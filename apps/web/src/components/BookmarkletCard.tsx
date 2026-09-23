@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { copyText } from "#lib/api";
 import { CopyIcon, CheckIcon } from "lucide-react";
 import {
@@ -21,6 +21,13 @@ function buildBookmarklet(): string {
 export function BookmarkletCard() {
   const [copied, setCopied] = useState(false);
   const code = buildBookmarklet();
+  const linkRef = useRef<HTMLAnchorElement>(null);
+
+  // React 19 replaces javascript: hrefs with an error-throwing stub, so the
+  // bookmarklet has to be set on the DOM node directly.
+  useEffect(() => {
+    linkRef.current?.setAttribute("href", code);
+  }, [code]);
 
   async function copy() {
     if (!(await copyText(code, "代码已复制"))) return;
@@ -39,7 +46,7 @@ export function BookmarkletCard() {
       <CardContent className="space-y-2">
         <div className="flex items-center gap-2">
           <a
-            href={code}
+            ref={linkRef}
             className="max-w-full truncate rounded-lg border bg-muted px-3 py-2 font-mono text-xs"
             onClick={(e) => e.preventDefault()}
             draggable

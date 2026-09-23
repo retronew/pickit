@@ -12,6 +12,12 @@ import { authClient } from "#lib/auth-client";
 const MODE_LABEL = { system: "跟随系统", light: "浅色", dark: "深色" } as const;
 const MODE_ICON = { system: MonitorIcon, light: SunIcon, dark: MoonIcon } as const;
 
+/** Login URL that returns here afterwards, e.g. to /add from the bookmarklet. */
+function loginUrl() {
+  const here = window.location.pathname + window.location.search;
+  return here === "/" ? "/login" : `/login?redirect=${encodeURIComponent(here)}`;
+}
+
 export function AppShell() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const navigate = useNavigate();
@@ -23,9 +29,9 @@ export function AppShell() {
     fetch("/api/me")
       .then((r) => {
         setAuthed(r.ok);
-        if (!r.ok) navigate("/login");
+        if (!r.ok) navigate(loginUrl());
       })
-      .catch(() => navigate("/login"));
+      .catch(() => navigate(loginUrl()));
   }, [navigate]);
 
   // Render nothing until the session is confirmed, so pages never fetch unauthenticated.

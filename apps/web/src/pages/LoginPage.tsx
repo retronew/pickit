@@ -48,6 +48,9 @@ export function LoginPage() {
   }, []);
 
   const code = params.get("error");
+  // Same-origin paths only, so the redirect can't send you to another site.
+  const redirect = params.get("redirect") ?? "";
+  const callbackURL = /^\/(?![/\\])/.test(redirect) ? redirect : "/";
   const message = error || (code ? (ERRORS[code] ?? `登录失败（${code}）`) : "");
 
   async function signIn(provider: Provider) {
@@ -55,8 +58,8 @@ export function LoginPage() {
     setError("");
     const { error } = await authClient.signIn.social({
       provider,
-      callbackURL: "/",
-      errorCallbackURL: "/login",
+      callbackURL,
+      errorCallbackURL: callbackURL === "/" ? "/login" : `/login?redirect=${encodeURIComponent(callbackURL)}`,
     });
     // On success the browser is already being redirected to the provider.
     if (error) {
