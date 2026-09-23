@@ -56,6 +56,8 @@ export function useAuditLog(filters: AuditFilters, live: boolean) {
   const [error, setError] = useState("");
   const [freshIds, setFreshIds] = useState<Set<number>>(new Set());
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  // Only full reloads (not live polls), for things that are costly to refetch.
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
   const topIdRef = useRef(0);
   // Drops responses for filters that are no longer current.
   const generationRef = useRef(0);
@@ -72,6 +74,7 @@ export function useAuditLog(filters: AuditFilters, live: boolean) {
       topIdRef.current = page.entries[0]?.id ?? 0;
       setError("");
       setUpdatedAt(Date.now());
+      setLoadedAt(Date.now());
     } catch (err) {
       if (generation === generationRef.current) setError(errorMessage(err));
     } finally {
@@ -126,5 +129,16 @@ export function useAuditLog(filters: AuditFilters, live: boolean) {
     return () => clearInterval(timer);
   }, [live, pollNewer]);
 
-  return { entries, hasMore, loading, loadingMore, error, freshIds, updatedAt, reload, loadMore };
+  return {
+    entries,
+    hasMore,
+    loading,
+    loadingMore,
+    error,
+    freshIds,
+    updatedAt,
+    loadedAt,
+    reload,
+    loadMore,
+  };
 }

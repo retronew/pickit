@@ -1,8 +1,6 @@
 // Audit trail storage: every API write (plus exports), sign-in / sign-out and
 // cron runs end up as one row in audit_log.
 
-export const AUDIT_RETENTION_DAYS = 180;
-
 export interface AuditEntry {
   actor: string;
   action: string;
@@ -37,14 +35,6 @@ export async function writeAudit(db: D1Database, e: AuditEntry) {
 /** Logs without ever failing the caller; audit problems only go to the console. */
 export function safeAudit(db: D1Database, e: AuditEntry): Promise<void> {
   return writeAudit(db, e).catch((err) => console.error("audit write failed", err));
-}
-
-/** Drops entries older than the retention window (daily cron). */
-export function pruneAudit(db: D1Database) {
-  return db
-    .prepare("DELETE FROM audit_log WHERE created_at < ?")
-    .bind(Date.now() - AUDIT_RETENTION_DAYS * 86_400_000)
-    .run();
 }
 
 export function requestMeta(req: Request) {

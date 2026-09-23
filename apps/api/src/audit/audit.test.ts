@@ -1,5 +1,5 @@
 import { describe as suite, expect, it } from "vitest";
-import { describe, sanitize } from "./index";
+import { describe, sanitize, isValidRetention, pruneAudit } from "./index";
 
 suite("sanitize", () => {
   it("redacts secrets and truncates long values", () => {
@@ -54,5 +54,32 @@ suite("describe", () => {
     expect(describe("DELETE", "/api/shares/abc", {}, undefined, {})?.action).toBe("share.revoke");
     expect(describe("POST", "/api/settings/ai", {}, undefined, {})?.action).toBe("settings.ai_update");
     expect(describe("POST", "/api/unknown", {}, undefined, {})).toBeNull();
+  });
+});
+
+
+suite("retention", () => {
+  it("accepts 0 (forever) up to the maximum, integers only", () => {
+    expect(isValidRetention(0)).toBe(true);
+    expect(isValidRetention(180)).toBe(true);
+    expect(isValidRetention(3650)).toBe(true);
+    expect(isValidRetention(3651)).toBe(false);
+    expect(isValidRetention(-1)).toBe(false);
+    expect(isValidRetention(1.5)).toBe(false);
+    expect(isValidRetention("30")).toBe(false);
+  });
+
+  it("never deletes anything when kept forever", async () => {
+    const db = { prepare: () => { throw new Error("should not query"); } } as unknown as D1Database;
+    expect(await pruneAudit(db, 0)).toBe(0);
+  });
+
+  it("describes retention changes", () => {
+    expect(describe("PUT", "/api/audit/settings", { retentionDays: 0 }, undefined, {})?.summary).toBe(
+      "修改审计日志保留时间为永久",
+    );
+    expect(
+      describe("PUT", "/api/audit/settings", { retentionDays: 30 }, undefined, { deleted: 12 })?.summary,
+    ).toBe("修改审计日志保留时间为 30 天，清理 12 条");
   });
 });

@@ -116,6 +116,13 @@ export function describe(
         action: "settings.allowed_emails",
         summary: `修改允许登录的邮箱（${(body.emails ?? []).length} 个）`,
       };
+    case "PUT /audit/settings":
+      return {
+        action: "settings.audit_retention",
+        summary: `修改审计日志保留时间为${body.retentionDays === 0 ? "永久" : ` ${body.retentionDays} 天`}${
+          res.deleted ? `，清理 ${res.deleted} 条` : ""
+        }`,
+      };
     case "POST /chat":
       return { action: "ai.chat", summary: "AI 问答" };
     case "POST /auth/sign-out":

@@ -3,6 +3,8 @@ import { useAuditLog, EMPTY_FILTERS, type AuditFilters } from "#hooks/useAuditLo
 import { AuditFiltersBar, type Facet } from "#components/audit/AuditFiltersBar";
 import { AuditEntryRow } from "#components/audit/AuditEntryRow";
 import { AuditToolbar } from "#components/audit/AuditToolbar";
+import { AuditRetention } from "#components/audit/AuditRetention";
+import { Confirm } from "#components/Confirm";
 import { PageLoading } from "#components/PageLoading";
 import { Button } from "#components/ui/button";
 import { Spinner } from "#components/ui/spinner";
@@ -42,7 +44,7 @@ export function AuditPage() {
     api<{ actions: Facet[]; actors: Facet[] }>("/api/audit/facets")
       .then(setFacets)
       .catch(() => {});
-  }, [log.updatedAt]);
+  }, [log.loadedAt]);
 
   const filtered = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
 
@@ -52,7 +54,7 @@ export function AuditPage() {
         <div>
           <h1 className="font-heading font-semibold text-lg">审计日志</h1>
           <p className="text-muted-foreground text-xs">
-            记录所有修改操作、导出、登录和定时任务，保留 180 天。
+            记录所有修改操作、导出、登录和定时任务。
           </p>
         </div>
         <AuditToolbar
@@ -63,6 +65,8 @@ export function AuditPage() {
           updatedAt={log.updatedAt}
         />
       </div>
+
+      <AuditRetention reloadKey={log.loadedAt} />
 
       <AuditFiltersBar
         filters={filters}
@@ -101,6 +105,7 @@ export function AuditPage() {
           )}
         </>
       )}
+      <Confirm />
     </div>
   );
 }

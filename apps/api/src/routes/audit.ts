@@ -1,5 +1,13 @@
 import { Hono } from "hono";
 import type { Env } from "#types";
+import {
+  MAX_RETENTION_DAYS,
+  auditStats,
+  getRetentionDays,
+  isValidRetention,
+  pruneAudit,
+  setRetentionDays,
+} from "#audit/index";
 
 export const auditRoutes = new Hono<{ Bindings: Env }>();
 
@@ -113,4 +121,24 @@ auditRoutes.get("/facets", async (c) => {
     ),
   ]);
   return c.json({ actions: actions.results, actors: actors.results });
+});
+
+/** Retention setting plus current usage. */
+auditRoutes.get("/settings", async (c) => {
+  const [retentionDays, stats] = await Promise.all([
+    getRetentionDays(c.env.DB),
+    auditStats(c.env.DB),
+  ]);
+  return c.json({ retentionDays, maxRetentionDays: MAX_RETENTION_DAYS, stats });
+});
+
+/** Sets retention (0 = forever) and prunes right away when it got shorter. */
+auditRoutes.put("/settings", async (c) => {
+  const body = await c.req.json<{ retentionDays?: unknown }>().catch(() => ({}) as { retentionDays?: unknown });
+  if (!isValidRetention(body.retentionDays)) {
+    return c.json({ error: `保留天数需为 0（永久）到 ${MAX_RETENTION_DAYS} 之间的整数` }, 400);
+  }
+  await setRetentionDays(c.env.DB, body.retentionDays);
+  const deleted = await pruneAudit(c.env.DB, body.retentionDays);
+  return c.json({ retentionDays: body.retentionDays, deleted, stats: await auditStats(c.env.DB) });
 });

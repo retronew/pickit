@@ -15,9 +15,9 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page
 - **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist that can be edited in Settings (no passwords)
 - **Theme**: follows the system light / dark setting by default; the header button cycles System → Light → Dark
-- **Audit log**: every write, export, sign-in / sign-out and cron run is recorded (actor, action, target, result, IP, request details with secrets redacted) and kept for 180 days; the **Audit** page filters by category, action, actor, result, date range (with presets) and keyword, with live and manual refresh
+- **Audit log**: every write, export, sign-in / sign-out and cron run is recorded (actor, action, target, result, IP, request details with secrets redacted) and kept for 180 days by default (adjustable from 1 day up to 10 years, or forever, on the Audit page, which also shows the log's estimated size); the **Audit** page filters by category, action, actor, result, date range (with presets) and keyword, with live and manual refresh
 - **API access**: Bearer API token for scripts and integrations
-- **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The settings page drives them while open; a per-minute cron keeps them going in the background
+- **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The job's settings tab drives them while open; a per-minute cron keeps them going in the background
 - **Maintenance cron**: daily JSON backup to R2 and dead-link checks
 
 ## Tech stack
