@@ -13,6 +13,7 @@ import { shareRoutes } from "#routes/shares";
 import { jobRoutes } from "#routes/jobs";
 import { auditRoutes } from "#routes/audit";
 import { publicRoutes } from "#routes/public";
+import { backupRoutes } from "#routes/backups";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -49,6 +50,7 @@ app.route("/api/tags", tagRoutes);
 app.route("/api/shares", shareRoutes);
 app.route("/api/jobs", jobRoutes);
 app.route("/api/audit", auditRoutes);
+app.route("/api/backups", backupRoutes);
 
 export default {
   fetch: app.fetch,

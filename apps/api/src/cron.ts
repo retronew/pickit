@@ -1,7 +1,6 @@
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const CHECK_BATCH_SIZE = 50;
 const CHECK_CONCURRENCY = 5;
 
@@ -48,36 +47,4 @@ export async function runDeadLinkCheck(env: Env) {
     Array.from({ length: CHECK_CONCURRENCY }, () => worker()),
   );
   return { checked: results.length, broken };
-}
-
-export async function runDailyBackup(env: Env) {
-  if (!env.BACKUPS) return null;
-  const { results } = await env.DB.prepare(
-    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL ORDER BY id`,
-  ).all<ItemRow>();
-  const items = results.map((r) => ({
-    id: r.id,
-    name: r.name,
-    url: r.url,
-    icon: r.icon,
-    note: r.note,
-    category: r.category,
-    tags: JSON.parse(r.tags || "[]"),
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  }));
-  const date = new Date().toISOString().slice(0, 10);
-  const key = `backups/pickit-${date}.json`;
-  await env.BACKUPS.put(key, JSON.stringify(items));
-  let removed = 0;
-
-  const list = await env.BACKUPS.list({ prefix: "backups/" });
-  const cutoff = Date.now() - THIRTY_DAYS_MS;
-  for (const obj of list.objects) {
-    if (obj.uploaded.getTime() < cutoff) {
-      await env.BACKUPS.delete(obj.key);
-      removed++;
-    }
-  }
-  return { key, count: items.length, removed };
 }

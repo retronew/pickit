@@ -1,7 +1,8 @@
 import type { Env } from "#types";
 import { advanceRunningJobs } from "#job-runners";
 import { backfillCompactVectors } from "#vectors";
-import { runDailyBackup, runDeadLinkCheck } from "#cron";
+import { runDeadLinkCheck } from "#cron";
+import { writeBackup, pruneBackups } from "#backups";
 import { safeAudit, pruneAudit } from "#audit/index";
 
 /** Must match the per-minute entry in wrangler.jsonc `triggers.crons`. */
@@ -10,12 +11,13 @@ const SYSTEM = "系统";
 
 async function backupWithAudit(env: Env) {
   try {
-    const r = await runDailyBackup(env);
-    if (!r) return;
+    if (!env.BACKUPS) return;
+    const backup = await writeBackup(env, "daily");
+    const removed = await pruneBackups(env);
     await safeAudit(env.DB, {
       actor: SYSTEM,
       action: "system.backup",
-      summary: `每日备份：${r.count} 条收藏写入 ${r.key}，清理旧备份 ${r.removed} 个`,
+      summary: `每日备份：${backup.count} 条收藏写入 ${backup.name}，清理旧备份 ${removed} 个`,
     });
   } catch (err) {
     await safeAudit(env.DB, {

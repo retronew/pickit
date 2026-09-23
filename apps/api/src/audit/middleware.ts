@@ -16,7 +16,8 @@ function isAudited(method: string, path: string): boolean {
   if (path.startsWith("/api/auth/")) return path === "/api/auth/sign-out";
   // Driven automatically every few seconds while a job page is open.
   if (/^\/api\/jobs\/\w+\/step$/.test(path)) return false;
-  if (method === "GET") return path === "/api/items/export";
+  // Reads aren't audited, except the ones that take data out.
+  if (method === "GET") return path === "/api/items/export" || /^\/api\/backups\/[^/]+$/.test(path);
   return method !== "OPTIONS" && method !== "HEAD";
 }
 

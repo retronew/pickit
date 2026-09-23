@@ -11,6 +11,7 @@ import { AiSettingsCard } from "#components/settings/ai/AiSettingsCard";
 import { SharesCard } from "#components/settings/SharesCard";
 import { ReembedCard } from "#components/settings/ReembedCard";
 import { BuildInfo } from "#components/settings/BuildInfo";
+import { BackupsCard } from "#components/settings/backups/BackupsCard";
 import { Confirm } from "#components/Confirm";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
 
@@ -51,13 +52,16 @@ const TABS: SettingsTab[] = [
   },
   {
     id: "data",
-    label: "导入导出",
+    label: "数据与备份",
     icon: DatabaseIcon,
-    description: "导入、导出收藏，以及一键收藏的书签工具",
+    description: "导入、导出收藏，备份与恢复，以及一键收藏的书签工具",
     content: (
-      <div className={TWO_COLUMNS}>
-        <DataImportExportCard />
-        <BookmarkletCard />
+      <div className="space-y-6">
+        <div className={TWO_COLUMNS}>
+          <DataImportExportCard />
+          <BookmarkletCard />
+        </div>
+        <BackupsCard />
       </div>
     ),
   },

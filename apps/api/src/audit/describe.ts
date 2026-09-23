@@ -123,12 +123,30 @@ export function describe(
           res.deleted ? `，清理 ${res.deleted} 条` : ""
         }`,
       };
+    case "POST /backups":
+      return {
+        action: "backup.create",
+        target: res.name ? `backup:${res.name}` : undefined,
+        summary: `手动备份${res.count != null ? `：${res.count} 条收藏` : ""}`,
+      };
     case "POST /chat":
       return { action: "ai.chat", summary: "AI 问答" };
     case "POST /auth/sign-out":
       return { action: "auth.sign_out", summary: "退出登录" };
   }
 
+  if ((m = p.match(/^\/backups\/([^/]+?)(\/restore)?$/))) {
+    const [, name, restore] = m;
+    const target = `backup:${name}`;
+    if (restore) {
+      const mode = body.mode === "replace" ? "覆盖" : "合并";
+      if (body.dryRun) return { action: "backup.restore_preview", target, summary: `预览恢复备份 ${name}（${mode}）` };
+      const counts = res.inserted != null ? `：恢复 ${res.inserted} 条，跳过 ${res.skipped ?? 0} 条${res.trashed ? `，${res.trashed} 条移到回收站` : ""}` : "";
+      return { action: "backup.restore", target, summary: `恢复备份 ${name}（${mode}）${counts}` };
+    }
+    if (method === "GET") return { action: "backup.download", target, summary: `下载备份 ${name}` };
+    if (method === "DELETE") return { action: "backup.delete", target, summary: `删除备份 ${name}` };
+  }
   if ((m = p.match(/^\/shares\/([^/]+)$/)) && method === "DELETE") {
     return { action: "share.revoke", target: `share:${m[1]}`, summary: `撤销分享 ${m[1]}` };
   }
