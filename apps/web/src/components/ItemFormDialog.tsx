@@ -11,6 +11,7 @@ import {
 } from "#components/ui/dialog";
 import { Field, FieldLabel } from "#components/ui/field";
 import { Input } from "#components/ui/input";
+import { Textarea } from "#components/ui/textarea";
 import { Button } from "#components/ui/button";
 import {
   Combobox,
@@ -204,10 +205,10 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
               </Field>
               <Field>
                 <FieldLabel htmlFor="item-note">备注</FieldLabel>
-                <Input
+                <Textarea
                   id="item-note"
                   size="lg"
-                  placeholder="一句话介绍，方便以后搜索"
+                  placeholder="介绍一下它，方便以后搜索（支持多行和 Markdown）"
                   value={form.note}
                   onChange={(e) => setForm({ ...form, note: e.target.value })}
                 />

@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { Streamdown } from "streamdown";
+import { Streamdown, defaultRemarkPlugins } from "streamdown";
+import remarkBreaks from "remark-breaks";
+
+// Single newlines in a note render as line breaks, like they were typed.
+const NOTE_REMARK_PLUGINS = [...Object.values(defaultRemarkPlugins), remarkBreaks];
 import {
   PencilIcon,
   PinIcon,
@@ -186,7 +190,7 @@ export function ItemDetailSheet({
             <SheetPanel className="space-y-5">
               {item.note && (
                 <div className="text-sm leading-relaxed [&_a]:underline [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-2">
-                  <Streamdown>{item.note}</Streamdown>
+                  <Streamdown remarkPlugins={NOTE_REMARK_PLUGINS}>{item.note}</Streamdown>
                 </div>
               )}
 

@@ -41,6 +41,7 @@ export function TagsField({ tags, onChange, suggestions }: Props) {
         ))}
         <ComboboxChipsInput
           ref={draftInputRef}
+          size="lg"
           placeholder={tags.length ? undefined : "输入后回车添加，或从建议中选择"}
           onKeyDown={(e) => {
             if (e.nativeEvent.isComposing) return;

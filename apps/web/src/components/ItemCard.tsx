@@ -163,7 +163,7 @@ export const ItemCard = memo(function ItemCard({
         )}
       </div>
       {item.note && (
-        <p className="mt-1 text-muted-foreground text-sm line-clamp-2">
+        <p className="mt-1 text-muted-foreground text-sm whitespace-pre-line line-clamp-2">
           {item.note}
         </p>
       )}
