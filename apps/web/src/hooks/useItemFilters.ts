@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { sortText } from "#lib/collate";
 import { useSearchParams } from "react-router";
 import { uniq } from "es-toolkit";
 import type { Item } from "#hooks/useItems";
@@ -50,7 +51,7 @@ export function useItemFilters(items: Item[], hits: Item[] | null) {
   }
 
   const categories = useMemo(
-    () => uniq(items.map((i) => i.category).filter(Boolean)).sort(),
+    () => sortText(uniq(items.map((i) => i.category).filter(Boolean))),
     [items],
   );
 

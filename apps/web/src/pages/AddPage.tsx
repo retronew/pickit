@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { sortText } from "#lib/collate";
 import { useNavigate, useSearchParams } from "react-router";
 import { uniq } from "es-toolkit";
 import type { Item } from "@pickit/shared";
@@ -26,8 +27,8 @@ export function AddPage() {
 
     (async () => {
       const items: Item[] = await fetch("/api/items").then((r) => r.json());
-      const categories = uniq(items.map((i) => i.category).filter(Boolean)).sort();
-      const allTags = uniq(items.flatMap((i) => i.tags)).sort();
+      const categories = sortText(uniq(items.map((i) => i.category).filter(Boolean)));
+      const allTags = sortText(uniq(items.flatMap((i) => i.tags)));
 
       let initial: Partial<ItemFormPayload> = { url, name: title };
       if (/^https?:\/\//.test(url)) {

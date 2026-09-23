@@ -1,4 +1,5 @@
 import { sortBy } from "es-toolkit";
+import { compareText } from "#lib/collate";
 import type { Item } from "@pickit/shared";
 
 export type SortKey = "pinned" | "created" | "updated" | "name";
@@ -21,7 +22,7 @@ function countBy(values: Iterable<string>): FacetCount[] {
   const counts = new Map<string, number>();
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
   return [...counts]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareText(a, b))
     .map(([value, count]) => ({ value, count }));
 }
 
