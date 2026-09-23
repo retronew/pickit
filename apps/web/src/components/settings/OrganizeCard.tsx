@@ -14,7 +14,7 @@ import {
   SelectContent,
   SelectItem,
 } from "#components/ui/select";
-import { JobProgress, JobActions, useJob } from "#components/settings/JobProgress";
+import { JobProgress, JobProgressSkeleton, JobActions, useJob } from "#components/settings/JobProgress";
 
 type Mode = "missing" | "all";
 
@@ -36,10 +36,17 @@ export function OrganizeCard() {
           让 AI 重新给收藏分类、打标签，尽量沿用已有分类。
         </CardDescription>
       </CardHeader>
-      {job && job.status !== "idle" && (
-        <CardContent className="animate-fade-in">
-          <JobProgress job={job} />
+      {!job && !error ? (
+        <CardContent>
+          <JobProgressSkeleton />
         </CardContent>
+      ) : (
+        job &&
+        job.status !== "idle" && (
+          <CardContent className="animate-fade-in">
+            <JobProgress job={job} />
+          </CardContent>
+        )
       )}
       <CardFooter className="flex flex-wrap items-center gap-2">
         <Select

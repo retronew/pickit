@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Skeleton } from "#components/ui/skeleton";
 import { Button } from "#components/ui/button";
 
 export type JobKind = "reembed" | "organize";
@@ -110,6 +111,16 @@ const STATUS_LABEL: Record<JobView["status"], string> = {
   paused: "已暂停",
   done: "已完成",
 };
+
+/** Shaped like JobProgress, shown while the job status loads. */
+export function JobProgressSkeleton() {
+  return (
+    <div className="space-y-2" aria-busy="true" aria-label="加载中">
+      <Skeleton className="h-2 w-full rounded-full" />
+      <Skeleton className="h-4 w-56 max-w-full" />
+    </div>
+  );
+}
 
 /** Progress, status and per-item failure details of a job. */
 export function JobProgress({ job }: { job: JobView }) {
