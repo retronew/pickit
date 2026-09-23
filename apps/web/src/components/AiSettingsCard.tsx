@@ -227,7 +227,7 @@ export function AiSettingsCard() {
           对话模型用于自动整理、摘要和问答；向量模型用于智能搜索和查重，两者可以使用不同的服务商。
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-8 lg:grid-cols-2">
+      <CardContent className="grid gap-8 lg:grid-cols-[1fr_auto_1fr]">
         <section className="space-y-4">
           <PanelHeading title="对话模型" configured={saved?.chatConfigured} />
           <EndpointFields
@@ -271,6 +271,9 @@ export function AiSettingsCard() {
           />
           <TestResult state={tests.chat} />
         </section>
+
+        {/* Horizontal when stacked, vertical between the two columns on lg. */}
+        <div role="separator" className="h-px bg-border lg:h-auto lg:w-px" />
 
         <section className="space-y-4">
           <PanelHeading title="向量模型（可选）" configured={saved?.embeddingConfigured} />
