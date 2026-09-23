@@ -17,7 +17,7 @@ function read(relPath: string): string {
 
 describe("soft-delete filtering", () => {
   it("item routes filter deleted_at on every active-item read path", () => {
-    const src = ["helpers", "collection", "io", "maintenance", "ai", "item"]
+    const src = ["helpers", "collection", "io", "maintenance", "bulk", "ai", "item"]
       .map((f) => read(`routes/items/${f}.ts`))
       .join("\n");
     const occurrences = src.match(/deleted_at IS NULL/g) ?? [];
@@ -30,8 +30,8 @@ describe("soft-delete filtering", () => {
   });
 
   it("job-runners.ts only selects and processes active items", () => {
-    const src = read("job-runners.ts");
-    // selectJobIds, loadRows, organize categories
+    const src = read("job-runners.ts") + read("organize.ts");
+    // selectJobIds, loadRows, organize categories (organize.ts)
     expect((src.match(/deleted_at IS NULL/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 

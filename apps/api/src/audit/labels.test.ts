@@ -26,7 +26,7 @@ function literalActions(): string[] {
 
 /** Actions built from request data (bulk actions, job controls). */
 function templatedActions(): string[] {
-  const bulk = ["delete", "pin", "unpin", "category", "purge"].map(
+  const bulk = ["delete", "restore", "purge", "pin", "unpin", "category", "add_tags", "remove_tags", "apply"].map(
     (action) => describe("POST", "/api/items/bulk", { ids: [1], action }, undefined, {})!.action,
   );
   const jobs = ["start", "pause", "resume", "retry"].map(

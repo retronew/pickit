@@ -79,65 +79,6 @@ maintenanceRoutes.post("/merge", async (c) => {
   return c.json({ ok: true });
 });
 
-maintenanceRoutes.post("/bulk", async (c) => {
-  const body = await c.req.json<{
-    ids?: number[];
-    action?: "delete" | "restore" | "purge" | "pin" | "unpin" | "category";
-    value?: unknown;
-  }>();
-  const ids = (body.ids ?? [])
-    .filter((n) => Number.isInteger(n))
-    .slice(0, 500);
-  if (ids.length === 0) return c.json({ error: "ids required" }, 400);
-  const placeholders = ids.map(() => "?").join(",");
-  const now = Date.now();
-
-  switch (body.action) {
-    case "delete":
-      await c.env.DB.prepare(
-        `UPDATE items SET deleted_at = ? WHERE id IN (${placeholders})`,
-      )
-        .bind(now, ...ids)
-        .run();
-      break;
-    case "restore":
-      await c.env.DB.prepare(
-        `UPDATE items SET deleted_at = NULL WHERE id IN (${placeholders})`,
-      )
-        .bind(...ids)
-        .run();
-      break;
-    case "purge":
-      await c.env.DB.prepare(
-        `DELETE FROM items WHERE id IN (${placeholders})`,
-      )
-        .bind(...ids)
-        .run();
-      break;
-    case "pin":
-    case "unpin":
-      await c.env.DB.prepare(
-        `UPDATE items SET pinned = ?, updated_at = ? WHERE id IN (${placeholders})`,
-      )
-        .bind(body.action === "pin" ? 1 : 0, now, ...ids)
-        .run();
-      break;
-    case "category":
-      if (typeof body.value !== "string") {
-        return c.json({ error: "value required" }, 400);
-      }
-      await c.env.DB.prepare(
-        `UPDATE items SET category = ?, updated_at = ? WHERE id IN (${placeholders})`,
-      )
-        .bind(body.value, now, ...ids)
-        .run();
-      break;
-    default:
-      return c.json({ error: "unknown action" }, 400);
-  }
-  return c.json({ ok: true, count: ids.length });
-});
-
 maintenanceRoutes.post("/:id/check", async (c) => {
   const id = Number(c.req.param("id"));
   const row = await c.env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`)

@@ -1,11 +1,14 @@
 import { useCallback, useState } from "react";
+import type { Item } from "@pickit/shared";
 import { Confirm } from "#components/Confirm";
+import { TagsEditDialog } from "#components/items/TagsEditDialog";
+import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
 import { api, toastError, toastSuccess } from "#lib/api";
 
 export type BulkAction = "delete" | "pin" | "unpin" | "category";
 
 /** Select mode on the items page and the bulk actions on the selection. */
-export function useBulkSelection(refresh: () => void) {
+export function useBulkSelection(refresh: () => void, items: Item[], allTags: string[]) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -43,6 +46,36 @@ export function useBulkSelection(refresh: () => void) {
     refresh();
   }
 
+  async function editTags(mode: "add" | "remove") {
+    const ids = [...selectedIds];
+    const suggestions =
+      mode === "add"
+        ? allTags
+        : [...new Set(items.filter((i) => selectedIds.has(i.id)).flatMap((i) => i.tags))].sort();
+    const tags = await TagsEditDialog.call({ mode, count: ids.length, suggestions });
+    if (!tags) return;
+    try {
+      const res = await api<{ changed: number }>("/api/items/bulk", {
+        json: { ids, action: mode === "add" ? "add_tags" : "remove_tags", tags },
+      });
+      toastSuccess(mode === "add" ? "已添加标签" : "已移除标签", {
+        description: `${res.changed} 项有变化：${tags.map((t) => `#${t}`).join(" ")}`,
+        id: "item-bulk",
+      });
+      refresh();
+    } catch (err) {
+      toastError(mode === "add" ? "添加标签失败" : "移除标签失败", err, { id: "item-bulk" });
+    }
+  }
+
+  async function aiOrganize() {
+    const applied = await OrganizeReviewDialog.call({ ids: [...selectedIds] });
+    if (!applied) return;
+    toastSuccess(`已按 AI 建议整理 ${applied} 项`, { id: "item-bulk" });
+    exitSelectMode();
+    refresh();
+  }
+
   async function bulkDelete() {
     const ok = await Confirm.call({
       title: `删除选中的 ${selectedIds.size} 项？`,
@@ -61,5 +94,7 @@ export function useBulkSelection(refresh: () => void) {
     toggleSelect,
     bulkAction,
     bulkDelete,
+    editTags,
+    aiOrganize,
   };
 }

@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { XIcon, PinIcon, PinOffIcon, Trash2Icon, FolderIcon } from "lucide-react";
+import {
+  XIcon,
+  PinIcon,
+  PinOffIcon,
+  Trash2Icon,
+  FolderIcon,
+  TagsIcon,
+  PlusIcon,
+  MinusIcon,
+  SparklesIcon,
+} from "lucide-react";
+import { Menu, MenuTrigger, MenuPopup, MenuItem } from "#components/ui/menu";
 import { Button } from "#components/ui/button";
 import {
   Select,
@@ -16,6 +27,8 @@ export function BulkActionBar({
   onUnpin,
   onDelete,
   onMoveCategory,
+  onEditTags,
+  onAiOrganize,
   onCancel,
 }: {
   count: number;
@@ -24,6 +37,8 @@ export function BulkActionBar({
   onUnpin: () => void;
   onDelete: () => void;
   onMoveCategory: (category: string) => void;
+  onEditTags: (mode: "add" | "remove") => void;
+  onAiOrganize: () => void;
   onCancel: () => void;
 }) {
   const [resetKey, setResetKey] = useState(0);
@@ -61,6 +76,26 @@ export function BulkActionBar({
             </SelectPopup>
           </Select>
         )}
+        <Menu>
+          <MenuTrigger render={<Button variant="outline" size="sm" />}>
+            <TagsIcon />
+            标签
+          </MenuTrigger>
+          <MenuPopup align="end">
+            <MenuItem onClick={() => onEditTags("add")}>
+              <PlusIcon />
+              添加标签…
+            </MenuItem>
+            <MenuItem onClick={() => onEditTags("remove")}>
+              <MinusIcon />
+              移除标签…
+            </MenuItem>
+          </MenuPopup>
+        </Menu>
+        <Button variant="outline" size="sm" onClick={onAiOrganize}>
+          <SparklesIcon />
+          AI 整理
+        </Button>
         <Button variant="destructive" size="sm" onClick={onDelete}>
           <Trash2Icon />
           删除

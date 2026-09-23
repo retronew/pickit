@@ -12,6 +12,8 @@ import { ItemGroups } from "#components/items/ItemGroups";
 import { ItemDetailSheet } from "#components/items/ItemDetailSheet";
 import { BulkActionBar } from "#components/items/BulkActionBar";
 import { BatchAddDialog } from "#components/items/BatchAddDialog";
+import { TagsEditDialog } from "#components/items/TagsEditDialog";
+import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
 import { Confirm } from "#components/Confirm";
 import { AskAi } from "#components/AskAi";
 import { PageLoading } from "#components/PageLoading";
@@ -38,7 +40,7 @@ export function ItemsPage() {
   const search = useItemSearch();
   const filters = useItemFilters(items, search.hits);
   const detail = useDetailSheet(items);
-  const selection = useBulkSelection(refresh);
+  const selection = useBulkSelection(refresh, items, filters.allTags);
   const [batchOpen, setBatchOpen] = useState(false);
 
   const { detailItem, setDetailOpen } = detail;
@@ -98,6 +100,8 @@ export function ItemsPage() {
           onUnpin={() => selection.bulkAction("unpin")}
           onMoveCategory={(c) => selection.bulkAction("category", c)}
           onDelete={selection.bulkDelete}
+          onEditTags={selection.editTags}
+          onAiOrganize={selection.aiOrganize}
           onCancel={selection.exitSelectMode}
         />
       )}
@@ -121,6 +125,8 @@ export function ItemsPage() {
 
       <AskAi />
       <ItemFormDialog />
+      <TagsEditDialog />
+      <OrganizeReviewDialog />
       <Confirm />
       <BatchAddDialog open={batchOpen} onOpenChange={setBatchOpen} onDone={refresh} />
       <ItemDetailSheet

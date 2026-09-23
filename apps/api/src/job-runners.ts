@@ -4,6 +4,7 @@ import { getSettings } from "#settings";
 import { createProvider, embedText, embedTexts, describeError, embeddingInput } from "#ai";
 import { isChatConfigured, isEmbeddingConfigured, type AiSettings } from "@pickit/shared";
 import { stepJob, type JobKind, type JobState, type StepResult } from "#jobs";
+import { activeCategories, suggestOrganize } from "#organize";
 
 /** How many items one step handles. Kept small so a step stays well under Worker limits. */
 const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4 };
@@ -114,35 +115,13 @@ async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Pro
   if (!chat) throw new Error("对话模型不可用，请检查设置");
   const rows = await loadRows(env, ids);
   const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
-  const { generateText } = await import("ai");
-  const { results: catRows } = await env.DB.prepare(
-    "SELECT DISTINCT category FROM items WHERE category != '' AND deleted_at IS NULL",
-  ).all<{ category: string }>();
-  const categories = catRows.map((r) => r.category);
+  const categories = await activeCategories(env.DB);
 
   const outcomes = await Promise.allSettled(
     rows.map(async (row) => {
-      const { text } = await generateText({
-        model: chat,
-        maxRetries: 1,
-        system:
-          "你是技术收藏库的整理助手。根据条目信息输出 JSON（不要输出其他内容）：" +
-          '{"category":"分类名(简短中文,优先从已有分类中选择；都不合适才新建)","tags":["标签1","标签2"]}',
-        prompt:
-          `已有分类：${categories.join("、") || "（暂无）"}\n` +
-          `名称：${row.name}\nURL：${row.url}\n备注：${row.note}\n` +
-          `当前分类：${row.category || "（无）"}\n当前标签：${row.tags}`,
-      });
-      const start = text.indexOf("{");
-      const end = text.lastIndexOf("}");
-      if (start < 0 || end < start) throw new Error(`模型没有返回 JSON：${text.slice(0, 100)}`);
-      const parsed = JSON.parse(text.slice(start, end + 1)) as {
-        category?: string;
-        tags?: string[];
-      };
-      const tags = Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : JSON.parse(row.tags || "[]");
+      const { category, tags } = await suggestOrganize(chat, row, categories);
       await env.DB.prepare("UPDATE items SET category=?, tags=?, updated_at=? WHERE id=?")
-        .bind(parsed.category || row.category, JSON.stringify(tags), Date.now(), row.id)
+        .bind(category, JSON.stringify(tags), Date.now(), row.id)
         .run();
     }),
   );

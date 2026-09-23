@@ -16,6 +16,10 @@ const BULK_VERBS: Record<string, string> = {
   unpin: "取消置顶",
   category: "修改分类",
   purge: "彻底删除",
+  restore: "恢复",
+  add_tags: "添加标签",
+  remove_tags: "移除标签",
+  apply: "应用整理建议",
 };
 
 /**
@@ -85,10 +89,17 @@ export function describe(
         target: `item:${body.keepId}`,
         summary: `合并重复收藏：保留 #${body.keepId}，移除 ${(body.removeIds ?? []).length} 项`,
       };
+    case "POST /items/suggest":
+      return { action: "item.suggest", summary: `AI 生成整理建议 ${(body.ids ?? []).length} 项` };
     case "POST /items/bulk": {
-      const n = (body.ids ?? []).length;
+      const n = body.action === "apply" ? (body.updates ?? []).length : (body.ids ?? []).length;
       const verb = BULK_VERBS[body.action] ?? body.action;
-      const extra = body.action === "category" ? `到${quote(body.value || "未分类")}` : "";
+      const extra =
+        body.action === "category"
+          ? `到${quote(body.value || "未分类")}`
+          : Array.isArray(body.tags)
+            ? `：${body.tags.map((t: string) => `#${t}`).join(" ")}`
+            : "";
       return { action: `item.bulk_${body.action}`, summary: `批量${verb} ${n} 项${extra}` };
     }
     case "POST /tags/rename":
