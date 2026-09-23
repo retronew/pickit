@@ -50,7 +50,7 @@ describe("audit middleware", () => {
     await t.json("/api/items");
     const list = await entries();
     expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ actor: "匿名", action: "item.delete", status: 401 });
+    expect(list[0]).toMatchObject({ actor: "anonymous", action: "item.delete", status: 401 });
     expect(list[0].detail.error).toBe("unauthorized");
   });
 
@@ -74,7 +74,7 @@ describe("audit query", () => {
     await insertEntry("item.create", now - 3 * DAY, { actor: "a@x.com", summary: "添加收藏「Vite」" });
     await insertEntry("item.delete", now - 2 * DAY, { actor: "b@x.com", status: 500 });
     await insertEntry("tag.rename", now - 1 * DAY, { actor: "a@x.com" });
-    await insertEntry("other", now, { actor: "系统" });
+    await insertEntry("other", now, { actor: "system" });
   });
 
   it("filters by category, action, actor, result, keyword and time", async () => {
@@ -188,7 +188,7 @@ describe("daily cron", () => {
     await Promise.all(pending);
     expect(put).toEqual([expect.stringMatching(/^backups\/pickit-\d{4}-\d{2}-\d{2}\.json$/)]);
     const [backup] = (await app.json("/api/audit?action=system.backup")).entries;
-    expect(backup).toMatchObject({ actor: "系统" });
+    expect(backup).toMatchObject({ actor: "system" });
     expect(backup.summary).toContain("1 条收藏");
   });
 });

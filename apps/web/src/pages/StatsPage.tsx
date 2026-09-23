@@ -76,7 +76,7 @@ export function StatsPage() {
     () =>
       (stats?.byCategory ?? []).slice(0, 15).map((c) => ({
         ...c,
-        label: truncateLabel(c.category),
+        label: truncateLabel(c.category || m.uncategorized()),
       })),
     [stats],
   );

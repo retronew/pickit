@@ -4,6 +4,7 @@ import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { nearest } from "#vectors";
 import { getSettings } from "#settings";
 import { createProvider } from "#ai";
+import { tr } from "#i18n";
 
 export const chatRoutes = new Hono<{ Bindings: Env }>();
 
@@ -38,7 +39,7 @@ chatRoutes.post("/", async (c) => {
   const settings = await getSettings(c.env.DB);
   const provider = settings ? createProvider(settings) : null;
   if (!provider?.chat) {
-    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
+    return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
 
   // retrieve relevant items: semantic if possible, otherwise dump categories/summary

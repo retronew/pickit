@@ -5,6 +5,7 @@ import { createProvider, embedText, embedTexts, describeError, embeddingInput } 
 import { isChatConfigured, isEmbeddingConfigured, type AiSettings } from "@pickit/shared";
 import { stepJob, type JobKind, type JobState, type StepResult } from "#jobs";
 import { activeCategories, suggestOrganize } from "#organize";
+import { errorText } from "#i18n";
 
 /** How many items one step handles. Kept small so a step stays well under Worker limits. */
 const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4 };
@@ -14,14 +15,12 @@ export const JOB_MODES: Record<JobKind, string[]> = {
   organize: ["missing", "all"],
 };
 
-/** Why a job can't run with the current settings, or null when it can. */
+/** Why a job can't run with the current settings (a message key), or null when it can. */
 export function jobConfigError(kind: JobKind, settings: AiSettings | null): string | null {
   if (kind === "reembed") {
-    return settings && isEmbeddingConfigured(settings)
-      ? null
-      : "还没有配置向量模型，请先在上方完成配置";
+    return settings && isEmbeddingConfigured(settings) ? null : "api_job_needs_embedding";
   }
-  return settings && isChatConfigured(settings) ? null : "还没有配置对话模型，请先在上方完成配置";
+  return settings && isChatConfigured(settings) ? null : "api_job_needs_chat";
 }
 
 /** The ids a new job should process for the chosen mode. */
@@ -76,7 +75,7 @@ function missingIds(ids: number[], rows: ItemRow[]): number[] {
 
 async function reembedBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
   const provider = createProvider(settings);
-  if (!provider?.embedding) throw new Error("向量模型不可用，请检查设置");
+  if (!provider?.embedding) throw new Error(await errorText(env, "api_embedding_unavailable"));
   const rows = await loadRows(env, ids);
   const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
   if (!rows.length) return result;
@@ -112,7 +111,7 @@ async function reembedBatch(env: Env, settings: AiSettings, ids: number[]): Prom
 
 async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
   const chat = createProvider(settings)?.chat;
-  if (!chat) throw new Error("对话模型不可用，请检查设置");
+  if (!chat) throw new Error(await errorText(env, "api_chat_unavailable"));
   const rows = await loadRows(env, ids);
   const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
   const categories = await activeCategories(env.DB);
@@ -139,7 +138,7 @@ export async function runJobStep(env: Env, kind: JobKind): Promise<JobState> {
   return stepJob(env.DB, kind, BATCH_SIZE[kind], async (ids) => {
     const settings = await getSettings(env.DB);
     const configError = jobConfigError(kind, settings);
-    if (configError) throw new Error(configError);
+    if (configError) throw new Error(await errorText(env, configError));
     return kind === "reembed"
       ? reembedBatch(env, settings!, ids)
       : organizeBatch(env, settings!, ids);

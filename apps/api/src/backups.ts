@@ -1,5 +1,6 @@
 import { normalizeUrl } from "@pickit/shared";
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
+import { LocalizedError } from "#i18n";
 
 // JSON backups of all active items in R2 (backups/pickit-*.json): the daily
 // cron, manual "back up now", and an automatic snapshot before each restore.
@@ -30,17 +31,14 @@ export interface BackupItem {
   updatedAt?: number;
 }
 
-export class BackupError extends Error {
-  constructor(
-    message: string,
-    readonly status: 400 | 404 | 503,
-  ) {
-    super(message);
+export class BackupError extends LocalizedError {
+  constructor(key: string, status: 400 | 404 | 503) {
+    super({ key }, status);
   }
 }
 
 function bucket(env: Env): R2Bucket {
-  if (!env.BACKUPS) throw new BackupError("没有配置 R2 备份存储（BACKUPS）", 503);
+  if (!env.BACKUPS) throw new BackupError("api_backup_not_configured", 503);
   return env.BACKUPS;
 }
 
@@ -128,9 +126,9 @@ export async function listBackups(env: Env): Promise<BackupInfo[]> {
 }
 
 export async function getBackupObject(env: Env, name: string): Promise<R2ObjectBody> {
-  if (!isValidBackupName(name)) throw new BackupError("备份文件名不合法", 400);
+  if (!isValidBackupName(name)) throw new BackupError("api_backup_bad_name", 400);
   const obj = await bucket(env).get(PREFIX + name);
-  if (!obj) throw new BackupError("备份不存在", 404);
+  if (!obj) throw new BackupError("api_backup_not_found", 404);
   return obj;
 }
 
@@ -145,9 +143,9 @@ async function readBackup(env: Env, name: string): Promise<BackupItem[]> {
   try {
     data = JSON.parse(await obj.text());
   } catch {
-    throw new BackupError("备份文件损坏，无法解析", 400);
+    throw new BackupError("api_backup_corrupt", 400);
   }
-  if (!Array.isArray(data)) throw new BackupError("备份文件格式不正确", 400);
+  if (!Array.isArray(data)) throw new BackupError("api_backup_bad_format", 400);
   return data.filter(
     (i): i is BackupItem => !!i && typeof i === "object" && typeof (i as BackupItem).name === "string",
   );

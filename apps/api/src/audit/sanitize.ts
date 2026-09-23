@@ -6,13 +6,13 @@ const MAX_ARRAY = 20;
 
 export function sanitize(value: unknown, depth = 0): unknown {
   if (typeof value === "string") {
-    return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}…（共 ${value.length} 字）` : value;
+    return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}…[${value.length}]` : value;
   }
   if (value === null || typeof value !== "object") return value;
   if (depth >= 4) return "…";
   if (Array.isArray(value)) {
     const out = value.slice(0, MAX_ARRAY).map((v) => sanitize(v, depth + 1));
-    if (value.length > MAX_ARRAY) out.push(`…（共 ${value.length} 项）`);
+    if (value.length > MAX_ARRAY) out.push(`…[${value.length}]`);
     return out;
   }
   const out: Record<string, unknown> = {};

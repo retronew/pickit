@@ -9,11 +9,12 @@ import {
   writeBackup,
   type RestoreMode,
 } from "#backups";
+import { localizedError, tr } from "#i18n";
 
 export const backupRoutes = new Hono<{ Bindings: Env }>();
 
-function fail(c: Context, err: unknown) {
-  if (err instanceof BackupError) return c.json({ error: err.message }, err.status);
+function fail(c: Context<{ Bindings: Env }>, err: unknown) {
+  if (err instanceof BackupError) return localizedError(c, err);
   throw err;
 }
 
@@ -50,7 +51,7 @@ backupRoutes.get("/:name", async (c) => {
 backupRoutes.post("/:name/restore", async (c) => {
   const body = await c.req.json<{ mode?: string; dryRun?: boolean }>().catch(() => ({}) as { mode?: string });
   if (body.mode !== "merge" && body.mode !== "replace") {
-    return c.json({ error: "mode 必须是 merge 或 replace" }, 400);
+    return c.json({ error: await tr(c, "api_restore_mode") }, 400);
   }
   try {
     return c.json(await restoreBackup(c.env, c.req.param("name"), body.mode as RestoreMode, !!(body as { dryRun?: boolean }).dryRun));

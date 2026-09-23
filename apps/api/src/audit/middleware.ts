@@ -3,6 +3,7 @@ import type { Env } from "#types";
 import { safeAudit, requestMeta } from "./store";
 import { sanitize } from "./sanitize";
 import { describe, type Body } from "./describe";
+import type { MessageRef } from "@pickit/shared/i18n";
 
 // The actor is set by the auth middleware and read back after the handler.
 const actors = new WeakMap<Request, string>();
@@ -77,8 +78,11 @@ export function auditMiddleware(sessionActor: SessionLookup) {
       const res = await responseJson(c.res);
       const described = describe(method, path, body, name, res);
       if (described === false) return; // deliberately not audited
-      const d = described ?? { action: "other", summary: `${method} ${path}` };
-      const actor = preActor ?? actors.get(c.req.raw) ?? "匿名";
+      const d: { action: string; target?: string; summary: MessageRef | string } = described ?? {
+        action: "other",
+        summary: `${method} ${path}`,
+      };
+      const actor = preActor ?? actors.get(c.req.raw) ?? "anonymous";
       const status = c.res.status;
       const error = status >= 400 && typeof res.error === "string" ? res.error : undefined;
       await safeAudit(c.env.DB, {

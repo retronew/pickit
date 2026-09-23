@@ -1,11 +1,19 @@
 // Audit trail storage: every API write (plus exports), sign-in / sign-out and
 // cron runs end up as one row in audit_log.
 
+import { renderMessage, type MessageRef } from "@pickit/shared/i18n";
+import { uiLocale } from "#locale";
+
 export interface AuditEntry {
   actor: string;
   action: string;
   target?: string;
-  summary?: string;
+  /**
+   * A message ref is rendered in the interface language for the summary
+   * column (keyword search) and also kept in detail.message, so the audit
+   * page can show it in whichever language is active.
+   */
+  summary?: MessageRef | string;
   status?: number | null;
   ip?: string;
   userAgent?: string;
@@ -13,6 +21,9 @@ export interface AuditEntry {
 }
 
 export async function writeAudit(db: D1Database, e: AuditEntry) {
+  const ref = typeof e.summary === "object" ? e.summary : null;
+  const summary = ref ? renderMessage(ref, await uiLocale(db)) : (e.summary ?? "");
+  const detail = ref ? { ...e.detail, message: ref } : (e.detail ?? {});
   await db
     .prepare(
       `INSERT INTO audit_log (created_at, actor, action, target, summary, status, ip, user_agent, detail)
@@ -23,11 +34,11 @@ export async function writeAudit(db: D1Database, e: AuditEntry) {
       e.actor,
       e.action,
       e.target ?? "",
-      e.summary ?? "",
+      summary,
       e.status ?? null,
       e.ip ?? "",
       (e.userAgent ?? "").slice(0, 300),
-      JSON.stringify(e.detail ?? {}),
+      JSON.stringify(detail),
     )
     .run();
 }

@@ -1,5 +1,12 @@
 import { describe as suite, expect, it } from "vitest";
-import { describe, sanitize, isValidRetention, pruneAudit } from "./index";
+import { renderMessage } from "@pickit/shared/i18n";
+import { describe as describeRequest, sanitize, isValidRetention, pruneAudit } from "./index";
+
+/** describe() with its summary rendered, in Chinese unless given. */
+function describe(...args: Parameters<typeof describeRequest>) {
+  const d = describeRequest(...args);
+  return d ? { ...d, summary: renderMessage(d.summary, "zh") } : d;
+}
 
 suite("sanitize", () => {
   it("redacts secrets and truncates long values", () => {
@@ -12,7 +19,7 @@ suite("sanitize", () => {
     expect(out.chat.apiKey).toBe("***");
     expect(out.chat.baseUrl).toBe("https://x");
     expect(out.token).toBe("***");
-    expect(out.content).toMatch(/^x{200}…（共 500 字）$/);
+    expect(out.content).toBe(`${"x".repeat(200)}…[500]`);
     expect(out.ids).toHaveLength(21);
   });
 
@@ -81,5 +88,24 @@ suite("retention", () => {
     expect(
       describe("PUT", "/api/audit/settings", { retentionDays: 30 }, undefined, { deleted: 12 })?.summary,
     ).toBe("修改审计日志保留时间为 30 天，清理 12 条");
+  });
+});
+
+suite("summaries in other languages", () => {
+  it("renders the same event in English and Japanese, including nested parts", () => {
+    const d = describeRequest("POST", "/api/items/bulk", { ids: [1, 2], action: "category", value: "前端" }, undefined, {});
+    if (!d) throw new Error("not described");
+    expect(renderMessage(d.summary, "en")).toBe("Moved 2 items to “前端”");
+    expect(renderMessage(d.summary, "ja")).toBe("2 件のカテゴリを「前端」に変更");
+
+    const restore = describeRequest("POST", "/api/backups/pickit-x.json/restore", { mode: "replace" }, undefined, {
+      inserted: 3,
+      skipped: 1,
+      trashed: 2,
+    });
+    if (!restore) throw new Error("not described");
+    expect(renderMessage(restore.summary, "en")).toBe(
+      "Restored backup pickit-x.json (Replace): 3 restored, 1 skipped, 2 moved to the trash",
+    );
   });
 });

@@ -7,7 +7,7 @@ import { safeAudit, pruneAudit } from "#audit/index";
 
 /** Must match the per-minute entry in wrangler.jsonc `triggers.crons`. */
 const JOB_CRON = "* * * * *";
-const SYSTEM = "系统";
+const SYSTEM = "system";
 
 async function backupWithAudit(env: Env) {
   try {
@@ -17,13 +17,16 @@ async function backupWithAudit(env: Env) {
     await safeAudit(env.DB, {
       actor: SYSTEM,
       action: "system.backup",
-      summary: `每日备份：${backup.count} 条收藏写入 ${backup.name}，清理旧备份 ${removed} 个`,
+      summary: {
+        key: "audit_sum_daily_backup",
+        params: { count: backup.count ?? 0, name: backup.name, removed },
+      },
     });
   } catch (err) {
     await safeAudit(env.DB, {
       actor: SYSTEM,
       action: "system.backup",
-      summary: "每日备份失败",
+      summary: { key: "audit_sum_daily_backup_failed" },
       status: 500,
       detail: { error: String(err) },
     });
@@ -36,7 +39,7 @@ async function linkCheckWithAudit(env: Env) {
   await safeAudit(env.DB, {
     actor: SYSTEM,
     action: "system.link_check",
-    summary: `检查 ${r.checked} 条链接，${r.broken} 条无法访问`,
+    summary: { key: "audit_sum_link_check", params: { checked: r.checked, broken: r.broken } },
   });
 }
 

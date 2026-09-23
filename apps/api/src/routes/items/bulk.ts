@@ -5,6 +5,7 @@ import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { getSettings } from "#settings";
 import { createProvider, describeError } from "#ai";
 import { activeCategories, suggestOrganize } from "#organize";
+import { tr } from "#i18n";
 
 export const bulkRoutes = new Hono<{ Bindings: Env }>();
 
@@ -173,7 +174,7 @@ bulkRoutes.post("/suggest", async (c) => {
   if (ids.length === 0) return c.json({ error: "ids required" }, 400);
   const settings = await getSettings(c.env.DB);
   const chat = settings ? createProvider(settings)?.chat : undefined;
-  if (!chat) return c.json({ error: "请先在设置里配置对话模型" }, 400);
+  if (!chat) return c.json({ error: await tr(c, "api_need_chat") }, 400);
 
   const { results: rows } = await c.env.DB.prepare(
     `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL AND id IN (${ids.map(() => "?").join(",")})`,

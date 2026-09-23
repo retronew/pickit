@@ -7,6 +7,7 @@ import { nearest, asFloat32 } from "#vectors";
 import { createProvider } from "#ai";
 import { getSettings } from "#settings";
 import { itemsByIds, toItemJson, findSimilarItems, embedItem } from "./helpers";
+import { tr } from "#i18n";
 
 export const aiRoutes = new Hono<{ Bindings: Env }>();
 
@@ -18,7 +19,7 @@ aiRoutes.post("/analyze", async (c) => {
   const settings = await getSettings(c.env.DB);
   const provider = settings ? createProvider(settings) : null;
   if (!provider?.chat) {
-    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
+    return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
 
   let pageTitle = "";
@@ -133,7 +134,7 @@ aiRoutes.post("/:id/summarize", async (c) => {
   const settings = await getSettings(c.env.DB);
   const provider = settings ? createProvider(settings) : null;
   if (!provider?.chat) {
-    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
+    return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
   const { generateText } = await import("ai");
   const { text } = await generateText({
@@ -157,7 +158,7 @@ aiRoutes.post("/:id/reembed", async (c) => {
   if (!row) return c.json({ error: "not found" }, 404);
   const settings = await getSettings(c.env.DB);
   if (!settings || !isEmbeddingConfigured(settings)) {
-    return c.json({ error: "还没有配置向量模型，请先到「设置」里完成配置" }, 400);
+    return c.json({ error: await tr(c, "api_need_embedding") }, 400);
   }
   c.executionCtx.waitUntil(
     embedItem(

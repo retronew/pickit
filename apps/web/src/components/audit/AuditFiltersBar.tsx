@@ -5,7 +5,7 @@ import { Input } from "#components/ui/input";
 import { DateRangePicker } from "#components/DateRangePicker";
 import { Button } from "#components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#components/ui/select";
-import { AUDIT_CATEGORIES, actionCategory, actionLabel, categoryLabel } from "#lib/audit";
+import { AUDIT_CATEGORIES, actionCategory, actionLabel, actorLabel, categoryLabel } from "#lib/audit";
 import { EMPTY_FILTERS, type AuditFilters } from "#hooks/useAuditLog";
 import { m } from "#lib/i18n";
 
@@ -69,9 +69,9 @@ export function AuditFiltersBar({
   const actionItems = Object.fromEntries(
     actions
       .filter((a) => !filters.category || actionCategory(a.value) === filters.category)
-      .map((a) => [a.value, `${actionLabel(a.value)}（${a.count}）`]),
+      .map((a) => [a.value, m.facet_count({ label: actionLabel(a.value), count: a.count })]),
   );
-  const actorItems = Object.fromEntries(actors.map((a) => [a.value, `${a.value}（${a.count}）`]));
+  const actorItems = Object.fromEntries(actors.map((a) => [a.value, m.facet_count({ label: actorLabel(a.value), count: a.count })]));
   const dirty = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
 
   return (

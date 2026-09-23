@@ -8,6 +8,7 @@ import {
   pruneAudit,
   setRetentionDays,
 } from "#audit/index";
+import { tr } from "#i18n";
 
 export const auditRoutes = new Hono<{ Bindings: Env }>();
 
@@ -136,7 +137,7 @@ auditRoutes.get("/settings", async (c) => {
 auditRoutes.put("/settings", async (c) => {
   const body = await c.req.json<{ retentionDays?: unknown }>().catch(() => ({}) as { retentionDays?: unknown });
   if (!isValidRetention(body.retentionDays)) {
-    return c.json({ error: `保留天数需为 0（永久）到 ${MAX_RETENTION_DAYS} 之间的整数` }, 400);
+    return c.json({ error: await tr(c, "api_bad_retention", { max: MAX_RETENTION_DAYS }) }, 400);
   }
   await setRetentionDays(c.env.DB, body.retentionDays);
   const deleted = await pruneAudit(c.env.DB, body.retentionDays);

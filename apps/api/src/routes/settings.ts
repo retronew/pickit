@@ -19,6 +19,7 @@ import { listModels, ModelListError, type ModelFamily } from "#ai-models";
 import { ownerEmails, getExtraEmails, setExtraEmails, parseEmails, isValidEmail } from "#auth";
 import { isLocale } from "@pickit/shared/i18n";
 import { getLocalePrefs, setLocalePrefs, isAiLanguage, type LocalePrefs } from "#locale";
+import { localizedError, tr } from "#i18n";
 
 export const settingsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -84,13 +85,13 @@ settingsRoutes.post("/ai/models", async (c) => {
   const body = await c.req.json<{ target: "chat" | "embedding"; settings: unknown }>();
   const next = mergeWithSaved(body.settings, await getRawSettings(c.env.DB));
   const endpoint = body.target === "chat" ? next.chat : next.embedding;
-  if (!endpoint.baseUrl) return c.json({ error: "请先填写接口地址" }, 400);
+  if (!endpoint.baseUrl) return c.json({ error: await tr(c, "api_need_base_url") }, 400);
   if (
     !endpoint.apiKey &&
     endpoint.provider !== CUSTOM_PROVIDER &&
     !findProvider(endpoint.provider)?.keyOptional
   ) {
-    return c.json({ error: "请先填写 API 密钥，再获取模型列表" }, 400);
+    return c.json({ error: await tr(c, "ai_need_key") }, 400);
   }
   const family: ModelFamily =
     endpoint.protocol === "anthropic"
@@ -102,10 +103,8 @@ settingsRoutes.post("/ai/models", async (c) => {
     const result = await listModels(family, endpoint.baseUrl, endpoint.apiKey);
     return c.json(result);
   } catch (e) {
-    return c.json(
-      { error: e instanceof ModelListError ? e.message : describeError(e) },
-      400,
-    );
+    if (e instanceof ModelListError) return localizedError(c, e);
+    return c.json({ error: describeError(e) }, 400);
   }
 });
 
@@ -117,14 +116,14 @@ settingsRoutes.post("/ai/test", async (c) => {
     const e = next.chat;
     const urls = chatRequestUrls(e.protocol, e.baseUrl, e.model);
     if (!isChatConfigured(next)) {
-      return c.json({ ok: false, urls, error: "请填写服务商、接口地址、密钥和模型" });
+      return c.json({ ok: false, urls, error: await tr(c, "api_chat_incomplete") });
     }
     try {
       const { generateText } = await import("ai");
       const { text } = await generateText({
         model: createChatModel(e),
-        prompt: "回复 ok",
-        maxOutputTokens: 16, // responses API 要求 >= 16
+        prompt: "Reply with: ok",
+        maxOutputTokens: 16, // the Responses API requires >= 16
         maxRetries: 0,
       });
       return c.json({ ok: true, urls, reply: text.slice(0, 100) });
@@ -136,7 +135,7 @@ settingsRoutes.post("/ai/test", async (c) => {
   const e = resolveEmbeddingEndpoint(next);
   const urls = e ? embeddingRequestUrls(e.protocol, e.baseUrl, e.model) : [];
   if (!e || !isEmbeddingConfigured(next)) {
-    return c.json({ ok: false, urls, error: "向量模型配置不完整" });
+    return c.json({ ok: false, urls, error: await tr(c, "api_embedding_incomplete") });
   }
   try {
     const { embed } = await import("ai");
@@ -178,7 +177,7 @@ settingsRoutes.put("/allowed-emails", async (c) => {
   if (!Array.isArray(body.emails)) return c.json({ error: "emails must be an array" }, 400);
   const emails = parseEmails(body.emails.filter((e) => typeof e === "string").join(","));
   const invalid = emails.filter((e) => !isValidEmail(e));
-  if (invalid.length) return c.json({ error: `邮箱格式不正确：${invalid.join(", ")}` }, 400);
+  if (invalid.length) return c.json({ error: await tr(c, "api_bad_emails", { emails: invalid.join(", ") }) }, 400);
   const owners = new Set(ownerEmails(c.env));
   const extra = emails.filter((e) => !owners.has(e));
   await setExtraEmails(c.env.DB, extra);

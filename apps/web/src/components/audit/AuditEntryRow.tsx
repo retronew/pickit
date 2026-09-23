@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 import { Badge } from "#components/ui/badge";
 import { cn } from "#lib/utils";
-import { actionLabel, isFailure, type AuditEntry } from "#lib/audit";
+import { actionLabel, actorLabel, auditSummary, isFailure, type AuditEntry } from "#lib/audit";
 import { intlLocale, m } from "#lib/i18n";
 
 const timeFormat = new Intl.DateTimeFormat(intlLocale(), {
@@ -34,7 +34,7 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 
 export function AuditEntryRow({ entry, fresh }: { entry: AuditEntry; fresh: boolean }) {
   const [open, setOpen] = useState(false);
-  const { method, path, durationMs, ...rest } = entry.detail as {
+  const { method, path, durationMs, message: _message, ...rest } = entry.detail as {
     method?: string;
     path?: string;
     durationMs?: number;
@@ -59,8 +59,8 @@ export function AuditEntryRow({ entry, fresh }: { entry: AuditEntry; fresh: bool
         </time>
         <span className="hidden truncate font-medium sm:block">{actionLabel(entry.action)}</span>
         <span className="col-span-2 min-w-0 sm:col-span-1">
-          <span className="block truncate">{entry.summary || actionLabel(entry.action)}</span>
-          <span className="block truncate text-muted-foreground text-xs">{entry.actor}</span>
+          <span className="block truncate">{auditSummary(entry) || actionLabel(entry.action)}</span>
+          <span className="block truncate text-muted-foreground text-xs">{actorLabel(entry.actor)}</span>
         </span>
         <span className="col-start-3 row-start-1 sm:col-start-auto sm:row-start-auto">
           <StatusBadge entry={entry} />

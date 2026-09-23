@@ -1,4 +1,5 @@
 import { normalizeBaseUrl, isEmbeddingModelId } from "@pickit/shared";
+import { LocalizedError } from "#i18n";
 
 export type ModelFamily = "openai" | "anthropic" | "google";
 
@@ -57,7 +58,7 @@ export function parseModels(family: ModelFamily, body: unknown): ModelInfo[] | n
   );
 }
 
-export class ModelListError extends Error {}
+export class ModelListError extends LocalizedError {}
 
 /** Fetches the model list, probing /v1 when the given base URL doesn't answer. */
 export async function listModels(
@@ -77,10 +78,10 @@ export async function listModels(
         signal: AbortSignal.timeout(10_000),
       });
     } catch (e) {
-      throw new ModelListError(`无法连接 ${url}：${String(e).slice(0, 200)}`);
+      throw new ModelListError({ key: "api_models_unreachable", params: { url, error: String(e).slice(0, 200) } });
     }
     if (res.status === 401 || res.status === 403) {
-      throw new ModelListError(`${url} 返回 ${res.status}：API 密钥无效、已停用，或没有访问模型列表的权限`);
+      throw new ModelListError({ key: "api_models_unauthorized", params: { url, status: res.status } });
     }
     if (!res.ok) continue;
     const body = await res.json().catch(() => null);
@@ -90,5 +91,5 @@ export async function listModels(
       return { baseUrl: base, models };
     }
   }
-  throw new ModelListError(`没有找到模型列表接口，已尝试：${tried.join("、")}`);
+  throw new ModelListError({ key: "api_models_not_found", params: { tried: tried.join(", ") } });
 }

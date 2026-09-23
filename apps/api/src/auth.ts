@@ -1,9 +1,11 @@
 import { betterAuth } from "better-auth";
 import type { Env } from "#types";
 import { safeAudit, requestMeta } from "#audit/index";
+import type { MessageRef } from "@pickit/shared/i18n";
 
 const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitHub" };
-const providerName = (id?: string) => (id ? (PROVIDER_NAMES[id] ?? id) : "未知方式");
+const providerName = (id?: string): MessageRef | string =>
+  id ? (PROVIDER_NAMES[id] ?? id) : { key: "audit_sum_unknown_provider" };
 
 // PickIt is single-user: sign-in goes through Google / GitHub via Better Auth,
 // and only emails listed in ALLOWED_EMAILS may get a session. Without the
@@ -104,16 +106,16 @@ export function createAuth(env: Env) {
       validateUserInfo: async ({ user, source }, ctx) => {
         if (!(await isAllowedEmail(env, user.email))) {
           await safeAudit(env.DB, {
-            actor: user.email ?? "未知账号",
+            actor: user.email ?? "unknown",
             action: "auth.sign_in_denied",
-            summary: `拒绝登录：邮箱不在允许列表（${providerName(source.oauth?.providerId)}）`,
+            summary: { key: "audit_sum_sign_in_denied", params: { provider: providerName(source.oauth?.providerId) } },
             status: 403,
             ...(ctx?.request ? requestMeta(ctx.request) : {}),
             detail: { provider: source.oauth?.providerId, action: source.action },
           });
           return {
             error: "email_not_allowed",
-            errorDescription: "这个账号没有访问权限",
+            errorDescription: "This account is not allowed to sign in",
           };
         }
       },
@@ -133,7 +135,7 @@ export function createAuth(env: Env) {
             await safeAudit(env.DB, {
               actor: user?.email ?? session.userId,
               action: "auth.sign_in",
-              summary: `登录成功（${providerName(provider)}）`,
+              summary: { key: "audit_sum_sign_in", params: { provider: providerName(provider) } },
               status: 200,
               ip: session.ipAddress ?? "",
               userAgent: session.userAgent ?? "",

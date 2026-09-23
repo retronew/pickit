@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "#types";
 import { defaultShareTitle, isShareType, sharedItem, type ShareRow } from "#shares";
+import { tr } from "#i18n";
 
 export const shareRoutes = new Hono<{ Bindings: Env }>();
 
@@ -27,11 +28,11 @@ shareRoutes.post("/", async (c) => {
     title?: string;
   }>();
   if (!isShareType(body.type) || !body.value?.trim()) {
-    return c.json({ error: "type（item / category / tag）和 value 必填" }, 400);
+    return c.json({ error: await tr(c, "api_share_invalid") }, 400);
   }
   const value = body.value.trim();
   if (body.type === "item" && !(await sharedItem(c.env.DB, value))) {
-    return c.json({ error: "收藏不存在" }, 404);
+    return c.json({ error: await tr(c, "api_item_not_found") }, 404);
   }
   const existing = await c.env.DB.prepare(
     "SELECT slug FROM shares WHERE type = ? AND value = ?",

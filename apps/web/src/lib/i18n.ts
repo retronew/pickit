@@ -13,9 +13,13 @@ export function intlLocale(): string {
   return INTL_LOCALE[getLocale()];
 }
 
-/** Marks <html lang> so screen readers and fonts pick the right language. */
+/**
+ * Marks <html lang> (screen readers, fonts) and sets the cookie the API reads
+ * to answer in the same language.
+ */
 export function applyDocumentLocale() {
   document.documentElement.lang = intlLocale();
+  document.cookie = `pickit_locale=${getLocale()}; path=/; max-age=31536000; SameSite=Lax`;
 }
 
 /** Saves the choice on the server (AI output, other devices) and reloads. */

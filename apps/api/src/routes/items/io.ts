@@ -10,6 +10,18 @@ import {
 } from "@pickit/shared";
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { toItemJson, findDuplicate, escapeHtml } from "./helpers";
+import { tr } from "#i18n";
+
+/** Items grouped by category in list order ("" = uncategorized). */
+function groupByCategory<T extends { category: string }>(items: T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const list = groups.get(item.category) ?? [];
+    list.push(item);
+    groups.set(item.category, list);
+  }
+  return groups;
+}
 
 export const ioRoutes = new Hono<{ Bindings: Env }>();
 
@@ -31,10 +43,10 @@ ioRoutes.post("/import", async (c) => {
           ? parseBookmarksHtml(body.content)
           : parseJsonItems(body.content);
   } catch {
-    return c.json({ error: "解析失败，请检查内容格式是否正确" }, 400);
+    return c.json({ error: await tr(c, "api_import_parse_failed") }, 400);
   }
   if (rows.length === 0) {
-    return c.json({ error: "没有识别到可导入的收藏" }, 400);
+    return c.json({ error: await tr(c, "api_import_empty") }, 400);
   }
 
   const seen = new Set<string>();
@@ -91,15 +103,13 @@ ioRoutes.get("/export", async (c) => {
   const ts = new Date().toISOString().slice(0, 10);
 
   if (format === "markdown") {
-    const groups = new Map<string, typeof items>();
-    for (const item of items) {
-      const key = item.category || "未分类";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(item);
-    }
+    const groups = groupByCategory(items);
+    const header = `| ${await tr(c, "field_name")} | ${await tr(c, "field_url")} | ${await tr(c, "field_note")} |\n| --- | --- | --- |\n`;
     let md = "";
     for (const [category, list] of groups) {
-      md += `## ${category}\n\n| 名称 | 链接 | 备注 |\n| --- | --- | --- |\n`;
+      // Uncategorized items come first without a heading, so re-importing
+      // them doesn't invent a category named after the heading.
+      md += `${category ? `## ${category}\n\n` : ""}${header}`;
       for (const item of list) {
         md += `| ${item.name} | ${item.url} | ${item.note} |\n`;
       }
@@ -116,18 +126,14 @@ ioRoutes.get("/export", async (c) => {
   if (format === "html") {
     let html =
       '<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n';
-    const groups = new Map<string, typeof items>();
-    for (const item of items) {
-      const key = item.category || "未分类";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(item);
-    }
-    for (const [category, list] of groups) {
-      html += `    <DT><H3>${escapeHtml(category)}</H3>\n    <DL><p>\n`;
-      for (const item of list) {
-        html += `        <DT><A HREF="${escapeHtml(item.url)}">${escapeHtml(item.name)}</A>\n`;
-      }
-      html += "    </DL><p>\n";
+    for (const [category, list] of groupByCategory(items)) {
+      const links = list.map(
+        (item) => `        <DT><A HREF="${escapeHtml(item.url)}">${escapeHtml(item.name)}</A>\n`,
+      );
+      // Uncategorized items stay at the top level instead of a made-up folder.
+      html += category
+        ? `    <DT><H3>${escapeHtml(category)}</H3>\n    <DL><p>\n${links.join("")}    </DL><p>\n`
+        : links.join("").replace(/^ {4}/gm, "");
     }
     html += "</DL><p>\n";
     return new Response(html, {

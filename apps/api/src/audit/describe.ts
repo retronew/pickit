@@ -1,47 +1,119 @@
-// Maps an API request to an action name and a readable summary.
+// Maps an API request to an action name and a summary. Summaries are
+// message refs (key + params, see @pickit/shared/i18n) so the audit page can
+// show them in any language; all keys are audit_sum_* in the catalogs.
+
+import type { MessageRef } from "@pickit/shared/i18n";
 
 export type Body = Record<string, any>;
 
-interface Described {
+export interface Described {
   action: string;
   target?: string;
-  summary: string;
+  summary: MessageRef;
 }
 
-const quote = (s: unknown) => (s ? `「${String(s)}」` : "");
+type Params = MessageRef["params"];
 
-const BULK_VERBS: Record<string, string> = {
-  delete: "删除",
-  pin: "置顶",
-  unpin: "取消置顶",
-  category: "修改分类",
-  purge: "彻底删除",
-  restore: "恢复",
-  add_tags: "添加标签",
-  remove_tags: "移除标签",
-  apply: "应用整理建议",
-};
+const msg = (key: string, params?: Params): MessageRef => ({ key: `audit_sum_${key}`, params });
+
+/** 「name」 in the reader's language; "" when empty. */
+const quote = (text: unknown): MessageRef | string =>
+  text ? { key: "audit_quote", params: { text: String(text) } } : "";
+
+const BULK_ACTIONS = new Set([
+  "delete",
+  "pin",
+  "unpin",
+  "category",
+  "purge",
+  "restore",
+  "add_tags",
+  "remove_tags",
+  "apply",
+]);
 
 /** MCP tool calls are audited; protocol chatter (initialize, tools/list…) is not. */
 function describeMcp(body: Body): Described | false {
   if (body.method !== "tools/call") return false;
   const name = String(body.params?.name ?? "");
   const args = (body.params?.arguments ?? {}) as Body;
-  const detail =
+  const summary =
     name === "search_bookmarks"
-      ? `搜索${quote(args.query)}`
+      ? msg("mcp_search", { query: quote(args.query) })
       : name === "add_bookmark"
-        ? `添加收藏 ${args.url ?? ""}`.trim()
+        ? msg("mcp_add", { url: String(args.url ?? "") })
         : name === "get_bookmark"
-          ? `查看收藏 #${args.id}`
-          : name;
-  return { action: "mcp.call", target: `mcp:${name}`, summary: `MCP：${detail}` };
+          ? msg("mcp_get", { id: String(args.id) })
+          : msg("mcp_other", { tool: name });
+  return { action: "mcp.call", target: `mcp:${name}`, summary };
+}
+
+function describeItem(method: string, id: string, sub: string | undefined, body: Body, name?: string): Described | null {
+  const target = `item:${id}`;
+  const label = quote(name ?? body.name) || `#${id}`;
+  if (!sub && method === "PUT") {
+    const keys = Object.keys(body);
+    if (keys.length === 1 && keys[0] === "pinned") {
+      return body.pinned
+        ? { action: "item.pin", target, summary: msg("item_pin", { label }) }
+        : { action: "item.unpin", target, summary: msg("item_unpin", { label }) };
+    }
+    return { action: "item.update", target, summary: msg("item_update", { label }) };
+  }
+  if (!sub && method === "DELETE") return { action: "item.delete", target, summary: msg("item_delete", { label }) };
+  const subs = ["restore", "purge", "summarize", "translate", "check", "reembed", "visit"];
+  if (sub && subs.includes(sub)) return { action: `item.${sub}`, target, summary: msg(`item_${sub}`, { label }) };
+  return null;
+}
+
+function describeBulk(body: Body): Described {
+  const count = body.action === "apply" ? (body.updates ?? []).length : (body.ids ?? []).length;
+  const action = String(body.action);
+  if (!BULK_ACTIONS.has(action)) return { action: `item.bulk_${action}`, summary: msg("bulk_other", { op: action, count }) };
+  const params: Params =
+    action === "category"
+      ? { count, category: quote(body.value) || { key: "uncategorized" } }
+      : Array.isArray(body.tags)
+        ? { count, tags: body.tags.map((t: string) => `#${t}`).join(" ") }
+        : { count };
+  return { action: `item.bulk_${action}`, summary: msg(`bulk_${action}`, params) };
+}
+
+function describeBackup(method: string, name: string, restore: boolean, body: Body, res: Body): Described | null {
+  const target = `backup:${name}`;
+  if (restore) {
+    const mode: MessageRef = { key: body.mode === "replace" ? "restore_replace" : "restore_merge" };
+    if (body.dryRun) return { action: "backup.restore_preview", target, summary: msg("backup_restore_preview", { name, mode }) };
+    const counts =
+      res.inserted != null
+        ? msg("backup_restore_counts", {
+            inserted: res.inserted,
+            skipped: res.skipped ?? 0,
+            trashed: res.trashed ? msg("backup_restore_trashed", { count: res.trashed }) : "",
+          })
+        : "";
+    return { action: "backup.restore", target, summary: msg("backup_restore", { name, mode, counts }) };
+  }
+  if (method === "GET") return { action: "backup.download", target, summary: msg("backup_download", { name }) };
+  if (method === "DELETE") return { action: "backup.delete", target, summary: msg("backup_delete", { name }) };
+  return null;
+}
+
+function describeShare(body: Body): MessageRef {
+  const what =
+    body.type === "category"
+      ? msg("share_category", { name: quote(body.value) })
+      : body.type === "tag"
+        ? msg("share_tag", { name: quote(body.value) })
+        : quote(body.title) || `#${body.value}`;
+  return msg("share_create", { what });
 }
 
 /**
- * Maps a request to an action name and a readable summary. `name` is the
- * item's name looked up before the handler ran (for /api/items/:id routes),
- * `res` the JSON response when useful (e.g. the id of a new item).
+ * Maps a request to an action and summary. `name` is the item's name looked
+ * up before the handler ran (for /api/items/:id routes), `res` the JSON
+ * response when useful (e.g. the id of a new item). null = not recognized
+ * (logged as "other"); false = deliberately not audited.
  */
 export function describe(
   method: string,
@@ -55,135 +127,97 @@ export function describe(
   let m: RegExpMatchArray | null;
 
   if ((m = p.match(/^\/items\/(\d+)(?:\/(\w+))?$/))) {
-    const [, id, sub] = m;
-    const target = `item:${id}`;
-    const label = quote(name ?? body.name) || `#${id}`;
-    if (!sub && method === "PUT") {
-      const keys = Object.keys(body);
-      if (keys.length === 1 && keys[0] === "pinned") {
-        return body.pinned
-          ? { action: "item.pin", target, summary: `置顶收藏${label}` }
-          : { action: "item.unpin", target, summary: `取消置顶${label}` };
-      }
-      return { action: "item.update", target, summary: `编辑收藏${label}` };
-    }
-    if (!sub && method === "DELETE") return { action: "item.delete", target, summary: `删除收藏${label}（移到回收站）` };
-    const subs: Record<string, [string, string]> = {
-      restore: ["item.restore", `从回收站恢复${label}`],
-      purge: ["item.purge", `彻底删除${label}`],
-      summarize: ["item.summarize", `生成 AI 摘要${label}`],
-      check: ["item.check", `检查链接${label}`],
-      reembed: ["item.reembed", `重建向量${label}`],
-      visit: ["item.visit", `打开收藏${label}`],
-    };
-    if (sub && subs[sub]) return { action: subs[sub][0], target, summary: subs[sub][1] };
+    const item = describeItem(method, m[1], m[2], body, name);
+    if (item) return item;
   }
 
-  const key = `${method} ${p}`;
-  switch (key) {
+  switch (`${method} ${p}`) {
     case "POST /items":
       return {
         action: "item.create",
         target: res.id ? `item:${res.id}` : undefined,
-        summary: `添加收藏${quote(body.name)}${body.allowDuplicate ? "（重复链接仍保存）" : ""}`,
+        summary: msg("item_create", { name: quote(body.name), dup: body.allowDuplicate ? msg("dup_suffix") : "" }),
       };
     case "POST /items/analyze":
-      return { action: "item.analyze", summary: `AI 识别链接 ${body.url ?? ""}`.trim() };
-    case "POST /items/import":
-      return body.dryRun
-        ? { action: "item.import_preview", summary: `预览导入（${body.format ?? "未知格式"}）` }
-        : {
-            action: "item.import",
-            summary: `导入数据（${body.format ?? "未知格式"}）${
-              res.inserted != null ? `：新增 ${res.inserted} 条，跳过 ${res.skipped ?? 0} 条` : ""
-            }`,
-          };
+      return { action: "item.analyze", summary: msg("item_analyze", { url: String(body.url ?? "") }) };
+    case "POST /items/import": {
+      const format = body.format ? String(body.format) : msg("unknown_format");
+      if (body.dryRun) return { action: "item.import_preview", summary: msg("import_preview", { format }) };
+      const counts = res.inserted != null ? msg("import_counts", { inserted: res.inserted, skipped: res.skipped ?? 0 }) : "";
+      return { action: "item.import", summary: msg("import", { format, counts }) };
+    }
     case "GET /items/export":
-      return { action: "item.export", summary: "导出数据" };
+      return { action: "item.export", summary: msg("export") };
     case "POST /items/merge":
       return {
         action: "item.merge",
         target: `item:${body.keepId}`,
-        summary: `合并重复收藏：保留 #${body.keepId}，移除 ${(body.removeIds ?? []).length} 项`,
+        summary: msg("merge", { keep: String(body.keepId), count: (body.removeIds ?? []).length }),
       };
     case "POST /items/suggest":
-      return { action: "item.suggest", summary: `AI 生成整理建议 ${(body.ids ?? []).length} 项` };
-    case "POST /items/bulk": {
-      const n = body.action === "apply" ? (body.updates ?? []).length : (body.ids ?? []).length;
-      const verb = BULK_VERBS[body.action] ?? body.action;
-      const extra =
-        body.action === "category"
-          ? `到${quote(body.value || "未分类")}`
-          : Array.isArray(body.tags)
-            ? `：${body.tags.map((t: string) => `#${t}`).join(" ")}`
-            : "";
-      return { action: `item.bulk_${body.action}`, summary: `批量${verb} ${n} 项${extra}` };
-    }
+      return { action: "item.suggest", summary: msg("suggest", { count: (body.ids ?? []).length }) };
+    case "POST /items/bulk":
+      return describeBulk(body);
     case "POST /tags/rename":
-      return { action: "tag.rename", target: `tag:${body.from}`, summary: `重命名标签${quote(body.from)}→${quote(body.to)}` };
+      return {
+        action: "tag.rename",
+        target: `tag:${body.from}`,
+        summary: msg("tag_rename", { from: quote(body.from), to: quote(body.to) }),
+      };
     case "POST /tags/delete":
-      return { action: "tag.delete", target: `tag:${body.tag}`, summary: `删除标签${quote(body.tag)}` };
+      return { action: "tag.delete", target: `tag:${body.tag}`, summary: msg("tag_delete", { tag: quote(body.tag) }) };
     case "POST /shares":
-      return {
-        action: "share.create",
-        target: res.slug ? `share:${res.slug}` : undefined,
-        summary: `创建分享链接：${
-          body.type === "category" ? `分类${quote(body.value)}` : body.type === "tag" ? `标签${quote(body.value)}` : quote(body.title) || `#${body.value}`
-        }`,
-      };
+      return { action: "share.create", target: res.slug ? `share:${res.slug}` : undefined, summary: describeShare(body) };
     case "POST /settings/ai":
-      return { action: "settings.ai_update", summary: "修改 AI 配置" };
+      return { action: "settings.ai_update", summary: msg("ai_update") };
     case "POST /settings/ai/models":
-      return { action: "settings.ai_models", summary: `获取${body.target === "embedding" ? "向量" : "对话"}模型列表` };
+      return { action: "settings.ai_models", summary: msg(body.target === "embedding" ? "ai_models_embedding" : "ai_models_chat") };
     case "POST /settings/ai/test":
-      return { action: "settings.ai_test", summary: `测试${body.target === "embedding" ? "向量" : "对话"}模型连接` };
+      return { action: "settings.ai_test", summary: msg(body.target === "embedding" ? "ai_test_embedding" : "ai_test_chat") };
     case "POST /settings/api-token/reset":
-      return { action: "settings.token_reset", summary: "生成 / 重置 API Token" };
+      return { action: "settings.token_reset", summary: msg("token_reset") };
     case "DELETE /settings/api-token":
-      return { action: "settings.token_delete", summary: "删除 API Token" };
+      return { action: "settings.token_delete", summary: msg("token_delete") };
     case "PUT /settings/allowed-emails":
+      return { action: "settings.allowed_emails", summary: msg("allowed_emails", { count: (body.emails ?? []).length }) };
+    case "PUT /settings/locale":
       return {
-        action: "settings.allowed_emails",
-        summary: `修改允许登录的邮箱（${(body.emails ?? []).length} 个）`,
+        action: "settings.locale",
+        summary: msg("locale", { locale: String(body.locale ?? "—"), ai: String(body.aiLanguage ?? "—") }),
       };
-    case "PUT /audit/settings":
+    case "PUT /audit/settings": {
+      const pruned = res.deleted ? msg("retention_pruned", { count: res.deleted }) : "";
       return {
         action: "settings.audit_retention",
-        summary: `修改审计日志保留时间为${body.retentionDays === 0 ? "永久" : ` ${body.retentionDays} 天`}${
-          res.deleted ? `，清理 ${res.deleted} 条` : ""
-        }`,
+        summary:
+          body.retentionDays === 0
+            ? msg("retention_forever", { pruned })
+            : msg("retention_days", { days: Number(body.retentionDays), pruned }),
       };
+    }
     case "POST /backups":
       return {
         action: "backup.create",
         target: res.name ? `backup:${res.name}` : undefined,
-        summary: `手动备份${res.count != null ? `：${res.count} 条收藏` : ""}`,
+        summary: msg("backup_create", { count: res.count != null ? msg("backup_count", { count: res.count }) : "" }),
       };
     case "POST /chat":
-      return { action: "ai.chat", summary: "AI 问答" };
+      return { action: "ai.chat", summary: msg("chat") };
     case "POST /auth/sign-out":
-      return { action: "auth.sign_out", summary: "退出登录" };
+      return { action: "auth.sign_out", summary: msg("sign_out") };
   }
 
   if ((m = p.match(/^\/backups\/([^/]+?)(\/restore)?$/))) {
-    const [, name, restore] = m;
-    const target = `backup:${name}`;
-    if (restore) {
-      const mode = body.mode === "replace" ? "覆盖" : "合并";
-      if (body.dryRun) return { action: "backup.restore_preview", target, summary: `预览恢复备份 ${name}（${mode}）` };
-      const counts = res.inserted != null ? `：恢复 ${res.inserted} 条，跳过 ${res.skipped ?? 0} 条${res.trashed ? `，${res.trashed} 条移到回收站` : ""}` : "";
-      return { action: "backup.restore", target, summary: `恢复备份 ${name}（${mode}）${counts}` };
-    }
-    if (method === "GET") return { action: "backup.download", target, summary: `下载备份 ${name}` };
-    if (method === "DELETE") return { action: "backup.delete", target, summary: `删除备份 ${name}` };
+    const backup = describeBackup(method, m[1], !!m[2], body, res);
+    if (backup) return backup;
   }
   if ((m = p.match(/^\/shares\/([^/]+)$/)) && method === "DELETE") {
-    return { action: "share.revoke", target: `share:${m[1]}`, summary: `撤销分享 ${m[1]}` };
+    return { action: "share.revoke", target: `share:${m[1]}`, summary: msg("share_revoke", { slug: m[1] }) };
   }
   if ((m = p.match(/^\/jobs\/(\w+)\/(start|pause|resume|retry)$/))) {
-    const job = m[1] === "reembed" ? "向量索引重建" : "批量整理";
-    const verb = { start: "开始", pause: "暂停", resume: "继续", retry: "重试失败项" }[m[2]];
-    return { action: `job.${m[2]}`, target: `job:${m[1]}`, summary: `${verb}${job}${body.mode ? `（${body.mode}）` : ""}` };
+    const job: MessageRef = { key: m[1] === "reembed" ? "audit_job_reembed" : "audit_job_organize" };
+    const mode = body.mode ? msg("mode", { mode: String(body.mode) }) : "";
+    return { action: `job.${m[2]}`, target: `job:${m[1]}`, summary: msg(`job_${m[2]}`, { job, mode }) };
   }
   return null;
 }

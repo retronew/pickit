@@ -58,7 +58,7 @@ function str(value: unknown): string {
 export const TOOLS: Tool[] = [
   {
     name: "search_bookmarks",
-    title: "搜索收藏",
+    title: "Search bookmarks",
     description:
       "Search the user's saved bookmarks by keywords or a natural-language description " +
       "(keyword + semantic search). Returns the best matches first.",
@@ -90,7 +90,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "get_bookmark",
-    title: "查看收藏",
+    title: "Get bookmark",
     description: "Get one bookmark by id, including its note and AI summary.",
     inputSchema: {
       type: "object",
@@ -111,7 +111,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "list_bookmarks",
-    title: "列出收藏",
+    title: "List bookmarks",
     description:
       "List bookmarks, optionally in a category (sub-categories included) or with a tag. " +
       'Sort by "recent" (default) or "popular" (most opened).',
@@ -149,7 +149,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "list_categories",
-    title: "列出分类",
+    title: "List categories",
     description: "List all categories with how many bookmarks each has.",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true },
@@ -163,7 +163,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "list_tags",
-    title: "列出标签",
+    title: "List tags",
     description: "List all tags with how many bookmarks use each.",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true },
@@ -177,7 +177,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "add_bookmark",
-    title: "添加收藏",
+    title: "Add bookmark",
     description:
       "Save a new bookmark. If the URL is already saved, nothing is added and the existing " +
       "bookmark is returned. Prefer existing categories (see list_categories).",
@@ -187,7 +187,7 @@ export const TOOLS: Tool[] = [
         url: { type: "string", description: "http(s) URL" },
         name: { type: "string", description: "Title; defaults to the URL's host" },
         note: { type: "string", description: "Short description, Markdown allowed" },
-        category: { type: "string", description: 'e.g. "前端" or "前端/React"' },
+        category: { type: "string", description: 'e.g. "Frontend" or "Frontend/React"; prefer existing ones' },
         tags: { type: "array", items: { type: "string" }, maxItems: 10 },
       },
       required: ["url"],

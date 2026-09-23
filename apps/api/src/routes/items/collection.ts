@@ -48,7 +48,7 @@ collectionRoutes.get("/stats", async (c) => {
   return c.json({
     total,
     byCategory: byCategory.map((r) => ({
-      category: r.category || "未分类",
+      category: r.category,
       count: r.count,
     })),
     byMonth,

@@ -3,6 +3,7 @@ import type { Env } from "#types";
 import { getSettings } from "#settings";
 import { getJob, startJob, setJobStatus, retryFailures, type JobKind, type JobState } from "#jobs";
 import { JOB_MODES, jobConfigError, runJobStep, selectJobIds } from "#job-runners";
+import { tr } from "#i18n";
 
 export const jobRoutes = new Hono<{ Bindings: Env; Variables: { kind: JobKind } }>();
 
@@ -29,10 +30,10 @@ jobRoutes.post("/:kind/start", async (c) => {
   if (!JOB_MODES[kind].includes(mode)) return c.json({ error: "unknown mode" }, 400);
   const settings = await getSettings(c.env.DB);
   const configError = jobConfigError(kind, settings);
-  if (configError) return c.json({ error: configError }, 400);
+  if (configError) return c.json({ error: await tr(c, configError) }, 400);
   const current = await getJob(c.env.DB, kind);
   if (current.status === "running") {
-    return c.json({ error: "任务正在运行，请先暂停再重新开始" }, 409);
+    return c.json({ error: await tr(c, "api_job_running") }, 409);
   }
   const ids = await selectJobIds(c.env, kind, mode, settings!);
   return c.json(view(await startJob(c.env.DB, kind, mode, ids)));
@@ -46,12 +47,12 @@ jobRoutes.post("/:kind/pause", async (c) =>
 
 jobRoutes.post("/:kind/resume", async (c) => {
   const configError = jobConfigError(c.var.kind, await getSettings(c.env.DB));
-  if (configError) return c.json({ error: configError }, 400);
+  if (configError) return c.json({ error: await tr(c, configError) }, 400);
   return c.json(view(await setJobStatus(c.env.DB, c.var.kind, "running")));
 });
 
 jobRoutes.post("/:kind/retry", async (c) => {
   const configError = jobConfigError(c.var.kind, await getSettings(c.env.DB));
-  if (configError) return c.json({ error: configError }, 400);
+  if (configError) return c.json({ error: await tr(c, configError) }, 400);
   return c.json(view(await retryFailures(c.env.DB, c.var.kind)));
 });
