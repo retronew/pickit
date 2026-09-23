@@ -82,7 +82,7 @@ cd ../.. && pnpm deploy
 
 - **R2 备份（可选）**：运行 `npx wrangler r2 bucket create pickit-backups`。不需要 R2 的话，删掉 `wrangler.jsonc` 里的 `r2_buckets` 段，定时任务会自动跳过备份。
 - **自定义域名（可选）**：在 `wrangler.jsonc` 里加上 `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]`，域名需要已接入你的 Cloudflare 账号。
-- **AI（可选）**：登录后到 **设置** 页选择服务商（OpenAI、Anthropic、Gemini、DeepSeek、通义千问、OpenRouter 等，或「自定义 / 中转站」），填写 API Key，再从拉取到的模型列表里选模型。对话模型和向量模型分开配置，可以用不同的服务商。自定义地址时，「检测并获取模型」会自动判断要不要加 `/v1`，页面上也会实时显示实际请求的地址。不配置 AI 的话，其他功能都能正常使用。
+- **AI（可选）**：登录后到 **设置** 页选择服务商（OpenAI、Anthropic、Gemini、DeepSeek、通义千问、OpenRouter 等，或「自定义」），填写 API Key，再从拉取到的模型列表里选模型。对话模型和向量模型分开配置，可以用不同的服务商。自定义地址时，「检测并获取模型」会自动判断要不要加 `/v1`，页面上也会实时显示实际请求的地址。不配置 AI 的话，其他功能都能正常使用。
 
 ### 自动部署
 

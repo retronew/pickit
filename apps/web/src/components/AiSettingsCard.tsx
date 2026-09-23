@@ -73,7 +73,7 @@ interface TestState {
 
 const PROVIDER_LABELS: Record<string, string> = {
   ...Object.fromEntries(AI_PROVIDERS.map((p) => [p.id, p.name])),
-  [CUSTOM_PROVIDER]: "自定义 / 中转站",
+  [CUSTOM_PROVIDER]: "自定义",
 };
 
 function originOf(url: string): string | null {
@@ -459,7 +459,7 @@ function EndpointFields<P extends string>({
             id={id("baseUrl")}
             size="lg"
             className="font-mono"
-            placeholder={preset?.baseUrl ?? "https://your-relay.example.com/v1"}
+            placeholder={preset?.baseUrl ?? "https://api.example.com/v1"}
             value={endpoint.baseUrl}
             readOnly={!urlEditable}
             onChange={(e) => onChange({ baseUrl: e.target.value } as Partial<AiEndpoint<P>>)}
@@ -467,7 +467,7 @@ function EndpointFields<P extends string>({
           <FieldDescription>
             {urlEditable
               ? "填到版本号为止，通常以 /v1 结尾，不要带 /chat/completions。不确定的话只填域名，点「检测并获取模型」会自动判断要不要加 /v1。"
-              : "使用该服务商的官方地址，无需填写。需要走中转站时，请选择「自定义 / 中转站」。"}
+              : "使用该服务商的官方地址，无需填写。需要使用其他地址时，请选择「自定义」。"}
           </FieldDescription>
           {warnings.map((w) => (
             <p key={w} className="text-xs text-amber-700 dark:text-amber-400">

@@ -82,7 +82,7 @@ cd ../.. && pnpm deploy
 
 - **R2 backups (optional):** run `npx wrangler r2 bucket create pickit-backups`. If you don't want R2, remove the `r2_buckets` block from `wrangler.jsonc` and the cron will skip backups.
 - **Custom domain (optional):** add `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]` to `wrangler.jsonc`. The domain must be a zone in your Cloudflare account.
-- **AI (optional):** after logging in, open **Settings**, pick a provider (OpenAI, Anthropic, Gemini, DeepSeek, Qwen, OpenRouter, … or **Custom / relay**), enter the API key and pick models from the fetched list. Chat and embedding models are configured separately and can use different providers. For custom endpoints, "Detect & fetch models" figures out whether `/v1` is needed, and the page shows the exact URLs that will be requested. Without AI, all other features still work.
+- **AI (optional):** after logging in, open **Settings**, pick a provider (OpenAI, Anthropic, Gemini, DeepSeek, Qwen, OpenRouter, … or **Custom**), enter the API key and pick models from the fetched list. Chat and embedding models are configured separately and can use different providers. For custom endpoints, "Detect & fetch models" figures out whether `/v1` is needed, and the page shows the exact URLs that will be requested. Without AI, all other features still work.
 
 ### Continuous deployment
 

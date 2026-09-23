@@ -232,17 +232,17 @@ export const CHAT_PROTOCOLS: { value: ChatProtocol; label: string; hint: string 
   {
     value: "openai-chat",
     label: "OpenAI Chat Completions",
-    hint: "绝大多数 OpenAI 兼容服务和中转站都用这个，不确定就选它。",
+    hint: "绝大多数 OpenAI 兼容服务都用这个，不确定就选它。",
   },
   {
     value: "openai-responses",
     label: "OpenAI Responses",
-    hint: "OpenAI 官方的新接口，部分新模型只支持这种；中转站一般不支持。",
+    hint: "OpenAI 官方的新接口，部分新模型只支持这种。",
   },
   {
     value: "anthropic",
     label: "Anthropic Messages",
-    hint: "Claude 原生接口，也适用于提供 Anthropic 格式的中转站。",
+    hint: "Claude 原生接口，也适用于兼容 Anthropic 格式的自定义服务。",
   },
   {
     value: "google",
@@ -255,7 +255,7 @@ export const EMBEDDING_PROTOCOLS: { value: EmbeddingProtocol; label: string; hin
   {
     value: "openai",
     label: "OpenAI Embeddings",
-    hint: "OpenAI 兼容的 /embeddings 接口，绝大多数服务和中转站都用这个。",
+    hint: "OpenAI 兼容的 /embeddings 接口，绝大多数服务都用这个。",
   },
   {
     value: "google",
@@ -307,7 +307,7 @@ export function baseUrlWarnings(input: string, isCustom: boolean): string[] {
   }
   if (isCustom && !hasVersionSegment(normalized)) {
     warnings.push(
-      "地址里没有 /v1 这类版本号。大多数 OpenAI 兼容服务和中转站需要以 /v1 结尾，可以点「检测并获取模型」自动判断。",
+      "地址里没有 /v1 这类版本号。大多数 OpenAI 兼容服务需要以 /v1 结尾，可以点「检测并获取模型」自动判断。",
     );
   }
   return warnings;
