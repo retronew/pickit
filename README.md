@@ -14,6 +14,7 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **Sharing**: public read-only share links (`/s/:slug`)
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page
 - **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist that can be edited in Settings (no passwords)
+- **Theme**: follows the system light / dark setting by default; the header button cycles System → Light → Dark
 - **API access**: Bearer API token for scripts and integrations
 - **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The settings page drives them while open; a per-minute cron keeps them going in the background
 - **Maintenance cron**: daily JSON backup to R2 and dead-link checks

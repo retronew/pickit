@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate } from "react-router";
-import { LogOutIcon, MoonIcon, SunIcon } from "lucide-react";
+import { LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "#hooks/useTheme";
 import { Button } from "#components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipPopup } from "#components/ui/tooltip";
 import { BackToTop } from "#components/BackToTop";
 import { CommandPalette } from "#components/CommandPalette";
 import { cn } from "#lib/utils";
 import { authClient } from "#lib/auth-client";
 
+const MODE_LABEL = { system: "跟随系统", light: "浅色", dark: "深色" } as const;
+const MODE_ICON = { system: MonitorIcon, light: SunIcon, dark: MoonIcon } as const;
+
 export function AppShell() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const navigate = useNavigate();
-  const { theme, toggle } = useTheme();
+  const { mode, theme, nextMode, cycle } = useTheme();
+  const ModeIcon = MODE_ICON[mode];
 
   useEffect(() => {
     // The API also enforces the email allowlist; a session alone isn't enough.
@@ -61,14 +66,27 @@ export function AppShell() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={(e) => toggle({ x: e.clientX, y: e.clientY })}
-              aria-label="切换主题"
-            >
-              {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={(e) => cycle({ x: e.clientX, y: e.clientY })}
+                    aria-label={`主题：${MODE_LABEL[mode]}，点击切换为${MODE_LABEL[nextMode]}`}
+                  />
+                }
+              >
+                <ModeIcon />
+              </TooltipTrigger>
+              <TooltipPopup side="bottom">
+                主题：{MODE_LABEL[mode]}
+                {mode === "system" && `（当前${MODE_LABEL[theme]}）`}
+                <span className="text-muted-foreground">
+                  {" · "}点击切换为{MODE_LABEL[nextMode]}
+                </span>
+              </TooltipPopup>
+            </Tooltip>
             <Button
               variant="ghost"
               size="sm"

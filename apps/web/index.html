@@ -9,9 +9,14 @@
     <meta name="theme-color" content="#0a0a0a" />
     <script>
       (function () {
-        var stored = localStorage.getItem("pickit-theme");
-        var theme = stored || "dark";
-        document.documentElement.classList.toggle("dark", theme === "dark");
+        var mode = "system";
+        try {
+          mode = localStorage.getItem("pickit-theme-mode") || "system";
+        } catch (e) {}
+        var dark =
+          mode === "dark" ||
+          (mode !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
       })();
     </script>
   </head>
