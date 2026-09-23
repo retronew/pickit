@@ -92,13 +92,6 @@ pnpm import -- --file path/to/bookmarks.md
 画面は中文・English・日本語に対応しています。文言は `packages/shared/messages/{zh,en,ja}.json`（zh が原文）にあり、`pnpm install` 時に [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) で `packages/shared/src/paraglide` にコンパイルされます（`pnpm --filter @pickit/shared i18n` でも可）。Web アプリと API は同じメッセージ関数を使います。
 
 - 文言の追加：3 つのファイルに同じキーで追加し、コードでは `m.your_key()` を使います。いずれかの言語でキーが欠けている、文言が空、プレースホルダーが一致しない、ICU の複数形構文を使っている（Paraglide の形式は非対応。件数はどの数でも自然に読める表現にします）場合はテストが失敗します。
-- 足りない英語 / 日本語の文言を AI で下書きし、差分を確認します：
-
-  ```bash
-  I18N_AI_BASE_URL=https://api.openai.com/v1 I18N_AI_KEY=sk-… I18N_AI_MODEL=gpt-4.1-mini pnpm i18n:translate
-  ```
-
-  OpenAI 互換 API なら何でも使えます。`{プレースホルダー}` が中国語の原文と一致しない下書きはスキップされ、一覧表示されます。
 
 ### テスト
 

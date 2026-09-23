@@ -92,13 +92,6 @@ pnpm import -- --file path/to/bookmarks.md
 The interface is available in Chinese, English and Japanese. Strings live in `packages/shared/messages/{zh,en,ja}.json` (zh is the source) and are compiled by [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) into `packages/shared/src/paraglide` on `pnpm install` (or `pnpm --filter @pickit/shared i18n`). The same message functions are used by the web app and the API.
 
 - Add a string: put it in all three files with the same key, then use `m.your_key()`. Tests fail if a language is missing a key, a message is empty, placeholders differ, or ICU plural syntax is used (Paraglide's format doesn't support it; word counts so they read correctly for any number).
-- Draft missing English / Japanese strings with AI, then review the diff:
-
-  ```bash
-  I18N_AI_BASE_URL=https://api.openai.com/v1 I18N_AI_KEY=sk-… I18N_AI_MODEL=gpt-4.1-mini pnpm i18n:translate
-  ```
-
-  Any OpenAI-compatible API works. Drafts whose `{placeholders}` don't match the Chinese source are skipped and reported.
 
 ### Tests
 

@@ -92,13 +92,6 @@ pnpm import -- --file path/to/bookmarks.md
 界面支持中文、English、日本語。文案放在 `packages/shared/messages/{zh,en,ja}.json`（以 zh 为准），`pnpm install` 时由 [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) 编译到 `packages/shared/src/paraglide`（也可以运行 `pnpm --filter @pickit/shared i18n`）。网页端和 API 共用同一套文案函数。
 
 - 新增文案：在三个文件里用同一个键添加，然后在代码里用 `m.your_key()`。如果某个语言缺键、文案为空、占位符不一致，或者用了 ICU 复数语法（Paraglide 的格式不支持；数量相关的文案要写成任何数字都通顺的说法），测试都会失败。
-- 用 AI 起草缺失的英文 / 日文文案，再检查改动：
-
-  ```bash
-  I18N_AI_BASE_URL=https://api.openai.com/v1 I18N_AI_KEY=sk-… I18N_AI_MODEL=gpt-4.1-mini pnpm i18n:translate
-  ```
-
-  任何 OpenAI 兼容接口都可以。`{占位符}` 和中文原文对不上的草稿会被跳过并列出来。
 
 ### 测试
 

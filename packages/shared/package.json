@@ -14,8 +14,7 @@
     "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage preferredLanguage baseLocale --emit-ts-declarations --no-emit-readme",
     "postinstall": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage preferredLanguage baseLocale --emit-ts-declarations --no-emit-readme",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "i18n:translate": "node scripts/translate-messages.ts"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.25.4"

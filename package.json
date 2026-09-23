@@ -12,8 +12,7 @@
     "db:migrate": "pnpm --filter @pickit/api db:migrate",
     "db:migrate:remote": "pnpm --filter @pickit/api db:migrate:remote",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "i18n:translate": "pnpm --filter @pickit/shared i18n:translate"
+    "test": "pnpm -r test"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
