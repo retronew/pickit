@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 批量导入 Notion 风格的 Markdown 表格到 pickit D1 数据库
+// 批量导入 Notion 风格的 Markdown 表格到 PickIt D1 数据库
 // 用法：
 //   pnpm import                          # 使用 data/bookmarks.md，导入本地开发库
 //   pnpm import -- --file my.md          # 指定文件

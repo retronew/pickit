@@ -33,7 +33,7 @@ type Format = "markdown" | "json" | "html";
 
 const FORMAT_LABELS: Record<Format, string> = {
   markdown: "Markdown 表格",
-  json: "JSON（pickit 格式）",
+  json: "JSON（PickIt 格式）",
   html: "浏览器书签 HTML",
 };
 
@@ -92,7 +92,7 @@ export function DataImportExportCard() {
       <CardHeader>
         <CardTitle>数据导入导出</CardTitle>
         <CardDescription>
-          支持 Markdown 表格、浏览器书签 HTML、pickit 自身的 JSON 导出格式。
+          支持 Markdown 表格、浏览器书签 HTML、PickIt 自身的 JSON 导出格式。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -147,7 +147,7 @@ export function DataImportExportCard() {
                 setContent(e.target.value);
                 setPreview(null);
               }}
-              placeholder="粘贴 Markdown 表格 / 浏览器导出的书签 HTML / pickit 导出的 JSON"
+              placeholder="粘贴 Markdown 表格 / 浏览器导出的书签 HTML / PickIt 导出的 JSON"
             />
           </Field>
 

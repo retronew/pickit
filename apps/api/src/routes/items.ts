@@ -332,7 +332,7 @@ itemRoutes.post("/analyze", async (c) => {
   let icon = "";
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; pickit/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; PickIt/1.0)" },
       redirect: "follow",
     });
     const html = (await res.text()).slice(0, 300_000);

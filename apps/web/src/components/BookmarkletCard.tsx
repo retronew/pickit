@@ -43,7 +43,7 @@ export function BookmarkletCard() {
             onClick={(e) => e.preventDefault()}
             draggable
           >
-            📌 收藏到 pickit
+            📌 收藏到 PickIt
           </a>
           <Button variant="outline" size="icon-sm" aria-label="复制代码" onClick={copy}>
             {copied ? <CheckIcon /> : <CopyIcon />}
