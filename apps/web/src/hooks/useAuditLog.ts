@@ -32,7 +32,9 @@ function toParams(f: AuditFilters, extra: Record<string, string | number> = {}) 
     if (f[key]) p.set(key, f[key]);
   }
   if (f.from) p.set("from", String(new Date(`${f.from}T00:00:00`).getTime()));
-  if (f.to) p.set("to", String(new Date(`${f.to}T23:59:59.999`).getTime()));
+  // A range with only a start day means that single day.
+  const to = f.to || f.from;
+  if (to) p.set("to", String(new Date(`${to}T23:59:59.999`).getTime()));
   for (const [k, v] of Object.entries(extra)) p.set(k, String(v));
   return p.toString();
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { XIcon } from "lucide-react";
 import { debounce } from "es-toolkit";
 import { Input } from "#components/ui/input";
+import { DateRangePicker } from "#components/DateRangePicker";
 import { Button } from "#components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#components/ui/select";
 import { AUDIT_CATEGORIES, actionCategory, actionLabel } from "#lib/audit";
@@ -109,27 +110,12 @@ export function AuditFiltersBar({
         items={{ ok: "成功", error: "失败" }}
         onChange={(result) => set({ result: result as AuditFilters["result"] })}
       />
-      <div className="flex items-center gap-1 text-muted-foreground text-xs">
-        <Input
-          type="date"
-          size="sm"
-          className="w-36"
-          aria-label="开始日期"
-          value={filters.from}
-          max={filters.to || undefined}
-          onChange={(e) => set({ from: e.target.value })}
-        />
-        至
-        <Input
-          type="date"
-          size="sm"
-          className="w-36"
-          aria-label="结束日期"
-          value={filters.to}
-          min={filters.from || undefined}
-          onChange={(e) => set({ to: e.target.value })}
-        />
-      </div>
+      <DateRangePicker
+        from={filters.from}
+        to={filters.to}
+        onChange={(range) => set(range)}
+        placeholder="全部时间"
+      />
       {dirty && (
         <Button variant="ghost" size="sm" onClick={() => onChange(EMPTY_FILTERS)}>
           <XIcon />
