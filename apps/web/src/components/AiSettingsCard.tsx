@@ -552,11 +552,24 @@ function ModelField({
 }) {
   const preferred = state.models.filter((m) => m.kind === target).map((m) => m.id);
   const items = preferred.length ? preferred : state.models.map((m) => m.id);
+  // Show the full list when the popup opens; filter only once the user edits
+  // the input. Otherwise a selected model filters the list down to itself.
+  const [openedWith, setOpenedWith] = useState<string | null>(null);
+  const query = value.trim().toLowerCase();
+  const filteredItems =
+    openedWith === value || !query ? items : items.filter((id) => id.toLowerCase().includes(query));
   return (
     <Field>
       <FieldLabel htmlFor={`${target}-model`}>模型</FieldLabel>
       <div className="flex gap-2">
-        <Autocomplete items={items} value={value} onValueChange={(v) => onChange(v)} openOnInputClick>
+        <Autocomplete
+          items={items}
+          filteredItems={filteredItems}
+          value={value}
+          onValueChange={(v) => onChange(v)}
+          onOpenChange={(open) => setOpenedWith(open ? value : null)}
+          openOnInputClick
+        >
           <AutocompleteInput
             id={`${target}-model`}
             size="lg"
