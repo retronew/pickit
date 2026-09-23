@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api, copyText, toastError, toastSuccess } from "#lib/api";
 import { CopyIcon, CheckIcon, RefreshCwIcon } from "lucide-react";
 import {
   Card,
@@ -38,16 +39,18 @@ export function ApiTokenCard() {
       });
       if (!ok) return;
     }
-    const res = await fetch("/api/settings/api-token/reset", {
-      method: "POST",
-    });
-    const data = await res.json();
-    setNewToken(data.token);
-    refresh();
+    try {
+      const data = await api<{ token: string }>("/api/settings/api-token/reset", { method: "POST" });
+      setNewToken(data.token);
+      toastSuccess(masked ? "已重置 Token" : "已生成 Token", { description: "记得马上复制", id: "api-token" });
+      refresh();
+    } catch (err) {
+      toastError(masked ? "重置 Token 失败" : "生成 Token 失败", err, { id: "api-token" });
+    }
   }
 
   async function copy() {
-    await navigator.clipboard.writeText(newToken);
+    if (!(await copyText(newToken, "Token 已复制"))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }

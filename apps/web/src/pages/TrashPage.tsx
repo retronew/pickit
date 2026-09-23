@@ -1,3 +1,4 @@
+import { api, toastError, toastSuccess } from "#lib/api";
 import { useEffect, useState } from "react";
 import { RotateCcwIcon, Trash2Icon } from "lucide-react";
 import type { Item } from "@pickit/shared";
@@ -24,7 +25,12 @@ export function TrashPage() {
   }, []);
 
   async function restore(item: Item) {
-    await fetch(`/api/items/${item.id}/restore`, { method: "POST" });
+    try {
+      await api(`/api/items/${item.id}/restore`, { method: "POST" });
+      toastSuccess("已恢复", { description: item.name, id: "trash" });
+    } catch (err) {
+      toastError("恢复失败", err, { id: "trash" });
+    }
     refresh();
   }
 
@@ -36,7 +42,12 @@ export function TrashPage() {
       danger: true,
     });
     if (!ok) return;
-    await fetch(`/api/items/${item.id}/purge`, { method: "DELETE" });
+    try {
+      await api(`/api/items/${item.id}/purge`, { method: "DELETE" });
+      toastSuccess("已彻底删除", { description: item.name, id: "trash" });
+    } catch (err) {
+      toastError("删除失败", err, { id: "trash" });
+    }
     refresh();
   }
 
@@ -48,11 +59,12 @@ export function TrashPage() {
       danger: true,
     });
     if (!ok) return;
-    await fetch("/api/items/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: items.map((i) => i.id), action: "purge" }),
-    });
+    try {
+      await api("/api/items/bulk", { json: { ids: items.map((i) => i.id), action: "purge" } });
+      toastSuccess("回收站已清空", { id: "trash" });
+    } catch (err) {
+      toastError("清空失败", err, { id: "trash" });
+    }
     refresh();
   }
 

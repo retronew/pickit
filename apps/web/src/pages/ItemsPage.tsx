@@ -5,7 +5,10 @@ import { ArrowUpDownIcon, CheckSquareIcon, XIcon } from "lucide-react";
 import { useItems, type Item } from "#hooks/useItems";
 import { useItemSearch } from "#hooks/useItemSearch";
 import { groupByCategory } from "#lib/groupItems";
-import { ItemFormDialog, type ItemFormPayload } from "#components/ItemFormDialog";
+import { cn } from "#lib/utils";
+import { ItemFormDialog } from "#components/ItemFormDialog";
+import { api, toastError, toastSuccess } from "#lib/api";
+import { saveItem } from "#lib/items";
 import { Confirm } from "#components/Confirm";
 import { ItemSearchBar } from "#components/ItemSearchBar";
 import { CategoryFilter, type CategoryOption } from "#components/CategoryFilter";
@@ -37,7 +40,7 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 export function ItemsPage() {
   const { items, loading, refresh } = useItems();
-  const { query, setQuery, hits, searching } = useItemSearch();
+  const { query, setQuery, hits, searching, error: searchError } = useItemSearch();
   const [searchParams, setSearchParams] = useSearchParams();
   const [category, setCategory] = useState("");
   const selectedTags = useMemo(() => uniq(searchParams.getAll("tag")), [searchParams]);
@@ -139,58 +142,37 @@ export function ItemsPage() {
 
   const grouped = useMemo(() => groupByCategory(visibleItems), [visibleItems]);
 
-  const saveItem = useCallback(
-    async (url: string, payload: ItemFormPayload, method: "POST" | "PUT") => {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.status === 409) {
-        const data = (await res.json()) as { existing?: { id: number; name: string } };
-        const ok = await Confirm.call({
-          title: "这条收藏已经存在",
-          message: `「${data.existing?.name ?? "这条收藏"}」已经在你收藏里了，还要再存一条吗？`,
-          confirmLabel: "继续保存",
-        });
-        if (!ok) return;
-        await fetch(url, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, allowDuplicate: true }),
-        });
-      }
-      refresh();
-    },
-    [refresh],
-  );
-
   async function addItem() {
     const payload = await ItemFormDialog.call({
       item: null,
       categories,
       allTags,
+      onSubmit: (p) => saveItem(p, null),
     });
-    if (!payload) return;
-    await saveItem("/api/items", payload, "POST");
+    if (payload) refresh();
   }
 
   const editItem = useCallback(
     async (item: Item) => {
-      const payload = await ItemFormDialog.call({ item, categories, allTags });
-      if (!payload) return;
-      await saveItem(`/api/items/${item.id}`, payload, "PUT");
+      const payload = await ItemFormDialog.call({
+        item,
+        categories,
+        allTags,
+        onSubmit: (p) => saveItem(p, item),
+      });
+      if (payload) refresh();
     },
-    [categories, allTags, saveItem],
+    [categories, allTags, refresh],
   );
 
   const togglePin = useCallback(async (item: Item) => {
-    await fetch(`/api/items/${item.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pinned: !item.pinned }),
-    });
-    refresh();
+    try {
+      await api(`/api/items/${item.id}`, { method: "PUT", json: { pinned: !item.pinned } });
+      toastSuccess(item.pinned ? "已取消置顶" : "已置顶", { description: item.name, id: "item-pin" });
+      refresh();
+    } catch (err) {
+      toastError(item.pinned ? "取消置顶失败" : "置顶失败", err, { id: "item-pin" });
+    }
   }, [refresh]);
 
   const deleteItem = useCallback(
@@ -202,9 +184,28 @@ export function ItemsPage() {
         danger: true,
       });
       if (!ok) return;
-      await fetch(`/api/items/${item.id}`, { method: "DELETE" });
+      try {
+        await api(`/api/items/${item.id}`, { method: "DELETE" });
+      } catch (err) {
+        toastError("删除失败", err, { id: "item-delete" });
+        return;
+      }
       if (detailItem?.id === item.id) setDetailOpen(false);
       refresh();
+      toastSuccess("已移到回收站", {
+        description: item.name,
+        id: "item-delete",
+        action: {
+          label: "撤销",
+          onClick: () =>
+            api(`/api/items/${item.id}/restore`, { method: "POST" })
+              .then(() => {
+                toastSuccess("已恢复", { description: item.name, id: "item-delete" });
+                refresh();
+              })
+              .catch((err) => toastError("恢复失败", err, { id: "item-delete" })),
+        },
+      });
     },
     [detailItem, refresh],
   );
@@ -228,11 +229,20 @@ export function ItemsPage() {
     value?: string,
   ) {
     if (selectedIds.size === 0) return;
-    await fetch("/api/items/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [...selectedIds], action, value }),
-    });
+    const count = selectedIds.size;
+    try {
+      await api("/api/items/bulk", { json: { ids: [...selectedIds], action, value } });
+    } catch (err) {
+      toastError("批量操作失败", err, { id: "item-bulk" });
+      return;
+    }
+    const done = {
+      delete: `已将 ${count} 项移到回收站`,
+      pin: `已置顶 ${count} 项`,
+      unpin: `已取消置顶 ${count} 项`,
+      category: `已将 ${count} 项移到「${value || "未分类"}」`,
+    }[action];
+    toastSuccess(done, { id: "item-bulk" });
     exitSelectMode();
     refresh();
   }
@@ -257,6 +267,20 @@ export function ItemsPage() {
         onAdd={addItem}
         onBatchAdd={() => setBatchOpen(true)}
       />
+      {query.trim() && (
+        <p
+          role="status"
+          className={cn("-mt-2 text-xs", searchError ? "text-destructive" : "text-muted-foreground")}
+        >
+          {searching
+            ? `正在搜索「${query.trim()}」…`
+            : searchError
+              ? `搜索失败：${searchError}`
+              : hits
+                ? `找到 ${visibleItems.length} 条相关收藏，按相关度排序`
+                : null}
+        </p>
+      )}
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -356,7 +380,7 @@ export function ItemsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="animate-fade-in space-y-5">
+        <div className={cn("animate-fade-in space-y-5 transition-opacity", searching && "opacity-60")}>
         {grouped.map(([cat, list]) => (
           <section key={cat}>
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

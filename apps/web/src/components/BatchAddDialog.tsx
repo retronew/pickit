@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toastError, toastSuccess } from "#lib/api";
 import {
   Dialog,
   DialogPopup,
@@ -112,6 +113,9 @@ export function BatchAddDialog({
     await Promise.all([worker(), worker()]);
 
     setRunning(false);
+    const summary = `新增 ${p.added} 条，跳过 ${p.skipped} 条重复${p.failed ? `，失败 ${p.failed} 条` : ""}`;
+    if (p.failed && !p.added) toastError("批量添加失败", new Error(summary), { id: "batch-add" });
+    else toastSuccess("批量添加完成", { description: summary, id: "batch-add" });
     onDone();
   }
 

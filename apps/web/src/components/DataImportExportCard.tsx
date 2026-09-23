@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { toastError, toastSuccess } from "#lib/api";
 import { UploadIcon, DownloadIcon } from "lucide-react";
 import {
   Card,
@@ -72,6 +73,7 @@ export function DataImportExportCard() {
       const data = await res.json();
       if (!res.ok) {
         setMessage(data.error ?? "导入失败");
+        toastError("导入失败", new Error(data.error ?? "请检查内容格式"), { id: "import" });
         setPreview(null);
         return;
       }
@@ -81,6 +83,10 @@ export function DataImportExportCard() {
         setPreview(null);
         setContent("");
         setMessage(`导入完成：新增 ${data.inserted} 条，跳过 ${data.skipped} 条重复`);
+        toastSuccess("导入完成", {
+          description: `新增 ${data.inserted} 条，跳过 ${data.skipped} 条重复`,
+          id: "import",
+        });
       }
     } finally {
       setBusy(false);

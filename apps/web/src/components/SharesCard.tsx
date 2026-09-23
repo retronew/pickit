@@ -1,3 +1,4 @@
+import { api, copyText, toastError, toastSuccess } from "#lib/api";
 import { useEffect, useState } from "react";
 import { CopyIcon, Trash2Icon } from "lucide-react";
 import {
@@ -31,12 +32,17 @@ export function SharesCard() {
   }, []);
 
   async function remove(slug: string) {
-    await fetch(`/api/shares/${slug}`, { method: "DELETE" });
+    try {
+      await api(`/api/shares/${slug}`, { method: "DELETE" });
+      toastSuccess("已撤销分享", { id: "share" });
+    } catch (err) {
+      toastError("撤销失败", err, { id: "share" });
+    }
     refresh();
   }
 
   async function copy(slug: string) {
-    await navigator.clipboard.writeText(`${window.location.origin}/s/${slug}`);
+    await copyText(`${window.location.origin}/s/${slug}`, "分享链接已复制");
   }
 
   return (

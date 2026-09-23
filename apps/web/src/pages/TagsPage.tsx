@@ -1,3 +1,4 @@
+import { api, toastError, toastSuccess } from "#lib/api";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { PencilIcon, Trash2Icon } from "lucide-react";
@@ -37,11 +38,12 @@ export function TagsPage() {
       confirmLabel: "重命名",
     });
     if (!to || to === tag) return;
-    await fetch("/api/tags/rename", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ from: tag, to }),
-    });
+    try {
+      await api("/api/tags/rename", { json: { from: tag, to } });
+      toastSuccess("已重命名", { description: `「${tag}」→「${to}」`, id: "tag" });
+    } catch (err) {
+      toastError("重命名失败", err, { id: "tag" });
+    }
     refresh();
   }
 
@@ -53,11 +55,12 @@ export function TagsPage() {
       danger: true,
     });
     if (!ok) return;
-    await fetch("/api/tags/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag }),
-    });
+    try {
+      await api("/api/tags/delete", { json: { tag } });
+      toastSuccess("已删除标签", { description: tag, id: "tag" });
+    } catch (err) {
+      toastError("删除标签失败", err, { id: "tag" });
+    }
     refresh();
   }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { copyText } from "#lib/api";
 import { CopyIcon, CheckIcon } from "lucide-react";
 import {
   Card,
@@ -22,7 +23,7 @@ export function BookmarkletCard() {
   const code = buildBookmarklet();
 
   async function copy() {
-    await navigator.clipboard.writeText(code);
+    if (!(await copyText(code, "代码已复制"))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }

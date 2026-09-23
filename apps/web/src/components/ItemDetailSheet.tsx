@@ -1,3 +1,4 @@
+import { api, copyText, toastError, toastSuccess } from "#lib/api";
 import { useEffect, useState } from "react";
 import { Streamdown, defaultRemarkPlugins } from "streamdown";
 import remarkBreaks from "remark-breaks";
@@ -85,14 +86,20 @@ export function ItemDetailSheet({
     if (!item) return;
     setChecking(true);
     try {
-      const res = await fetch(`/api/items/${item.id}/check`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setLinkStatus(data);
-        onChanged();
+      const data = await api<{ httpStatus: number | null; checkedAt: number | null }>(
+        `/api/items/${item.id}/check`,
+        { method: "POST" },
+      );
+      setLinkStatus(data);
+      onChanged();
+      if (data.httpStatus != null && data.httpStatus < 400) {
+        toastSuccess("链接可以访问", { id: "check" });
+      } else {
+        const reason = data.httpStatus ? `HTTP ${data.httpStatus}` : "请求超时或被拒绝";
+        toastError("链接无法访问", new Error(reason), { id: "check" });
       }
+    } catch (err) {
+      toastError("检查失败", err, { id: "check" });
     } finally {
       setChecking(false);
     }
@@ -102,14 +109,13 @@ export function ItemDetailSheet({
     if (!item) return;
     setSummarizing(true);
     try {
-      const res = await fetch(`/api/items/${item.id}/summarize`, {
+      const data = await api<{ summary: string }>(`/api/items/${item.id}/summarize`, {
         method: "POST",
       });
-      const data = await res.json();
-      if (res.ok) {
-        setSummary(data.summary);
-        onChanged();
-      }
+      setSummary(data.summary);
+      onChanged();
+    } catch (err) {
+      toastError("生成摘要失败", err, { id: "summarize" });
     } finally {
       setSummarizing(false);
     }
@@ -119,23 +125,15 @@ export function ItemDetailSheet({
     if (!item) return;
     setSharing(true);
     try {
-      const res = await fetch("/api/shares", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "item",
-          value: String(item.id),
-          title: item.name,
-        }),
+      const data = await api<{ slug: string }>("/api/shares", {
+        json: { type: "item", value: String(item.id), title: item.name },
       });
-      const data = await res.json();
-      if (res.ok) {
-        await navigator.clipboard.writeText(
-          `${window.location.origin}/s/${data.slug}`,
-        );
+      if (await copyText(`${window.location.origin}/s/${data.slug}`, "分享链接已复制")) {
         setShared(true);
         setTimeout(() => setShared(false), 2000);
       }
+    } catch (err) {
+      toastError("分享失败", err, { id: "share" });
     } finally {
       setSharing(false);
     }

@@ -11,9 +11,11 @@ import { StatsPage } from "#pages/StatsPage";
 import { SettingsPage } from "#pages/SettingsPage";
 import { LoginPage } from "#pages/LoginPage";
 import { PublicSharePage } from "#pages/PublicSharePage";
+import { ToastProvider } from "#components/ui/toast";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <ToastProvider position="top-center">
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -28,5 +30,6 @@ createRoot(document.getElementById("root")!).render(
         </Route>
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   </StrictMode>,
 );

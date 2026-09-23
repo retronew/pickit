@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { toastSuccess } from "#lib/api";
 import { LockIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import {
   Card,
@@ -43,7 +44,11 @@ export function AllowedEmailsCard() {
         return false;
       }
       setData(body);
+      toastSuccess("已保存允许登录的邮箱", { id: "allowed-emails" });
       return true;
+    } catch {
+      setError("网络出问题了，请重试");
+      return false;
     } finally {
       setSaving(false);
     }

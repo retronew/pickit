@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toastError, toastSuccess } from "#lib/api";
 import {
   AI_PROVIDERS,
   CHAT_PROTOCOLS,
@@ -209,8 +210,10 @@ export function AiSettingsCard() {
     }>("/api/settings/ai", form);
     if (!ok) {
       setSaveMessage("保存失败，请重试");
+      toastError("保存 AI 配置失败", undefined, { id: "ai-save" });
       return;
     }
+    toastSuccess("AI 配置已保存", { id: "ai-save" });
     setSaveMessage(
       `已保存 · 对话模型${data.chatConfigured ? "可用" : "未配置"} · 向量模型${data.embeddingConfigured ? "可用" : "未配置"}`,
     );

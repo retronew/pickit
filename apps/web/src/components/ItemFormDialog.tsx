@@ -23,6 +23,8 @@ import {
 } from "#components/ui/combobox";
 import { TagsField } from "#components/TagsField";
 import { SparklesIcon } from "lucide-react";
+import { Spinner } from "#components/ui/spinner";
+import { errorMessage, toastError } from "#lib/api";
 
 interface PossibleDuplicate {
   id: number;
@@ -55,10 +57,15 @@ interface Props {
   categories: string[];
   allTags: string[];
   initial?: Partial<ItemFormPayload>;
+  /**
+   * Saves the form. Resolves true to close the dialog, false to keep it open;
+   * a thrown error is shown in the dialog, which also stays open.
+   */
+  onSubmit: (payload: ItemFormPayload) => Promise<boolean>;
 }
 
 export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
-  ({ item, categories, allTags, initial, call }) => {
+  ({ item, categories, allTags, initial, onSubmit, call }) => {
     const isEditing = !!item;
     // Starts closed so Base UI has a real false→true transition to animate —
     // flips true one frame after mount (mirrors @retronew/call-vue's demo).
@@ -78,6 +85,8 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
     const [analyzing, setAnalyzing] = useState(false);
     const [analyzeMsg, setAnalyzeMsg] = useState("");
     const [possibleDuplicates, setPossibleDuplicates] = useState<PossibleDuplicate[]>([]);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState("");
 
     const canAnalyze = /^https?:\/\/.+/.test(form.url.trim());
 
@@ -112,23 +121,33 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
       }
     }
 
-    function submit() {
-      if (!form.name) return;
-      call.end({
+    async function submit() {
+      if (!form.name || saving) return;
+      const payload: ItemFormPayload = {
         name: form.name,
         url: form.url,
         icon: form.icon,
         note: form.note,
         category: form.category,
         tags: form.tags,
-      });
+      };
+      setSaving(true);
+      setSaveError("");
+      try {
+        if (await onSubmit(payload)) call.end(payload);
+      } catch (err) {
+        setSaveError(errorMessage(err));
+        toastError("保存失败", err, { id: "item-save" });
+      } finally {
+        setSaving(false);
+      }
     }
 
     return (
       <Dialog
         open={entered && !call.ended}
         onOpenChange={(open) => {
-          if (!open) call.end(null);
+          if (!open && !saving) call.end(null);
         }}
       >
         <DialogPopup>
@@ -252,12 +271,16 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
               </Field>
             </form>
           </DialogPanel>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => call.end(null)}>
+          <DialogFooter className="items-center">
+            {saveError && (
+              <p className="text-destructive me-auto text-sm">{saveError}</p>
+            )}
+            <Button variant="ghost" disabled={saving} onClick={() => call.end(null)}>
               取消
             </Button>
-            <Button type="submit" form="item-form" disabled={!form.name}>
-              保存
+            <Button type="submit" form="item-form" disabled={!form.name || saving}>
+              {saving && <Spinner />}
+              {saving ? "保存中…" : "保存"}
             </Button>
           </DialogFooter>
         </DialogPopup>

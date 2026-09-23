@@ -1,4 +1,5 @@
-import { SearchIcon, PlusIcon, ChevronDownIcon, ListPlusIcon } from "lucide-react";
+import { SearchIcon, PlusIcon, ChevronDownIcon, ListPlusIcon, XIcon } from "lucide-react";
+import { Spinner } from "#components/ui/spinner";
 import { Input } from "#components/ui/input";
 import { Button, buttonVariants } from "#components/ui/button";
 import { Kbd } from "#components/ui/kbd";
@@ -21,19 +22,34 @@ export function ItemSearchBar({
   return (
     <div className="flex items-center gap-2">
       <div className="relative flex-1">
-        <SearchIcon className="z-raised pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        {searching ? (
+          <Spinner className="z-raised pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        ) : (
+          <SearchIcon className="z-raised pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        )}
         <Input
           size="lg"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder={
-            searching ? "搜索中…" : "搜索收藏，也可以直接描述你在找什么…"
-          }
+          placeholder="搜索收藏，也可以直接描述你在找什么…"
+          aria-busy={searching}
           className="pl-7 pr-14"
         />
-        <Kbd className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
-          ⌘K
-        </Kbd>
+        {query ? (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="清空搜索"
+            onClick={() => onQueryChange("")}
+            className="z-raised absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground"
+          >
+            <XIcon />
+          </Button>
+        ) : (
+          <Kbd className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+            ⌘K
+          </Kbd>
+        )}
       </div>
       <div className="flex">
         <Button size="lg" onClick={onAdd} className="rounded-e-none">

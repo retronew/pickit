@@ -1,3 +1,4 @@
+import { api, toastError, toastSuccess } from "#lib/api";
 import { useState } from "react";
 import type { Item } from "@pickit/shared";
 import {
@@ -21,14 +22,17 @@ export function DuplicatesCard() {
   async function scan() {
     setLoading(true);
     try {
-      const res = await fetch("/api/items/duplicates");
-      const data: Item[][] = await res.json();
+      const data = await api<Item[][]>("/api/items/duplicates");
       setGroups(data);
       const initial: Record<number, number> = {};
       data.forEach((g, i) => {
         initial[i] = g[0].id;
       });
       setKeepChoice(initial);
+      if (data.length) toastSuccess(`发现 ${data.length} 组重复`, { id: "duplicates" });
+      else toastSuccess("没有发现重复的收藏", { id: "duplicates" });
+    } catch (err) {
+      toastError("检测失败", err, { id: "duplicates" });
     } finally {
       setLoading(false);
     }
@@ -40,12 +44,14 @@ export function DuplicatesCard() {
     const removeIds = group.map((i) => i.id).filter((id) => id !== keepId);
     setMerging(groupIndex);
     try {
-      await fetch("/api/items/merge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keepId, removeIds }),
-      });
+      await api("/api/items/merge", { json: { keepId, removeIds } });
       setGroups((prev) => prev!.filter((_, i) => i !== groupIndex));
+      toastSuccess("已合并", {
+        description: `保留「${group.find((i) => i.id === keepId)?.name ?? ""}」，其余 ${removeIds.length} 项移到回收站`,
+        id: "merge",
+      });
+    } catch (err) {
+      toastError("合并失败", err, { id: "merge" });
     } finally {
       setMerging(null);
     }

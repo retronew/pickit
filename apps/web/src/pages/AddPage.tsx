@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { uniq } from "es-toolkit";
 import type { Item } from "@pickit/shared";
 import { ItemFormDialog, type ItemFormPayload } from "#components/ItemFormDialog";
+import { saveItem } from "#lib/items";
 import { Confirm } from "#components/Confirm";
 import { Spinner } from "#components/ui/spinner";
 
@@ -53,38 +54,16 @@ export function AddPage() {
       }
 
       setStatus("");
-      const payload = await ItemFormDialog.call({
+      await ItemFormDialog.call({
         item: null,
         categories,
         allTags,
         initial,
+        onSubmit: (p) => saveItem(p, null),
       });
-      if (payload) await save(payload);
       navigate("/");
     })();
   }, [params, navigate]);
-
-  async function save(payload: ItemFormPayload) {
-    const res = await fetch("/api/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.status === 409) {
-      const data = await res.json();
-      const ok = await Confirm.call({
-        title: "这条收藏已经存在",
-        message: `「${data.existing?.name ?? "这条收藏"}」已经在你收藏里了，还要再存一条吗？`,
-        confirmLabel: "继续保存",
-      });
-      if (!ok) return;
-      await fetch("/api/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, allowDuplicate: true }),
-      });
-    }
-  }
 
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
