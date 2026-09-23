@@ -13,7 +13,7 @@ Cloudflare Workers + D1 だけで動く、セルフホスト型のシングル�
 - **インポート / エクスポート**：Markdown テーブル、JSON、ブラウザのブックマーク HTML
 - **共有**：公開の読み取り専用共有リンク（`/s/:slug`）
 - **クイック保存**：表示中のページを `/add?url=...` で開くブックマークレット
-- **ログイン**：[Better Auth](https://better-auth.com) による Google / GitHub ログイン。許可リストのメールアドレスに限定（シングルユーザー、パスワードなし）
+- **ログイン**：[Better Auth](https://better-auth.com) による Google / GitHub ログイン。許可リストのメールアドレスに限定、リストは設定画面で編集可能（パスワードなし）
 - **API アクセス**：スクリプトや外部連携用の Bearer API トークン
 - **バッチジョブ**：埋め込みの再生成と AI 一括整理は小さなステップに分けて実行され、一時停止 / 再開、失敗項目の再試行、項目ごとのエラー詳細に対応。設定ページを開いている間はページが処理を進め、閉じた後は毎分の cron がバックグラウンドで続行します
 - **定期メンテナンス**：毎日 R2 への JSON バックアップとリンク切れチェック
@@ -84,7 +84,7 @@ npx wrangler login
 npx wrangler d1 create pickit-db          # 表示された database_id を wrangler.jsonc に記入
 pnpm db:migrate:remote
 npx wrangler secret put BETTER_AUTH_SECRET   # 例：openssl rand -base64 32
-npx wrangler secret put ALLOWED_EMAILS       # ログインを許可するメールアドレス（カンマ区切り）
+npx wrangler secret put ALLOWED_EMAILS       # オーナーのメールアドレス（カンマ区切り、常にログイン可能）
 npx wrangler secret put GOOGLE_CLIENT_ID     # GOOGLE_CLIENT_SECRET、GITHUB_CLIENT_ID、GITHUB_CLIENT_SECRET も同様
 cd ../.. && pnpm deploy
 ```
@@ -98,7 +98,7 @@ cd ../.. && pnpm deploy
 | Google | Google Cloud Console → API とサービス → 認証情報 → OAuth クライアント ID（ウェブアプリケーション） | `https://your-domain/api/auth/callback/google` |
 | GitHub | GitHub → Settings → Developer settings → OAuth Apps | `https://your-domain/api/auth/callback/github` |
 
-`ALLOWED_EMAILS` に含まれるメールアドレスだけがログインでき、それ以外の Google / GitHub アカウントは拒否されます。リストから外すと既存のセッションも無効になります。client id と secret の両方が設定されていないプロバイダーはログイン画面に表示されません。同じメールアドレスの Google と GitHub アカウントは同一ユーザーとしてログインします。
+許可リストのメールアドレスだけがログインでき、それ以外の Google / GitHub アカウントは拒否されます。許可リストは 2 つから成ります：`ALLOWED_EMAILS` シークレットのオーナーのメールアドレスは常に許可され、画面からは削除できません（締め出し防止）。それ以外のアドレスは **設定 → アクセスと共有 → ログインを許可するメールアドレス** で追加・削除できます。削除すると既存のセッションもすぐに無効になります。client id と secret の両方が設定されていないプロバイダーはログイン画面に表示されません。同じメールアドレスの Google と GitHub アカウントは同一ユーザーとしてログインします。
 
 - **R2 バックアップ（任意）**：`npx wrangler r2 bucket create pickit-backups` を実行します。R2 を使わない場合は `wrangler.jsonc` の `r2_buckets` ブロックを削除すれば、cron はバックアップをスキップします。
 - **カスタムドメイン（任意）**：`wrangler.jsonc` に `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]` を追加します。ドメインは Cloudflare アカウントのゾーンである必要があります。

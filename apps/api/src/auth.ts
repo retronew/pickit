@@ -1,24 +1,70 @@
 import { betterAuth } from "better-auth";
 import type { Env } from "#types";
 
-// pickit is single-user: sign-in goes through Google / GitHub via Better Auth,
+// PickIt is single-user: sign-in goes through Google / GitHub via Better Auth,
 // and only emails listed in ALLOWED_EMAILS may get a session. Without the
 // allowlist anyone with a Google or GitHub account could sign in.
 
 export type SocialProvider = "google" | "github";
 
-/** Lower-cased emails from ALLOWED_EMAILS (comma or whitespace separated). */
-export function allowedEmails(env: Env): Set<string> {
-  return new Set(
-    (env.ALLOWED_EMAILS ?? "")
-      .split(/[\s,]+/)
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
+const EMAIL_RE = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
+
+/** Lower-cased, de-duplicated emails from a comma or whitespace separated list. */
+export function parseEmails(raw: string | null | undefined): string[] {
+  return [
+    ...new Set(
+      (raw ?? "")
+        .split(/[\s,]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
 }
 
-export function isAllowedEmail(env: Env, email: string | null | undefined): boolean {
-  return !!email && allowedEmails(env).has(email.toLowerCase());
+export function isValidEmail(email: string): boolean {
+  return EMAIL_RE.test(email);
+}
+
+/**
+ * Owners come from the ALLOWED_EMAILS secret. They are always allowed and
+ * can't be removed from the settings page, so nobody can lock themselves out.
+ */
+export function ownerEmails(env: Env): string[] {
+  return parseEmails(env.ALLOWED_EMAILS);
+}
+
+const SETTINGS_KEY = "allowed_emails";
+
+/** Extra emails managed on the settings page. */
+export async function getExtraEmails(db: D1Database): Promise<string[]> {
+  const row = await db
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .bind(SETTINGS_KEY)
+    .first<{ value: string }>();
+  try {
+    const list: unknown = row ? JSON.parse(row.value) : [];
+    return Array.isArray(list) ? list.filter((e): e is string => typeof e === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setExtraEmails(db: D1Database, emails: string[]) {
+  await db
+    .prepare(
+      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+    )
+    .bind(SETTINGS_KEY, JSON.stringify(emails))
+    .run();
+}
+
+/** Owners plus the extra emails from the settings page. */
+export async function allowedEmails(env: Env): Promise<Set<string>> {
+  return new Set([...ownerEmails(env), ...(await getExtraEmails(env.DB))]);
+}
+
+export async function isAllowedEmail(env: Env, email: string | null | undefined): Promise<boolean> {
+  return !!email && (await allowedEmails(env)).has(email.toLowerCase());
 }
 
 /** Providers whose client id and secret are both configured. */
@@ -51,8 +97,8 @@ export function createAuth(env: Env) {
     },
     user: {
       // Runs before creating a user, linking an account or signing in.
-      validateUserInfo: ({ user }) => {
-        if (!isAllowedEmail(env, user.email)) {
+      validateUserInfo: async ({ user }) => {
+        if (!(await isAllowedEmail(env, user.email))) {
           return {
             error: "email_not_allowed",
             errorDescription: "这个账号没有访问权限",

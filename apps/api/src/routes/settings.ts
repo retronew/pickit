@@ -16,6 +16,7 @@ import type { Env } from "#types";
 import { getRawSettings, saveSettings, getApiToken, setApiToken } from "#settings";
 import { createChatModel, createEmbeddingModel, describeError } from "#ai";
 import { listModels, ModelListError, type ModelFamily } from "#ai-models";
+import { ownerEmails, getExtraEmails, setExtraEmails, parseEmails, isValidEmail } from "#auth";
 
 export const settingsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -162,4 +163,22 @@ settingsRoutes.post("/api-token/reset", async (c) => {
 settingsRoutes.delete("/api-token", async (c) => {
   await c.env.DB.prepare("DELETE FROM settings WHERE key = 'api_token'").run();
   return c.json({ ok: true });
+});
+
+// Emails allowed to sign in. Owners (the ALLOWED_EMAILS secret) are read-only
+// here; the extra list is stored in the settings table.
+settingsRoutes.get("/allowed-emails", async (c) => {
+  return c.json({ owners: ownerEmails(c.env), emails: await getExtraEmails(c.env.DB) });
+});
+
+settingsRoutes.put("/allowed-emails", async (c) => {
+  const body = await c.req.json<{ emails?: unknown }>().catch(() => ({}) as { emails?: unknown });
+  if (!Array.isArray(body.emails)) return c.json({ error: "emails must be an array" }, 400);
+  const emails = parseEmails(body.emails.filter((e) => typeof e === "string").join(","));
+  const invalid = emails.filter((e) => !isValidEmail(e));
+  if (invalid.length) return c.json({ error: `邮箱格式不正确：${invalid.join(", ")}` }, 400);
+  const owners = new Set(ownerEmails(c.env));
+  const extra = emails.filter((e) => !owners.has(e));
+  await setExtraEmails(c.env.DB, extra);
+  return c.json({ owners: [...owners], emails: extra });
 });

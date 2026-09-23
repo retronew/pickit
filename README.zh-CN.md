@@ -13,7 +13,7 @@
 - **导入 / 导出**：Markdown 表格、JSON、浏览器书签 HTML
 - **分享**：公开只读分享链接（`/s/:slug`）
 - **快速收藏**：书签小工具（bookmarklet），一键打开当前页面的 `/add?url=...`
-- **登录**：通过 [Better Auth](https://better-auth.com) 使用 Google / GitHub 登录，并限制为允许列表里的邮箱（单用户，不使用密码）
+- **登录**：通过 [Better Auth](https://better-auth.com) 使用 Google / GitHub 登录，并限制为允许列表里的邮箱，列表可在设置页修改（不使用密码）
 - **API 访问**：Bearer API Token，方便脚本和第三方集成
 - **批量任务**：向量索引重建和 AI 批量整理按小批次分步执行，支持暂停 / 继续、重试失败项，并能查看每一条的失败原因。设置页打开时由页面推进，关闭后由每分钟一次的定时任务在后台继续
 - **定时维护**：每天备份 JSON 到 R2，并检查失效链接
@@ -84,7 +84,7 @@ npx wrangler login
 npx wrangler d1 create pickit-db          # 把输出的 database_id 填进 wrangler.jsonc
 pnpm db:migrate:remote
 npx wrangler secret put BETTER_AUTH_SECRET   # 例如 openssl rand -base64 32
-npx wrangler secret put ALLOWED_EMAILS       # 允许登录的邮箱，多个用逗号分隔
+npx wrangler secret put ALLOWED_EMAILS       # 所有者邮箱，多个用逗号分隔（始终允许登录）
 npx wrangler secret put GOOGLE_CLIENT_ID     # 以及 GOOGLE_CLIENT_SECRET、GITHUB_CLIENT_ID、GITHUB_CLIENT_SECRET
 cd ../.. && pnpm deploy
 ```
@@ -98,7 +98,7 @@ cd ../.. && pnpm deploy
 | Google | Google Cloud Console → API 和服务 → 凭据 → OAuth 客户端 ID（Web 应用） | `https://your-domain/api/auth/callback/google` |
 | GitHub | GitHub → Settings → Developer settings → OAuth Apps | `https://your-domain/api/auth/callback/github` |
 
-只有 `ALLOWED_EMAILS` 里的邮箱能登录，其他 Google / GitHub 账号一律拒绝；从列表里删掉某个邮箱，它已有的登录态也会立即失效。没配齐 client id 和 secret 的服务商不会出现在登录页。邮箱相同的 Google 和 GitHub 账号会登录为同一个用户。
+只有允许列表里的邮箱能登录，其他 Google / GitHub 账号一律拒绝。允许列表分两部分：`ALLOWED_EMAILS` 密钥里的所有者邮箱始终允许登录，且不能在页面上移除（避免把自己锁在外面）；其余邮箱可以在 **设置 → 访问与分享 → 允许登录的邮箱** 里添加或移除。移除某个邮箱后，它已有的登录态会立即失效。没配齐 client id 和 secret 的服务商不会出现在登录页。邮箱相同的 Google 和 GitHub 账号会登录为同一个用户。
 
 - **R2 备份（可选）**：运行 `npx wrangler r2 bucket create pickit-backups`。不需要 R2 的话，删掉 `wrangler.jsonc` 里的 `r2_buckets` 段，定时任务会自动跳过备份。
 - **自定义域名（可选）**：在 `wrangler.jsonc` 里加上 `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]`，域名需要已接入你的 Cloudflare 账号。

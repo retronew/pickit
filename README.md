@@ -13,7 +13,7 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **Import / export**: Markdown tables, JSON, browser bookmark HTML
 - **Sharing**: public read-only share links (`/s/:slug`)
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page
-- **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist (single user, no passwords)
+- **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist that can be edited in Settings (no passwords)
 - **API access**: Bearer API token for scripts and integrations
 - **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The settings page drives them while open; a per-minute cron keeps them going in the background
 - **Maintenance cron**: daily JSON backup to R2 and dead-link checks
@@ -84,7 +84,7 @@ npx wrangler login
 npx wrangler d1 create pickit-db          # put the printed database_id into wrangler.jsonc
 pnpm db:migrate:remote
 npx wrangler secret put BETTER_AUTH_SECRET   # e.g. openssl rand -base64 32
-npx wrangler secret put ALLOWED_EMAILS       # comma-separated emails allowed to sign in
+npx wrangler secret put ALLOWED_EMAILS       # owner emails, comma-separated (always allowed)
 npx wrangler secret put GOOGLE_CLIENT_ID     # and GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 cd ../.. && pnpm deploy
 ```
@@ -98,7 +98,7 @@ Sign-in uses [Better Auth](https://better-auth.com) with Google and GitHub; ther
 | Google | Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application) | `https://your-domain/api/auth/callback/google` |
 | GitHub | GitHub → Settings → Developer settings → OAuth Apps | `https://your-domain/api/auth/callback/github` |
 
-Only emails listed in `ALLOWED_EMAILS` can sign in; every other Google / GitHub account is rejected, and removing an email revokes its sessions. A provider without both its client id and secret is hidden on the login page. Google and GitHub accounts with the same email sign in as the same user.
+Only allowed emails can sign in; every other Google / GitHub account is rejected. The allowlist has two parts: owner emails from the `ALLOWED_EMAILS` secret, which are always allowed and can't be removed from the UI (so you can't lock yourself out), and extra emails you add or remove in **Settings → Access & sharing → Allowed emails**. Removing an email revokes its existing sessions immediately. A provider without both its client id and secret is hidden on the login page. Google and GitHub accounts with the same email sign in as the same user.
 
 - **R2 backups (optional):** run `npx wrangler r2 bucket create pickit-backups`. If you don't want R2, remove the `r2_buckets` block from `wrangler.jsonc` and the cron will skip backups.
 - **Custom domain (optional):** add `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]` to `wrangler.jsonc`. The domain must be a zone in your Cloudflare account.

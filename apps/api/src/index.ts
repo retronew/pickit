@@ -42,7 +42,7 @@ app.use("/api/*", async (c, next) => {
     .api.getSession({ headers: c.req.raw.headers })
     .catch(() => null);
   // Re-check the allowlist so removing an email revokes existing sessions.
-  if (!session || !isAllowedEmail(c.env, session.user.email)) {
+  if (!session || !(await isAllowedEmail(c.env, session.user.email))) {
     return c.json({ error: "unauthorized" }, 401);
   }
   await next();

@@ -5,6 +5,7 @@ import { BookmarkletCard } from "#components/BookmarkletCard";
 import { OrganizeCard } from "#components/OrganizeCard";
 import { DuplicatesCard } from "#components/DuplicatesCard";
 import { ApiTokenCard } from "#components/ApiTokenCard";
+import { AllowedEmailsCard } from "#components/AllowedEmailsCard";
 import { AiSettingsCard } from "#components/AiSettingsCard";
 import { SharesCard } from "#components/SharesCard";
 import { ReembedCard } from "#components/ReembedCard";
@@ -99,8 +100,9 @@ export function SettingsPage() {
 
       <Separator />
 
-      <SettingsSection icon={ShieldCheckIcon} title="开发者与分享">
+      <SettingsSection icon={ShieldCheckIcon} title="访问与分享">
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <AllowedEmailsCard />
           <ApiTokenCard />
           <SharesCard />
         </div>
