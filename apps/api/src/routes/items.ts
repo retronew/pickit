@@ -10,8 +10,7 @@ import type { Env, ItemRow } from "#types";
 import type { AiSettings } from "#ai";
 import { getSettings } from "#settings";
 import { isChatConfigured, isEmbeddingConfigured } from "@pickit/shared";
-import { createProvider, embedText, cosSim, type Provider } from "#ai";
-import { getJob, saveJob, runBatchJob, type JobState } from "#jobs";
+import { createProvider, embedText, embeddingInput, cosSim, type Provider } from "#ai";
 import { checkLink } from "#cron";
 
 export const itemRoutes = new Hono<{ Bindings: Env }>();
@@ -396,8 +395,7 @@ async function findSimilarItems(
   provider: Provider,
   item: { name: string; note?: string; category?: string },
 ) {
-  const text = [item.name, item.category, item.note].filter(Boolean).join("\n");
-  const vec = await embedText(provider, text);
+  const vec = await embedText(provider, embeddingInput(item));
   if (!vec) return [];
   const qf = new Float32Array(vec);
 
@@ -630,82 +628,6 @@ itemRoutes.post("/merge", async (c) => {
   return c.json({ ok: true });
 });
 
-itemRoutes.post("/organize-all", async (c) => {
-  const body = await c.req
-    .json<{ mode?: "missing" | "all" }>()
-    .catch(() => ({}) as { mode?: "missing" | "all" });
-  const mode = body.mode ?? "missing";
-  const settings = await getSettings(c.env.DB);
-  if (!settings || !isChatConfigured(settings)) {
-    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
-  }
-  const existing = await getJob(c.env.DB, "organize_job");
-  if (existing?.running) {
-    return c.json({ error: "已有整理任务在运行，请等它完成" }, 409);
-  }
-  let sql = "SELECT * FROM items WHERE deleted_at IS NULL";
-  if (mode === "missing") sql += " AND (category = '' OR tags = '[]')";
-  const { results } = await c.env.DB.prepare(sql).all<ItemRow>();
-  const job: JobState = {
-    total: results.length,
-    done: 0,
-    failedIds: [],
-    running: true,
-    startedAt: Date.now(),
-  };
-  await saveJob(c.env.DB, "organize_job", job);
-  c.executionCtx.waitUntil(runOrganizeJob(c.env, results, settings, job));
-  return c.json({ queued: results.length });
-});
-
-itemRoutes.get("/organize-status", async (c) => {
-  const job = await getJob(c.env.DB, "organize_job");
-  return c.json(job ?? { total: 0, done: 0, failedIds: [], running: false });
-});
-
-async function runOrganizeJob(
-  env: Env,
-  rows: ItemRow[],
-  settings: AiSettings,
-  job: JobState,
-) {
-  const chat = createProvider(settings)?.chat;
-  if (!chat) return;
-  const { generateText } = await import("ai");
-  const { results: catRows } = await env.DB.prepare(
-    "SELECT DISTINCT category FROM items WHERE category != '' AND deleted_at IS NULL",
-  ).all<{ category: string }>();
-  const categories = catRows.map((r) => r.category);
-
-  await runBatchJob(env.DB, "organize_job", rows, job, async (row) => {
-    const { text } = await generateText({
-      model: chat,
-      system:
-        "你是技术收藏库的整理助手。根据条目信息输出 JSON（不要输出其他内容）：" +
-        '{"category":"分类名(简短中文,优先从已有分类中选择；都不合适才新建)","tags":["标签1","标签2"]}',
-      prompt:
-        `已有分类：${categories.join("、") || "（暂无）"}\n` +
-        `名称：${row.name}\nURL：${row.url}\n备注：${row.note}\n` +
-        `当前分类：${row.category || "（无）"}\n当前标签：${row.tags}`,
-    });
-    const jsonStr = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-    const parsed = JSON.parse(jsonStr) as { category?: string; tags?: string[] };
-    const tags = Array.isArray(parsed.tags)
-      ? parsed.tags.slice(0, 5)
-      : JSON.parse(row.tags || "[]");
-    await env.DB.prepare(
-      "UPDATE items SET category=?, tags=?, updated_at=? WHERE id=?",
-    )
-      .bind(
-        parsed.category || row.category,
-        JSON.stringify(tags),
-        Date.now(),
-        row.id,
-      )
-      .run();
-  });
-}
-
 itemRoutes.post("/bulk", async (c) => {
   const body = await c.req.json<{
     ids?: number[];
@@ -823,67 +745,6 @@ itemRoutes.post("/:id/reembed", async (c) => {
   return c.json({ ok: true });
 });
 
-itemRoutes.post("/reembed-all", async (c) => {
-  const settings = await getSettings(c.env.DB);
-  if (!settings || !isEmbeddingConfigured(settings)) {
-    return c.json({ error: "还没有配置向量模型，请先到「设置」里完成配置" }, 400);
-  }
-  const existing = await getJob(c.env.DB, "reembed_job");
-  if (existing?.running) {
-    return c.json({ error: "已有重建任务在运行，请等它完成" }, 409);
-  }
-  const { results } = await c.env.DB
-    .prepare("SELECT * FROM items WHERE deleted_at IS NULL")
-    .all<ItemRow>();
-  const job: JobState = {
-    total: results.length,
-    done: 0,
-    failedIds: [],
-    running: true,
-    startedAt: Date.now(),
-  };
-  await saveJob(c.env.DB, "reembed_job", job);
-  c.executionCtx.waitUntil(runReembedJob(c.env, results, settings, job));
-  return c.json({ queued: results.length });
-});
-
-itemRoutes.get("/reembed-status", async (c) => {
-  const job = await getJob(c.env.DB, "reembed_job");
-  return c.json(
-    job ?? { total: 0, done: 0, failedIds: [], running: false },
-  );
-});
-
-itemRoutes.post("/reembed-retry", async (c) => {
-  const settings = await getSettings(c.env.DB);
-  if (!settings || !isEmbeddingConfigured(settings)) {
-    return c.json({ error: "还没有配置向量模型，请先到「设置」里完成配置" }, 400);
-  }
-  const existing = await getJob(c.env.DB, "reembed_job");
-  if (!existing || existing.failedIds.length === 0) {
-    return c.json({ error: "没有需要重试的收藏" }, 400);
-  }
-  if (existing.running) {
-    return c.json({ error: "已有重建任务在运行，请等它完成" }, 409);
-  }
-  const { results } = await c.env.DB
-    .prepare(
-      `SELECT * FROM items WHERE id IN (${existing.failedIds.map(() => "?").join(",")})`,
-    )
-    .bind(...existing.failedIds)
-    .all<ItemRow>();
-  const job: JobState = {
-    total: results.length,
-    done: 0,
-    failedIds: [],
-    running: true,
-    startedAt: Date.now(),
-  };
-  await saveJob(c.env.DB, "reembed_job", job);
-  c.executionCtx.waitUntil(runReembedJob(c.env, results, settings, job));
-  return c.json({ queued: results.length });
-});
-
 // Registered last among GET routes: Hono matches route patterns in
 // registration order, and this catch-all-looking single segment would
 // otherwise shadow every other static GET route above it.
@@ -898,27 +759,6 @@ itemRoutes.get("/:id", async (c) => {
   return c.json(toItemJson(row));
 });
 
-async function runReembedJob(
-  env: Env,
-  rows: ItemRow[],
-  settings: AiSettings,
-  job: JobState,
-) {
-  await runBatchJob(env.DB, "reembed_job", rows, job, (row) =>
-    embedItem(
-      env,
-      row.id,
-      {
-        name: row.name,
-        url: row.url,
-        note: row.note,
-        category: row.category,
-      },
-      settings,
-    ),
-  );
-}
-
 export async function embedItem(
   env: Env,
   id: number,
@@ -927,10 +767,7 @@ export async function embedItem(
 ) {
   const provider = createProvider(settings);
   if (!provider?.embedding) return;
-  const text = [item.name, item.category, item.note]
-    .filter(Boolean)
-    .join("\n");
-  const vec = await embedText(provider, text);
+  const vec = await embedText(provider, embeddingInput(item));
   if (!vec) return;
   await env.DB.prepare(
     "UPDATE items SET embedding=?, embedding_model=? WHERE id=?",

@@ -37,9 +37,12 @@
 	],
 	// Daily at 18:00 UTC (02:00 China time): full JSON backup to R2, plus a
 	// batch of dead-link checks. See src/cron.ts.
+	// Every minute: advance running batch jobs (re-embed / organize) when no
+	// settings page is driving them. See src/job-runners.ts.
 	"triggers": {
 		"crons": [
-			"0 18 * * *"
+			"0 18 * * *",
+			"* * * * *"
 		]
 	}
 }

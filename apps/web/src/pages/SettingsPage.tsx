@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import { BotIcon, DatabaseIcon, ShieldCheckIcon, WandSparklesIcon } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "#components/ui/card";
 import { DataImportExportCard } from "#components/DataImportExportCard";
 import { BookmarkletCard } from "#components/BookmarkletCard";
 import { OrganizeCard } from "#components/OrganizeCard";
@@ -9,9 +7,8 @@ import { DuplicatesCard } from "#components/DuplicatesCard";
 import { ApiTokenCard } from "#components/ApiTokenCard";
 import { AiSettingsCard } from "#components/AiSettingsCard";
 import { SharesCard } from "#components/SharesCard";
-import { JobProgress, type JobState } from "#components/JobProgress";
+import { ReembedCard } from "#components/ReembedCard";
 import { Confirm } from "#components/Confirm";
-import { Button } from "#components/ui/button";
 import { Separator } from "#components/ui/separator";
 
 function BuildInfo() {
@@ -71,94 +68,15 @@ function SettingsSection({
 }
 
 export function SettingsPage() {
-  const [reembedJob, setReembedJob] = useState<JobState | null>(null);
-  const [reembedError, setReembedError] = useState("");
-
-  const fetchReembedStatus = () =>
-    fetch("/api/items/reembed-status")
-      .then((r) => r.json())
-      .then((d: JobState) => setReembedJob(d));
-
-  useEffect(() => {
-    fetchReembedStatus();
-  }, []);
-
-  useEffect(() => {
-    if (!reembedJob?.running) return;
-    const timer = setInterval(fetchReembedStatus, 1200);
-    return () => clearInterval(timer);
-  }, [reembedJob?.running]);
-
   return (
     <div className="space-y-8">
       <h1 className="font-heading text-lg font-semibold">设置</h1>
 
       <SettingsSection icon={BotIcon} title="AI 配置" description="用于自动整理、智能搜索和问答">
         <div className="space-y-6">
-        <AiSettingsCard />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>向量索引重建</CardTitle>
-            <CardDescription>
-              换了向量模型后，需要为全部收藏重新生成索引。
-            </CardDescription>
-          </CardHeader>
-          {reembedJob && reembedJob.total > 0 && (
-            <CardContent>
-              <JobProgress job={reembedJob} doneLabel="上次重建完成" />
-            </CardContent>
-          )}
-          <CardFooter className="mt-auto flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="lg"
-              disabled={reembedJob?.running}
-              onClick={async () => {
-                setReembedError("");
-                const res = await fetch("/api/items/reembed-all", {
-                  method: "POST",
-                });
-                const data = await res.json();
-                if (res.ok) {
-                  await fetchReembedStatus();
-                } else {
-                  setReembedError(data.error ?? "启动失败，请稍后重试");
-                }
-              }}
-            >
-              {reembedJob?.running ? "重建中…" : "重建全部索引"}
-            </Button>
-            {!reembedJob?.running &&
-              reembedJob &&
-              reembedJob.failedIds.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={async () => {
-                    setReembedError("");
-                    const res = await fetch("/api/items/reembed-retry", {
-                      method: "POST",
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                      await fetchReembedStatus();
-                    } else {
-                      setReembedError(data.error ?? "重试失败，请稍后重试");
-                    }
-                  }}
-                >
-                  重试失败项
-                </Button>
-              )}
-            {reembedError && (
-              <span className="text-destructive text-sm">
-                {reembedError}
-              </span>
-            )}
-          </CardFooter>
-        </Card>
-      </div>
+          <AiSettingsCard />
+          <ReembedCard />
+        </div>
       </SettingsSection>
 
       <Separator />

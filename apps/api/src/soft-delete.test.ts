@@ -20,11 +20,17 @@ describe("soft-delete filtering", () => {
     const src = read("routes/items.ts");
     const occurrences = src.match(/deleted_at IS NULL/g) ?? [];
     // GET /, GET /trash(inverted), /categories, /analyze categories,
-    // findDuplicate, /:id/related fallback, /duplicates, reembed-all,
-    // organize-all, /export — this is a floor, not an exact count, so
-    // the test fails loud if someone deletes a filter rather than only
-    // when the exact number drifts from adding new ones.
-    expect(occurrences.length).toBeGreaterThanOrEqual(8);
+    // findDuplicate, /:id/related fallback, /duplicates, /export — this is
+    // a floor, not an exact count, so the test fails loud if someone
+    // deletes a filter rather than only when the exact number drifts from
+    // adding new ones.
+    expect(occurrences.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("job-runners.ts only selects and processes active items", () => {
+    const src = read("job-runners.ts");
+    // selectJobIds, loadRows, organize categories
+    expect((src.match(/deleted_at IS NULL/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
   it("search.ts excludes deleted items from FTS, LIKE fallback, and semantic search", () => {

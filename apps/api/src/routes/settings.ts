@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { APICallError, RetryError } from "ai";
 import {
   normalizeBaseUrl,
   upgradeAiSettings,
@@ -15,7 +14,7 @@ import {
 } from "@pickit/shared";
 import type { Env } from "#types";
 import { getRawSettings, saveSettings, getApiToken, setApiToken } from "#settings";
-import { createChatModel, createEmbeddingModel } from "#ai";
+import { createChatModel, createEmbeddingModel, describeError } from "#ai";
 import { listModels, ModelListError, type ModelFamily } from "#ai-models";
 
 export const settingsRoutes = new Hono<{ Bindings: Env }>();
@@ -53,19 +52,8 @@ function mergeWithSaved(body: unknown, saved: AiSettings): AiSettings {
   next.chat.baseUrl = normalizeBaseUrl(next.chat.baseUrl);
   next.embedding.baseUrl = normalizeBaseUrl(next.embedding.baseUrl);
   next.chat.apiKey = keepKey(next.chat, saved.chat);
-  next.embedding.apiKey = next.embedding.inheritChat
-    ? ""
-    : keepKey(next.embedding, saved.embedding);
+  next.embedding.apiKey = keepKey(next.embedding, saved.embedding);
   return next;
-}
-
-function describeError(e: unknown): string {
-  const err = RetryError.isInstance(e) ? e.lastError : e;
-  if (APICallError.isInstance(err)) {
-    const body = typeof err.responseBody === "string" ? err.responseBody.slice(0, 200) : "";
-    return [err.statusCode, err.url, body || err.message].filter(Boolean).join(" · ");
-  }
-  return String(err).slice(0, 300);
 }
 
 settingsRoutes.get("/ai", async (c) => {
@@ -92,9 +80,7 @@ settingsRoutes.post("/ai", async (c) => {
 settingsRoutes.post("/ai/models", async (c) => {
   const body = await c.req.json<{ target: "chat" | "embedding"; settings: unknown }>();
   const next = mergeWithSaved(body.settings, await getRawSettings(c.env.DB));
-  // An inheriting embedding endpoint lists models from the chat provider.
-  const endpoint =
-    body.target === "chat" || next.embedding.inheritChat ? next.chat : next.embedding;
+  const endpoint = body.target === "chat" ? next.chat : next.embedding;
   if (!endpoint.baseUrl) return c.json({ error: "请先填写接口地址" }, 400);
   if (
     !endpoint.apiKey &&

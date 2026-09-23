@@ -6,7 +6,6 @@ import {
   EMBEDDING_PROTOCOLS,
   baseUrlWarnings,
   chatRequestUrls,
-  embeddingProtocolFor,
   embeddingRequestUrls,
   emptyAiSettings,
   findProvider,
@@ -21,7 +20,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Field, FieldLabel, FieldDescription } from "#components/ui/field";
 import { Input } from "#components/ui/input";
 import { Button } from "#components/ui/button";
-import { Switch } from "#components/ui/switch";
 import {
   Select,
   SelectTrigger,
@@ -98,15 +96,6 @@ function hasUsableKey(endpoint: AiEndpoint<string>, saved?: SavedEndpoint): bool
 
 const emptyModels: ModelState = { models: [], loading: false, message: "", error: false };
 
-/** The form with inheritChat forced off when the chat protocol can't provide embeddings. */
-function effectiveSettings(form: AiSettings): AiSettings {
-  const canInherit = embeddingProtocolFor(form.chat.protocol) !== null;
-  return {
-    ...form,
-    embedding: { ...form.embedding, inheritChat: form.embedding.inheritChat && canInherit },
-  };
-}
-
 async function postJson<T>(url: string, body: unknown): Promise<{ ok: boolean; data: T }> {
   const res = await fetch(url, {
     method: "POST",
@@ -143,9 +132,6 @@ export function AiSettingsCard() {
     load();
   }, []);
 
-  const effective = effectiveSettings(form);
-  const canInherit = embeddingProtocolFor(form.chat.protocol) !== null;
-  const inherit = effective.embedding.inheritChat;
 
   const patchChat = (patch: Partial<AiSettings["chat"]>) =>
     setForm((f) => ({ ...f, chat: { ...f.chat, ...patch } }));
@@ -153,8 +139,7 @@ export function AiSettingsCard() {
     setForm((f) => ({ ...f, embedding: { ...f.embedding, ...patch } }));
 
   const fetchModels = async (target: Target) => {
-    const owner = target === "chat" || inherit ? "chat" : "embedding";
-    if (!hasUsableKey(form[owner], saved?.[owner])) {
+    if (!hasUsableKey(form[target], saved?.[target])) {
       setModels((m) => ({
         ...m,
         [target]: { models: [], loading: false, message: "请先填写 API 密钥，再获取模型列表", error: true },
@@ -164,7 +149,7 @@ export function AiSettingsCard() {
     setModels((m) => ({ ...m, [target]: { ...m[target], loading: true, message: "" } }));
     const { ok, data } = await postJson<{ baseUrl?: string; models?: ModelInfo[]; error?: string }>(
       "/api/settings/ai/models",
-      { target, settings: effective },
+      { target, settings: form },
     );
     if (!ok || !data.models || !data.baseUrl) {
       setModels((m) => ({
@@ -174,11 +159,10 @@ export function AiSettingsCard() {
       return;
     }
     // Model discovery may find the working route under /v1; adopt it.
-    const urlOwner = target === "chat" || inherit ? "chat" : "embedding";
-    const current = normalizeBaseUrl(form[urlOwner].baseUrl);
+    const current = normalizeBaseUrl(form[target].baseUrl);
     const adjusted = data.baseUrl !== current;
     if (adjusted) {
-      if (urlOwner === "chat") patchChat({ baseUrl: data.baseUrl });
+      if (target === "chat") patchChat({ baseUrl: data.baseUrl });
       else patchEmbedding({ baseUrl: data.baseUrl });
     }
     const wanted = data.models.filter((m) => m.kind === target).length;
@@ -203,7 +187,7 @@ export function AiSettingsCard() {
       error?: string;
       reply?: string;
       dimensions?: number;
-    }>("/api/settings/ai/test", { target, settings: effective });
+    }>("/api/settings/ai/test", { target, settings: form });
     setTests((t) => ({
       ...t,
       [target]: {
@@ -222,7 +206,7 @@ export function AiSettingsCard() {
     const { ok, data } = await postJson<{
       chatConfigured: boolean;
       embeddingConfigured: boolean;
-    }>("/api/settings/ai", effective);
+    }>("/api/settings/ai", form);
     if (!ok) {
       setSaveMessage("保存失败，请重试");
       return;
@@ -233,7 +217,7 @@ export function AiSettingsCard() {
     await load();
   };
 
-  const embeddingEndpoint = resolveEmbeddingEndpoint(effective);
+  const embeddingEndpoint = resolveEmbeddingEndpoint(form);
 
   return (
     <Card>
@@ -290,25 +274,6 @@ export function AiSettingsCard() {
 
         <section className="space-y-4">
           <PanelHeading title="向量模型（可选）" configured={saved?.embeddingConfigured} />
-          <label className="flex items-start gap-3 text-sm">
-            <Switch
-              checked={inherit}
-              disabled={!canInherit}
-              onCheckedChange={(checked) => {
-                patchEmbedding({ inheritChat: checked });
-                setModels((m) => ({ ...m, embedding: emptyModels }));
-              }}
-            />
-            <span className="space-y-0.5">
-              <span className="block">与对话模型使用同一服务商和密钥</span>
-              <span className="text-muted-foreground block text-xs">
-                {canInherit
-                  ? "打开后只需要选择向量模型；关闭后可以单独设置服务商。"
-                  : "Anthropic 没有向量接口，请单独设置向量模型的服务商。"}
-              </span>
-            </span>
-          </label>
-          {!inherit && (
             <EndpointFields
               target="embedding"
               endpoint={form.embedding}
@@ -331,16 +296,15 @@ export function AiSettingsCard() {
               }}
               onChange={patchEmbedding}
             />
-          )}
           <ModelField
             target="embedding"
             value={form.embedding.model}
             placeholder={
-              findProvider(inherit ? form.chat.provider : form.embedding.provider)
+              findProvider(form.embedding.provider)
                 ?.embeddingModelHint ?? "留空表示不使用向量功能"
             }
             state={models.embedding}
-            canFetch={!!(inherit ? form.chat.baseUrl : form.embedding.baseUrl)}
+            canFetch={!!form.embedding.baseUrl}
             fetchLabel="获取模型列表"
             onFetch={() => fetchModels("embedding")}
             onChange={(model) => patchEmbedding({ model })}

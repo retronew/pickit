@@ -3,7 +3,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { LanguageModel, EmbeddingModel } from "ai";
-import { embed, embedMany } from "ai";
+import { embed, embedMany, APICallError, RetryError } from "ai";
 import {
   normalizeBaseUrl,
   resolveEmbeddingEndpoint,
@@ -70,6 +70,11 @@ export function createProvider(settings: AiSettings): Provider | null {
   return provider.chat || provider.embedding ? provider : null;
 }
 
+/** The text a bookmark is embedded from. */
+export function embeddingInput(item: { name: string; category?: string; note?: string }): string {
+  return [item.name, item.category, item.note].filter(Boolean).join("\n");
+}
+
 export async function embedText(
   provider: Provider,
   text: string,
@@ -104,4 +109,14 @@ export function cosSim(a: Float32Array, b: Float32Array): number {
     nb += b[i] * b[i];
   }
   return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+}
+
+/** A one-line error message with status, URL and response body when available. */
+export function describeError(e: unknown): string {
+  const err = RetryError.isInstance(e) ? e.lastError : e;
+  if (APICallError.isInstance(err)) {
+    const body = typeof err.responseBody === "string" ? err.responseBody.slice(0, 200) : "";
+    return [err.statusCode, err.url, body || err.message].filter(Boolean).join(" · ");
+  }
+  return String(err instanceof Error ? err.message : err).slice(0, 300);
 }

@@ -19,21 +19,21 @@ import { JobProgress, JobActions, useJob } from "#components/JobProgress";
 type Mode = "missing" | "all";
 
 const MODE_LABELS: Record<Mode, string> = {
-  missing: "只补缺分类和标签的",
-  all: "全部重新整理",
+  missing: "只补缺失或模型不一致的",
+  all: "全部重建",
 };
 
-export function OrganizeCard() {
+export function ReembedCard() {
   const [mode, setMode] = useState<Mode>("missing");
-  const { job, error, run } = useJob("organize");
+  const { job, error, run } = useJob("reembed");
   const running = job?.status === "running";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI 批量整理</CardTitle>
+        <CardTitle>向量索引重建</CardTitle>
         <CardDescription>
-          让 AI 重新给收藏分类、打标签，尽量沿用已有分类。
+          为收藏生成向量索引。换了向量模型后，旧索引无法和新模型比较，需要重新生成。
         </CardDescription>
       </CardHeader>
       {job && job.status !== "idle" && (
@@ -59,7 +59,7 @@ export function OrganizeCard() {
             ))}
           </SelectContent>
         </Select>
-        <JobActions job={job} startLabel="开始整理" onStart={() => run("start", { mode })} run={run} />
+        <JobActions job={job} startLabel="开始重建" onStart={() => run("start", { mode })} run={run} />
         {error && <span className="text-destructive text-sm">{error}</span>}
       </CardFooter>
     </Card>

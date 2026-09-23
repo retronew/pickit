@@ -8,8 +8,13 @@ import { chatRoutes } from "#routes/chat";
 import { settingsRoutes } from "#routes/settings";
 import { tagRoutes } from "#routes/tags";
 import { shareRoutes } from "#routes/shares";
+import { jobRoutes } from "#routes/jobs";
+import { advanceRunningJobs } from "#job-runners";
 import { getApiToken } from "#settings";
 import { runDailyBackup, runDeadLinkCheck } from "#cron";
+
+/** Must match the per-minute entry in wrangler.jsonc `triggers.crons`. */
+const JOB_CRON = "* * * * *";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -48,6 +53,7 @@ app.route("/api/chat", chatRoutes);
 app.route("/api/settings", settingsRoutes);
 app.route("/api/tags", tagRoutes);
 app.route("/api/shares", shareRoutes);
+app.route("/api/jobs", jobRoutes);
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 
@@ -89,7 +95,12 @@ app.get("/api/public/shares/:slug", async (c) => {
 
 export default {
   fetch: app.fetch,
-  async scheduled(_controller, env, ctx) {
+  async scheduled(controller, env, ctx) {
+    if (controller.cron === JOB_CRON) {
+      // Keeps re-embedding / organizing jobs moving when no page drives them.
+      ctx.waitUntil(advanceRunningJobs(env));
+      return;
+    }
     ctx.waitUntil(runDailyBackup(env));
     ctx.waitUntil(runDeadLinkCheck(env));
   },

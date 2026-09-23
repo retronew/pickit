@@ -8,7 +8,6 @@ import {
   resolveEmbeddingEndpoint,
   isChatConfigured,
   isEmbeddingConfigured,
-  emptyAiSettings,
 } from "./ai";
 
 describe("normalizeBaseUrl", () => {
@@ -70,7 +69,13 @@ describe("upgradeAiSettings", () => {
       protocol: "openai-chat",
       model: "deepseek-chat",
     });
-    expect(s.embedding).toMatchObject({ inheritChat: true, model: "emb" });
+    expect(s.embedding).toEqual({
+      provider: "custom",
+      baseUrl: "https://api.deepseek.com/v1",
+      apiKey: "sk-1",
+      protocol: "openai",
+      model: "emb",
+    });
     expect(isChatConfigured(s)).toBe(true);
     expect(isEmbeddingConfigured(s)).toBe(true);
   });
@@ -82,25 +87,38 @@ describe("upgradeAiSettings", () => {
   });
 });
 
-describe("resolveEmbeddingEndpoint", () => {
-  it("inherits provider, URL and key from chat", () => {
-    const s = emptyAiSettings();
-    s.chat = { provider: "google", baseUrl: "https://g.com/v1beta", apiKey: "k", protocol: "google", model: "c" };
-    s.embedding.model = "gemini-embedding-001";
-    expect(resolveEmbeddingEndpoint(s)).toEqual({
+describe("upgrading configs that inherited the chat provider", () => {
+  const chat = (protocol: "google" | "anthropic") => ({
+    provider: protocol,
+    baseUrl: "https://x.com/v1",
+    apiKey: "k",
+    protocol,
+    model: "c",
+  });
+
+  it("copies the chat provider into a now independent embedding endpoint", () => {
+    const s = upgradeAiSettings({
+      version: 2,
+      chat: chat("google"),
+      embedding: { provider: "", baseUrl: "", apiKey: "", protocol: "openai", model: "gemini-embedding-001", inheritChat: true },
+    });
+    expect(s.embedding).toEqual({
       provider: "google",
-      baseUrl: "https://g.com/v1beta",
+      baseUrl: "https://x.com/v1",
       apiKey: "k",
       protocol: "google",
       model: "gemini-embedding-001",
     });
+    expect(resolveEmbeddingEndpoint(s)).toEqual(s.embedding);
   });
 
-  it("cannot inherit from an Anthropic chat endpoint", () => {
-    const s = emptyAiSettings();
-    s.chat = { provider: "anthropic", baseUrl: "https://a.com/v1", apiKey: "k", protocol: "anthropic", model: "c" };
-    s.embedding.model = "x";
-    expect(resolveEmbeddingEndpoint(s)).toBeNull();
+  it("does not copy from an Anthropic chat endpoint", () => {
+    const s = upgradeAiSettings({
+      version: 2,
+      chat: chat("anthropic"),
+      embedding: { provider: "", baseUrl: "", apiKey: "", protocol: "openai", model: "x", inheritChat: true },
+    });
+    expect(s.embedding.provider).toBe("");
     expect(isEmbeddingConfigured(s)).toBe(false);
   });
 });

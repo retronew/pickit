@@ -9,11 +9,12 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **Bookmarks**: add, edit, pin, soft-delete to trash, restore, bulk actions, duplicate detection and merging
 - **Organize**: categories, tags (rename / delete), visit counts, stats dashboard
 - **Search**: SQLite FTS5 full-text search, plus semantic search via embeddings
-- **AI** (optional, any OpenAI-compatible API): auto-fill name/category/tags for new links, per-item summaries, chat over your library, batch re-organize
+- **AI** (optional; OpenAI, Anthropic, Gemini and any OpenAI-compatible API): auto-fill name/category/tags for new links, per-item summaries, chat over your library, batch re-organize. Chat and embedding models are configured independently, so they can come from different providers
 - **Import / export**: Markdown tables, JSON, browser bookmark HTML
 - **Sharing**: public read-only share links (`/s/:slug`)
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page
 - **API access**: Bearer API token for scripts and integrations
+- **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The settings page drives them while open; a per-minute cron keeps them going in the background
 - **Maintenance cron**: daily JSON backup to R2 and dead-link checks
 
 ## Tech stack
