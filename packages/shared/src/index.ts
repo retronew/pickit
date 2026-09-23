@@ -27,15 +27,7 @@ export function normalizeUrl(url: string): string {
     .replace(/\/+$/, "");
 }
 
-export type AiApiMode = "chat" | "responses";
-
-export interface AiConfig {
-  baseUrl: string;
-  apiKey: string;
-  chatModel: string;
-  embeddingModel?: string;
-  apiMode?: AiApiMode;
-}
+export * from "./ai";
 
 export interface SearchHit {
   id: number;

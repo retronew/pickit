@@ -1,21 +1,31 @@
-import type { AiSettings } from "./ai";
+import {
+  upgradeAiSettings,
+  emptyAiSettings,
+  isChatConfigured,
+  isEmbeddingConfigured,
+  type AiSettings,
+} from "@pickit/shared";
 
-export async function getSettings(db: D1Database): Promise<AiSettings | null> {
-  const { results } = await db
-    .prepare("SELECT key, value FROM settings WHERE key IN ('ai_config')")
-    .all<{ key: string; value: string }>();
-  const row = results.find((r) => r.key === "ai_config");
-  if (!row) return null;
+/** The stored AI config (upgraded from the legacy single-endpoint format), even if incomplete. */
+export async function getRawSettings(db: D1Database): Promise<AiSettings> {
+  const row = await db
+    .prepare("SELECT value FROM settings WHERE key = 'ai_config'")
+    .first<{ value: string }>();
+  if (!row) return emptyAiSettings();
   try {
-    const parsed = JSON.parse(row.value) as AiSettings;
-    if (!parsed.baseUrl || !parsed.apiKey || !parsed.chatModel) return null;
-    return parsed;
+    return upgradeAiSettings(JSON.parse(row.value));
   } catch {
-    return null;
+    return emptyAiSettings();
   }
 }
 
-export async function saveSettings(db: D1Database, config: unknown) {
+/** The AI config, or null when neither chat nor embedding is usable. */
+export async function getSettings(db: D1Database): Promise<AiSettings | null> {
+  const s = await getRawSettings(db);
+  return isChatConfigured(s) || isEmbeddingConfigured(s) ? s : null;
+}
+
+export async function saveSettings(db: D1Database, config: AiSettings) {
   await db
     .prepare(
       "INSERT INTO settings (key, value) VALUES ('ai_config', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",

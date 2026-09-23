@@ -82,7 +82,7 @@ cd ../.. && pnpm deploy
 
 - **R2 バックアップ（任意）**：`npx wrangler r2 bucket create pickit-backups` を実行します。R2 を使わない場合は `wrangler.jsonc` の `r2_buckets` ブロックを削除すれば、cron はバックアップをスキップします。
 - **カスタムドメイン（任意）**：`wrangler.jsonc` に `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]` を追加します。ドメインは Cloudflare アカウントのゾーンである必要があります。
-- **AI（任意）**：ログイン後、**設定** ページで Base URL、API キー、モデル名を入力します。未設定でも AI 以外の機能はすべて使えます。
+- **AI（任意）**：ログイン後、**設定** ページでプロバイダー（OpenAI、Anthropic、Gemini、DeepSeek、Qwen、OpenRouter など、または「カスタム / 中継」）を選び、API キーを入力して、取得したモデル一覧からモデルを選びます。チャットモデルと埋め込みモデルは別々に設定でき、異なるプロバイダーも使えます。カスタム URL では「検出してモデルを取得」が `/v1` の要否を自動判定し、実際にリクエストされる URL もページ上に表示されます。未設定でも AI 以外の機能はすべて使えます。
 
 ### 継続的デプロイ
 

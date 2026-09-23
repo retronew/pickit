@@ -36,8 +36,8 @@ chatRoutes.post("/", async (c) => {
 
   const settings = await getSettings(c.env.DB);
   const provider = settings ? createProvider(settings) : null;
-  if (!provider) {
-    return c.json({ error: "还没有配置 AI，请先到「设置」里完成配置" }, 400);
+  if (!provider?.chat) {
+    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
   }
 
   // retrieve relevant items: semantic if possible, otherwise dump categories/summary

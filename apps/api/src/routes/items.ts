@@ -9,6 +9,7 @@ import {
 import type { Env, ItemRow } from "#types";
 import type { AiSettings } from "#ai";
 import { getSettings } from "#settings";
+import { isChatConfigured, isEmbeddingConfigured } from "@pickit/shared";
 import { createProvider, embedText, cosSim, type Provider } from "#ai";
 import { getJob, saveJob, runBatchJob, type JobState } from "#jobs";
 import { checkLink } from "#cron";
@@ -311,8 +312,8 @@ itemRoutes.post("/analyze", async (c) => {
   }
   const settings = await getSettings(c.env.DB);
   const provider = settings ? createProvider(settings) : null;
-  if (!provider) {
-    return c.json({ error: "还没有配置 AI，请先到「设置」里完成配置" }, 400);
+  if (!provider?.chat) {
+    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
   }
 
   let pageTitle = "";
@@ -512,8 +513,8 @@ itemRoutes.post("/:id/summarize", async (c) => {
   if (!row) return c.json({ error: "not found" }, 404);
   const settings = await getSettings(c.env.DB);
   const provider = settings ? createProvider(settings) : null;
-  if (!provider) {
-    return c.json({ error: "还没有配置 AI，请先到「设置」里完成配置" }, 400);
+  if (!provider?.chat) {
+    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
   }
   const { generateText } = await import("ai");
   const { text } = await generateText({
@@ -635,7 +636,9 @@ itemRoutes.post("/organize-all", async (c) => {
     .catch(() => ({}) as { mode?: "missing" | "all" });
   const mode = body.mode ?? "missing";
   const settings = await getSettings(c.env.DB);
-  if (!settings) return c.json({ error: "还没有配置 AI，请先到「设置」里完成配置" }, 400);
+  if (!settings || !isChatConfigured(settings)) {
+    return c.json({ error: "还没有配置对话模型，请先到「设置」里完成配置" }, 400);
+  }
   const existing = await getJob(c.env.DB, "organize_job");
   if (existing?.running) {
     return c.json({ error: "已有整理任务在运行，请等它完成" }, 409);
@@ -666,8 +669,8 @@ async function runOrganizeJob(
   settings: AiSettings,
   job: JobState,
 ) {
-  const provider = createProvider(settings);
-  if (!provider) return;
+  const chat = createProvider(settings)?.chat;
+  if (!chat) return;
   const { generateText } = await import("ai");
   const { results: catRows } = await env.DB.prepare(
     "SELECT DISTINCT category FROM items WHERE category != '' AND deleted_at IS NULL",
@@ -676,7 +679,7 @@ async function runOrganizeJob(
 
   await runBatchJob(env.DB, "organize_job", rows, job, async (row) => {
     const { text } = await generateText({
-      model: provider.chat,
+      model: chat,
       system:
         "你是技术收藏库的整理助手。根据条目信息输出 JSON（不要输出其他内容）：" +
         '{"category":"分类名(简短中文,优先从已有分类中选择；都不合适才新建)","tags":["标签1","标签2"]}',
@@ -801,7 +804,9 @@ itemRoutes.post("/:id/reembed", async (c) => {
     .first<ItemRow>();
   if (!row) return c.json({ error: "not found" }, 404);
   const settings = await getSettings(c.env.DB);
-  if (!settings) return c.json({ error: "还没有配置 AI，请先到「设置」里完成配置" }, 400);
+  if (!settings || !isEmbeddingConfigured(settings)) {
+    return c.json({ error: "还没有配置向量模型，请先到「设置」里完成配置" }, 400);
+  }
   c.executionCtx.waitUntil(
     embedItem(
       c.env,
@@ -820,7 +825,9 @@ itemRoutes.post("/:id/reembed", async (c) => {
 
 itemRoutes.post("/reembed-all", async (c) => {
   const settings = await getSettings(c.env.DB);
-  if (!settings) return c.json({ error: "还没有配置 AI，请先到「设置」里完成配置" }, 400);
+  if (!settings || !isEmbeddingConfigured(settings)) {
+    return c.json({ error: "还没有配置向量模型，请先到「设置」里完成配置" }, 400);
+  }
   const existing = await getJob(c.env.DB, "reembed_job");
   if (existing?.running) {
     return c.json({ error: "已有重建任务在运行，请等它完成" }, 409);
@@ -849,7 +856,9 @@ itemRoutes.get("/reembed-status", async (c) => {
 
 itemRoutes.post("/reembed-retry", async (c) => {
   const settings = await getSettings(c.env.DB);
-  if (!settings) return c.json({ error: "还没有配置 AI，请先到「设置」里完成配置" }, 400);
+  if (!settings || !isEmbeddingConfigured(settings)) {
+    return c.json({ error: "还没有配置向量模型，请先到「设置」里完成配置" }, 400);
+  }
   const existing = await getJob(c.env.DB, "reembed_job");
   if (!existing || existing.failedIds.length === 0) {
     return c.json({ error: "没有需要重试的收藏" }, 400);
