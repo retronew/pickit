@@ -6,6 +6,7 @@ import { Button } from "#components/ui/button";
 import { BackToTop } from "#components/BackToTop";
 import { CommandPalette } from "#components/CommandPalette";
 import { cn } from "#lib/utils";
+import { authClient } from "#lib/auth-client";
 
 export function AppShell() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -13,16 +14,17 @@ export function AppShell() {
   const { theme, toggle } = useTheme();
 
   useEffect(() => {
-    fetch("/api/auth/status")
-      .then((r) => r.json())
-      .then((d) => {
-        setAuthed(d.authenticated);
-        if (!d.authenticated) navigate("/login");
+    // The API also enforces the email allowlist; a session alone isn't enough.
+    fetch("/api/me")
+      .then((r) => {
+        setAuthed(r.ok);
+        if (!r.ok) navigate("/login");
       })
       .catch(() => navigate("/login"));
   }, [navigate]);
 
-  if (authed === false) return null;
+  // Render nothing until the session is confirmed, so pages never fetch unauthenticated.
+  if (authed !== true) return null;
 
   const navItems = [
     { to: "/", label: "收藏", end: true },
@@ -71,7 +73,7 @@ export function AppShell() {
               variant="ghost"
               size="sm"
               onClick={async () => {
-                await fetch("/api/auth/logout", { method: "POST" });
+                await authClient.signOut();
                 navigate("/login");
               }}
             >

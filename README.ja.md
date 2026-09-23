@@ -13,6 +13,7 @@ Cloudflare Workers + D1 だけで動く、セルフホスト型のシングル�
 - **インポート / エクスポート**：Markdown テーブル、JSON、ブラウザのブックマーク HTML
 - **共有**：公開の読み取り専用共有リンク（`/s/:slug`）
 - **クイック保存**：表示中のページを `/add?url=...` で開くブックマークレット
+- **ログイン**：[Better Auth](https://better-auth.com) による Google / GitHub ログイン。許可リストのメールアドレスに限定（シングルユーザー、パスワードなし）
 - **API アクセス**：スクリプトや外部連携用の Bearer API トークン
 - **バッチジョブ**：埋め込みの再生成と AI 一括整理は小さなステップに分けて実行され、一時停止 / 再開、失敗項目の再試行、項目ごとのエラー詳細に対応。設定ページを開いている間はページが処理を進め、閉じた後は毎分の cron がバックグラウンドで続行します
 - **定期メンテナンス**：毎日 R2 への JSON バックアップとリンク切れチェック
@@ -45,8 +46,14 @@ pnpm install
 
 # ローカル用シークレット（git 管理対象外）
 cat > apps/api/.dev.vars <<'EOF'
-APP_PASSWORD=ログイン用パスワード
-JWT_SECRET=十分に長いランダム文字列
+BETTER_AUTH_SECRET=十分に長いランダム文字列
+BETTER_AUTH_URL=http://localhost:5173
+ALLOWED_EMAILS=you@example.com
+# ローカル開発用の OAuth アプリ（コールバック：http://localhost:5173/api/auth/callback/<provider>）
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
 EOF
 
 pnpm db:migrate   # ローカルの D1 データベースにマイグレーションを適用
@@ -76,10 +83,22 @@ cd apps/api
 npx wrangler login
 npx wrangler d1 create pickit-db          # 表示された database_id を wrangler.jsonc に記入
 pnpm db:migrate:remote
-npx wrangler secret put APP_PASSWORD
-npx wrangler secret put JWT_SECRET        # 例：openssl rand -base64 32
+npx wrangler secret put BETTER_AUTH_SECRET   # 例：openssl rand -base64 32
+npx wrangler secret put ALLOWED_EMAILS       # ログインを許可するメールアドレス（カンマ区切り）
+npx wrangler secret put GOOGLE_CLIENT_ID     # GOOGLE_CLIENT_SECRET、GITHUB_CLIENT_ID、GITHUB_CLIENT_SECRET も同様
 cd ../.. && pnpm deploy
 ```
+
+### ログイン（Google / GitHub）
+
+ログインは [Better Auth](https://better-auth.com) による Google と GitHub のみで、パスワードログインはありません。`wrangler.jsonc` の `vars` にある `BETTER_AUTH_URL` を公開 URL に変更し、次のコールバック URL で OAuth アプリを作成します：
+
+| プロバイダー | 作成場所 | コールバック URL |
+| --- | --- | --- |
+| Google | Google Cloud Console → API とサービス → 認証情報 → OAuth クライアント ID（ウェブアプリケーション） | `https://your-domain/api/auth/callback/google` |
+| GitHub | GitHub → Settings → Developer settings → OAuth Apps | `https://your-domain/api/auth/callback/github` |
+
+`ALLOWED_EMAILS` に含まれるメールアドレスだけがログインでき、それ以外の Google / GitHub アカウントは拒否されます。リストから外すと既存のセッションも無効になります。client id と secret の両方が設定されていないプロバイダーはログイン画面に表示されません。同じメールアドレスの Google と GitHub アカウントは同一ユーザーとしてログインします。
 
 - **R2 バックアップ（任意）**：`npx wrangler r2 bucket create pickit-backups` を実行します。R2 を使わない場合は `wrangler.jsonc` の `r2_buckets` ブロックを削除すれば、cron はバックアップをスキップします。
 - **カスタムドメイン（任意）**：`wrangler.jsonc` に `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]` を追加します。ドメインは Cloudflare アカウントのゾーンである必要があります。
@@ -98,7 +117,7 @@ cd ../.. && pnpm deploy
 
 ## API
 
-Web アプリは Cookie セッションで認証します。スクリプトからは **設定** ページで発行した API トークンを使えます：
+Web アプリは Better Auth のセッション Cookie で認証します。スクリプトからは **設定** ページで発行した API トークンを使えます：
 
 ```bash
 curl -H "Authorization: Bearer <token>" https://your-domain/api/items

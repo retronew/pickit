@@ -13,6 +13,7 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **Import / export**: Markdown tables, JSON, browser bookmark HTML
 - **Sharing**: public read-only share links (`/s/:slug`)
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page
+- **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist (single user, no passwords)
 - **API access**: Bearer API token for scripts and integrations
 - **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The settings page drives them while open; a per-minute cron keeps them going in the background
 - **Maintenance cron**: daily JSON backup to R2 and dead-link checks
@@ -45,8 +46,14 @@ pnpm install
 
 # Local secrets (git-ignored)
 cat > apps/api/.dev.vars <<'EOF'
-APP_PASSWORD=your-login-password
-JWT_SECRET=any-long-random-string
+BETTER_AUTH_SECRET=any-long-random-string
+BETTER_AUTH_URL=http://localhost:5173
+ALLOWED_EMAILS=you@example.com
+# OAuth apps for local dev (callback: http://localhost:5173/api/auth/callback/<provider>)
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
 EOF
 
 pnpm db:migrate   # apply migrations to the local D1 database
@@ -76,10 +83,22 @@ cd apps/api
 npx wrangler login
 npx wrangler d1 create pickit-db          # put the printed database_id into wrangler.jsonc
 pnpm db:migrate:remote
-npx wrangler secret put APP_PASSWORD
-npx wrangler secret put JWT_SECRET        # e.g. openssl rand -base64 32
+npx wrangler secret put BETTER_AUTH_SECRET   # e.g. openssl rand -base64 32
+npx wrangler secret put ALLOWED_EMAILS       # comma-separated emails allowed to sign in
+npx wrangler secret put GOOGLE_CLIENT_ID     # and GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 cd ../.. && pnpm deploy
 ```
+
+### Sign-in (Google / GitHub)
+
+Sign-in uses [Better Auth](https://better-auth.com) with Google and GitHub; there is no password login. Set `BETTER_AUTH_URL` in `wrangler.jsonc` `vars` to your public origin, then create the OAuth apps with these callback URLs:
+
+| Provider | Where | Callback URL |
+| --- | --- | --- |
+| Google | Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application) | `https://your-domain/api/auth/callback/google` |
+| GitHub | GitHub → Settings → Developer settings → OAuth Apps | `https://your-domain/api/auth/callback/github` |
+
+Only emails listed in `ALLOWED_EMAILS` can sign in; every other Google / GitHub account is rejected, and removing an email revokes its sessions. A provider without both its client id and secret is hidden on the login page. Google and GitHub accounts with the same email sign in as the same user.
 
 - **R2 backups (optional):** run `npx wrangler r2 bucket create pickit-backups`. If you don't want R2, remove the `r2_buckets` block from `wrangler.jsonc` and the cron will skip backups.
 - **Custom domain (optional):** add `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]` to `wrangler.jsonc`. The domain must be a zone in your Cloudflare account.
@@ -98,7 +117,7 @@ Because migrations run before the new code goes live, keep them backward-compati
 
 ## API
 
-The web app authenticates with a cookie session. Scripts can use an API token generated in **Settings**:
+The web app uses the Better Auth session cookie. Scripts can use an API token generated in **Settings**:
 
 ```bash
 curl -H "Authorization: Bearer <token>" https://your-domain/api/items

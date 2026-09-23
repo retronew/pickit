@@ -21,6 +21,7 @@
     "@ai-sdk/openai-compatible": "^3.0.53",
     "@pickit/shared": "workspace:*",
     "ai": "^7.0.109",
+    "better-auth": "^1.7.5",
     "hono": "^4.13.8"
   },
   "devDependencies": {

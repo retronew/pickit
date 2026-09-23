@@ -1,7 +1,6 @@
 import { Hono } from "hono";
-import { jwt } from "hono/jwt";
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
-import { authRoutes } from "#routes/auth";
+import { getAuth, isAllowedEmail, enabledProviders } from "#auth";
 import { itemRoutes } from "#routes/items";
 import { searchRoutes } from "#routes/search";
 import { chatRoutes } from "#routes/chat";
@@ -19,15 +18,14 @@ const JOB_CRON = "* * * * *";
 
 const app = new Hono<{ Bindings: Env }>();
 
-const PUBLIC_PATHS = new Set([
-  "/api/auth/login",
-  "/api/auth/status",
-  "/api/health",
-]);
+// Better Auth owns /api/auth/* (OAuth redirects, callbacks, session, sign-out).
+app.on(["GET", "POST"], "/api/auth/*", (c) => getAuth(c.env).handler(c.req.raw));
+
+const PUBLIC_PATHS = new Set(["/api/health"]);
 
 app.use("/api/*", async (c, next) => {
   const path = new URL(c.req.url).pathname;
-  if (PUBLIC_PATHS.has(path) || path.startsWith("/api/public/")) {
+  if (PUBLIC_PATHS.has(path) || path.startsWith("/api/public/") || path.startsWith("/api/auth/")) {
     await next();
     return;
   }
@@ -40,14 +38,25 @@ app.use("/api/*", async (c, next) => {
       return;
     }
   }
-  try {
-    await jwt({ secret: c.env.JWT_SECRET, alg: "HS256", cookie: "pickit_token" })(c, next);
-  } catch {
+  const session = await getAuth(c.env)
+    .api.getSession({ headers: c.req.raw.headers })
+    .catch(() => null);
+  // Re-check the allowlist so removing an email revokes existing sessions.
+  if (!session || !isAllowedEmail(c.env, session.user.email)) {
     return c.json({ error: "unauthorized" }, 401);
   }
+  await next();
 });
 
-app.route("/api/auth", authRoutes);
+// Behind the auth middleware: 200 with the signed-in user, 401 otherwise.
+app.get("/api/me", async (c) => {
+  const session = await getAuth(c.env).api.getSession({ headers: c.req.raw.headers });
+  const user = session?.user;
+  return c.json({ user: user ? { name: user.name, email: user.email, image: user.image } : null });
+});
+
+// Lets the login page show only the providers that are configured.
+app.get("/api/public/auth-providers", (c) => c.json({ providers: enabledProviders(c.env) }));
 app.route("/api/items", itemRoutes);
 app.route("/api/search", searchRoutes);
 app.route("/api/chat", chatRoutes);

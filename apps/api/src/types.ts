@@ -1,9 +1,17 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
-  APP_PASSWORD: string;
-  JWT_SECRET: string;
   BACKUPS?: R2Bucket;
+  /** Better Auth: secret for signing sessions (`wrangler secret put`). */
+  BETTER_AUTH_SECRET: string;
+  /** Public origin, e.g. https://pickit.example.com (OAuth callbacks live under it). */
+  BETTER_AUTH_URL?: string;
+  /** Emails allowed to sign in, comma separated. Everyone else is rejected. */
+  ALLOWED_EMAILS?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GITHUB_CLIENT_ID?: string;
+  GITHUB_CLIENT_SECRET?: string;
 }
 
 export interface ItemRow {
