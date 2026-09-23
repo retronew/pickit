@@ -1,0 +1,22 @@
+{
+  "name": "pickit",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "concurrently -k \"pnpm dev:web\" \"pnpm dev:api\"",
+    "dev:web": "pnpm --filter @pickit/web dev",
+    "dev:api": "pnpm --filter @pickit/api dev",
+    "build": "pnpm --filter @pickit/web build",
+    "import": "node scripts/import.mjs",
+    "deploy": "pnpm run build && pnpm --filter @pickit/api deploy",
+    "db:migrate": "pnpm --filter @pickit/api db:migrate",
+    "db:migrate:remote": "pnpm --filter @pickit/api db:migrate:remote",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  }
+}

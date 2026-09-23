@@ -1,0 +1,12 @@
+.wrangler/
+node_modules/
+dist/
+.dev.vars
+*.local
+.DS_Store
+*.log
+.playwright-cli/
+data/
+.agents/
+.claude/
+skills-lock.json

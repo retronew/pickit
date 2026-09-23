@@ -1,0 +1,7 @@
+ALTER TABLE items ADD COLUMN http_status INTEGER;
+ALTER TABLE items ADD COLUMN checked_at INTEGER;
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  ip TEXT NOT NULL,
+  ts INTEGER NOT NULL
+);

@@ -1,0 +1,1 @@
+ALTER TABLE items ADD COLUMN ai_summary TEXT NOT NULL DEFAULT '';

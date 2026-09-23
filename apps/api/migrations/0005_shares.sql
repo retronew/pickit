@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS shares (
+  slug TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL,
+  value TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);

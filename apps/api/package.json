@@ -1,0 +1,28 @@
+{
+  "name": "@pickit/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.72",
+    "@ai-sdk/openai-compatible": "^3.0.53",
+    "@pickit/shared": "workspace:*",
+    "ai": "^7.0.109",
+    "hono": "^4.13.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260922.1",
+    "wrangler": "^4.136.1"
+  }
+}

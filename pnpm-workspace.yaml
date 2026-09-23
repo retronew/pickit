@@ -1,0 +1,14 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  esbuild: true
+  workerd: true
+minimumReleaseAgeExclude:
+  - '@ai-sdk/gateway@4.0.88'
+  - '@cloudflare/unenv-preset@2.16.2'
+  - '@cloudflare/workers-types@5.20260922.1'
+  - ai@7.0.109
+  - miniflare@5.20260921.0-alpha
+  - wrangler@4.136.1
+  - '@ai-sdk/openai@4.0.72'

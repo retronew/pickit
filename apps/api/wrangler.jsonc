@@ -1,0 +1,45 @@
+{
+	"name": "pickit",
+	"compatibility_date": "2025-03-01",
+	"main": "src/index.ts",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"routes": [
+		{
+			"pattern": "pickit.rika66.com",
+			"custom_domain": true
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "pickit-db",
+			"database_id": "73c23ba1-d18b-4ff7-8ce9-e4663b710bb9",
+			// Keeps local dev pointing at the existing local sqlite file.
+			"preview_database_id": "placeholder-create-with-wrangler",
+			"migrations_dir": "migrations"
+		}
+	],
+	// Requires `wrangler r2 bucket create pickit-backups` before deploying.
+	// Backups are best-effort: cron.ts skips the backup step if this binding
+	// is absent, so remove this block if you don't want the R2 bucket.
+	"r2_buckets": [
+		{
+			"binding": "BACKUPS",
+			"bucket_name": "pickit-backups"
+		}
+	],
+	// Daily at 18:00 UTC (02:00 China time): full JSON backup to R2, plus a
+	// batch of dead-link checks. See src/cron.ts.
+	"triggers": {
+		"crons": [
+			"0 18 * * *"
+		]
+	}
+}
