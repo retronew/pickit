@@ -84,6 +84,18 @@ function originOf(url: string): string | null {
   }
 }
 
+/** Whether a request can carry a key: typed, reusable saved one, or not needed. */
+function hasUsableKey(endpoint: AiEndpoint<string>, saved?: SavedEndpoint): boolean {
+  if (endpoint.apiKey || endpoint.provider === CUSTOM_PROVIDER) return true;
+  if (findProvider(endpoint.provider)?.keyOptional) return true;
+  return (
+    !!saved?.apiKeyMasked &&
+    saved.provider === endpoint.provider &&
+    originOf(saved.baseUrl) !== null &&
+    originOf(saved.baseUrl) === originOf(endpoint.baseUrl)
+  );
+}
+
 const emptyModels: ModelState = { models: [], loading: false, message: "", error: false };
 
 /** The form with inheritChat forced off when the chat protocol can't provide embeddings. */
@@ -141,6 +153,14 @@ export function AiSettingsCard() {
     setForm((f) => ({ ...f, embedding: { ...f.embedding, ...patch } }));
 
   const fetchModels = async (target: Target) => {
+    const owner = target === "chat" || inherit ? "chat" : "embedding";
+    if (!hasUsableKey(form[owner], saved?.[owner])) {
+      setModels((m) => ({
+        ...m,
+        [target]: { models: [], loading: false, message: "请先填写 API 密钥，再获取模型列表", error: true },
+      }));
+      return;
+    }
     setModels((m) => ({ ...m, [target]: { ...m[target], loading: true, message: "" } }));
     const { ok, data } = await postJson<{ baseUrl?: string; models?: ModelInfo[]; error?: string }>(
       "/api/settings/ai/models",
@@ -265,7 +285,7 @@ export function AiSettingsCard() {
               { label: "模型列表", url: modelsListUrl(form.chat.baseUrl) },
             ]}
           />
-          <TestRow state={tests.chat} onTest={() => runTest("chat")} />
+          <TestResult state={tests.chat} />
         </section>
 
         <section className="space-y-4">
@@ -337,16 +357,28 @@ export function AiSettingsCard() {
               )}
             />
           )}
-          <TestRow
-            state={tests.embedding}
-            disabled={!form.embedding.model}
-            onTest={() => runTest("embedding")}
-          />
+          <TestResult state={tests.embedding} />
         </section>
       </CardContent>
       <CardFooter className="flex flex-wrap items-center gap-2">
         <Button size="lg" onClick={save}>
           保存
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          disabled={tests.chat.running}
+          onClick={() => runTest("chat")}
+        >
+          {tests.chat.running ? "测试中…" : "测试对话模型"}
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          disabled={!form.embedding.model || tests.embedding.running}
+          onClick={() => runTest("embedding")}
+        >
+          {tests.embedding.running ? "测试中…" : "测试向量模型"}
         </Button>
         {saveMessage && <span className="text-muted-foreground text-sm">{saveMessage}</span>}
       </CardFooter>
@@ -579,31 +611,17 @@ function RequestPreview({ urls }: { urls: RequestUrl[] }) {
   );
 }
 
-function TestRow({
-  state,
-  disabled,
-  onTest,
-}: {
-  state: TestState;
-  disabled?: boolean;
-  onTest: () => void;
-}) {
+function TestResult({ state }: { state: TestState }) {
+  if (!state.text) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button variant="outline" disabled={disabled || state.running} onClick={onTest}>
-        {state.running ? "测试中…" : "测试连接"}
-      </Button>
-      {state.text && (
-        <span
-          className={
-            state.ok
-              ? "text-sm text-emerald-700 dark:text-emerald-400"
-              : "text-destructive min-w-0 break-all text-sm"
-          }
-        >
-          {state.text}
-        </span>
-      )}
-    </div>
+    <p
+      className={
+        state.ok
+          ? "text-sm text-emerald-700 dark:text-emerald-400"
+          : "text-destructive min-w-0 break-all text-sm"
+      }
+    >
+      {state.text}
+    </p>
   );
 }

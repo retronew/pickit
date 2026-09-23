@@ -80,7 +80,7 @@ export async function listModels(
       throw new ModelListError(`无法连接 ${url}：${String(e).slice(0, 200)}`);
     }
     if (res.status === 401 || res.status === 403) {
-      throw new ModelListError(`${url} 返回 ${res.status}，请检查 API 密钥`);
+      throw new ModelListError(`${url} 返回 ${res.status}：API 密钥无效、已停用，或没有访问模型列表的权限`);
     }
     if (!res.ok) continue;
     const body = await res.json().catch(() => null);

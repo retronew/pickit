@@ -4,6 +4,8 @@ import {
   normalizeBaseUrl,
   upgradeAiSettings,
   resolveEmbeddingEndpoint,
+  findProvider,
+  CUSTOM_PROVIDER,
   isChatConfigured,
   isEmbeddingConfigured,
   chatRequestUrls,
@@ -94,6 +96,13 @@ settingsRoutes.post("/ai/models", async (c) => {
   const endpoint =
     body.target === "chat" || next.embedding.inheritChat ? next.chat : next.embedding;
   if (!endpoint.baseUrl) return c.json({ error: "请先填写接口地址" }, 400);
+  if (
+    !endpoint.apiKey &&
+    endpoint.provider !== CUSTOM_PROVIDER &&
+    !findProvider(endpoint.provider)?.keyOptional
+  ) {
+    return c.json({ error: "请先填写 API 密钥，再获取模型列表" }, 400);
+  }
   const family: ModelFamily =
     endpoint.protocol === "anthropic"
       ? "anthropic"
