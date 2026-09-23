@@ -14,6 +14,7 @@ import { jobRoutes } from "#routes/jobs";
 import { auditRoutes } from "#routes/audit";
 import { publicRoutes } from "#routes/public";
 import { backupRoutes } from "#routes/backups";
+import { mcpRoutes } from "#routes/mcp";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -51,6 +52,7 @@ app.route("/api/shares", shareRoutes);
 app.route("/api/jobs", jobRoutes);
 app.route("/api/audit", auditRoutes);
 app.route("/api/backups", backupRoutes);
+app.route("/api/mcp", mcpRoutes);
 
 export default {
   fetch: app.fetch,

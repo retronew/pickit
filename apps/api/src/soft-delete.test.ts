@@ -35,8 +35,8 @@ describe("soft-delete filtering", () => {
     expect((src.match(/deleted_at IS NULL/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
-  it("search.ts excludes deleted items from FTS and the LIKE fallback", () => {
-    const src = read("routes/search.ts");
+  it("search excludes deleted items from FTS and the LIKE fallback", () => {
+    const src = read("search.ts");
     const occurrences = src.match(/deleted_at IS NULL/g) ?? [];
     expect(occurrences.length).toBeGreaterThanOrEqual(2);
   });

@@ -61,7 +61,7 @@ export function ApiTokenCard() {
       <CardHeader>
         <CardTitle>API Token</CardTitle>
         <CardDescription>
-          需要脚本或第三方工具访问接口时，用这个 token 代替登录密码。
+          脚本、第三方工具或 AI 助手（MCP）访问接口时使用这个 token。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">

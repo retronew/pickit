@@ -6,19 +6,21 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 
 ## Features
 
-- **Bookmarks**: add, edit, pin, soft-delete to trash, restore, bulk actions, duplicate detection and merging
+- **Bookmarks**: add, edit, pin, soft-delete to trash, restore, duplicate detection and merging
+- **Bulk editing**: select items to pin, move, delete, add / remove tags, or let AI suggest categories and tags and apply only the ones you tick in a review table
 - **Organize**: categories, tags (rename / delete), visit counts, stats dashboard
 - **Search**: SQLite FTS5 full-text search, plus semantic search via embeddings. Similarity scans use compact 512-dim vectors and re-rank a shortlist with the full ones, so even 4096-dim models stay within the free plan's 10 ms CPU limit
 - **AI** (optional; OpenAI, Anthropic, Gemini and any OpenAI-compatible API): auto-fill name/category/tags for new links, per-item summaries, chat over your library, batch re-organize. Chat and embedding models are configured independently, so they can come from different providers
 - **Import / export**: Markdown tables, JSON, browser bookmark HTML
-- **Sharing**: public read-only share links (`/s/:slug`)
+- **Sharing**: public read-only links (`/s/:slug`) for a single bookmark, or a live list of a category (with sub-categories) or a tag, with an RSS feed
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page
 - **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist that can be edited in Settings (no passwords)
 - **Theme**: follows the system light / dark setting by default; the header button cycles System → Light → Dark
 - **Audit log**: every write, export, sign-in / sign-out and cron run is recorded (actor, action, target, result, IP, request details with secrets redacted) and kept for 180 days by default (adjustable from 1 day up to 10 years, or forever, on the Audit page, which also shows the log's estimated size); the **Audit** page filters by category, action, actor, result, date range (with presets) and keyword, with live and manual refresh
-- **API access**: Bearer API token for scripts and integrations
+- **API access**: Bearer API token for scripts and integrations, plus an MCP server so AI assistants can search and add bookmarks
 - **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The job's settings tab drives them while open; a per-minute cron keeps them going in the background
-- **Maintenance cron**: daily JSON backup to R2 and dead-link checks
+- **Backups**: daily JSON backups to R2 (kept 30 days) plus "back up now"; the settings table lets you download, delete or restore one — merge (only missing URLs) or replace (current items go to the trash). Every restore first snapshots the current data, so it can be undone
+- **Maintenance cron**: dead-link checks and audit-log pruning
 
 ## Tech stack
 
@@ -35,6 +37,7 @@ apps/
     src/index.ts       App wiring: middleware order and route mounting
     src/routes/        One module per API area; routes/items/ is split by concern
     src/audit/         Audit log: storage, request description, redaction, middleware
+    src/mcp/           MCP server: JSON-RPC handling and bookmark tools
     src/scheduled.ts   Cron entry (jobs, backups, link checks, audit pruning)
   web/                 React SPA, built into apps/api/dist and served as Worker assets
     src/pages/         One component per route
@@ -85,7 +88,7 @@ pnpm import -- --file path/to/bookmarks.md
 
 ### Tests
 
-- **API route tests** (`*.int.test.ts`) run the real Worker — routes, auth and audit middleware — against an in-memory SQLite database built from the real migrations (`apps/api/src/test/`, using Node's built-in `node:sqlite`, so Node 22.13+ is required). They cover items, trash, bulk actions, import / export, search, tags, shares, settings, authentication and the audit log.
+- **API route tests** (`*.int.test.ts`) run the real Worker — routes, auth and audit middleware — against an in-memory SQLite database built from the real migrations (`apps/api/src/test/`, using Node's built-in `node:sqlite`, so Node 22.13+ is required). They cover items, trash, bulk actions, import / export, search, tags, shares, settings, authentication, the audit log, backups / restore, bulk editing (with a stubbed AI model) and MCP.
 - **Unit tests** cover vectors, jobs, AI settings / URLs, importers, audit description and redaction, and the web app's API client, save flow, filters and formatting.
 - A test fails if any audit action the API records has no display label.
 
@@ -136,4 +139,13 @@ The web app uses the Better Auth session cookie. Scripts can use an API token ge
 
 ```bash
 curl -H "Authorization: Bearer <token>" https://your-domain/api/items
+```
+
+### MCP (AI assistants)
+
+`/api/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server (Streamable HTTP, stateless) so assistants such as Claude can search, read and add your bookmarks. It uses the same API token. Tools: `search_bookmarks`, `get_bookmark`, `list_bookmarks`, `list_categories`, `list_tags`, `add_bookmark`. Tool calls are recorded in the audit log. **Settings → Access & sharing → MCP** shows ready-to-copy config.
+
+```bash
+claude mcp add --transport http pickit https://your-domain/api/mcp \
+  --header "Authorization: Bearer <token>"
 ```

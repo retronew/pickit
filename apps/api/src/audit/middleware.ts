@@ -75,10 +75,9 @@ export function auditMiddleware(sessionActor: SessionLookup) {
 
     const task = (async () => {
       const res = await responseJson(c.res);
-      const d = describe(method, path, body, name, res) ?? {
-        action: "other",
-        summary: `${method} ${path}`,
-      };
+      const described = describe(method, path, body, name, res);
+      if (described === false) return; // deliberately not audited
+      const d = described ?? { action: "other", summary: `${method} ${path}` };
       const actor = preActor ?? actors.get(c.req.raw) ?? "匿名";
       const status = c.res.status;
       const error = status >= 400 && typeof res.error === "string" ? res.error : undefined;

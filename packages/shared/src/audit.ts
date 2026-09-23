@@ -10,6 +10,7 @@ export const AUDIT_CATEGORIES: Record<string, string> = {
   ai: "AI",
   auth: "登录",
   backup: "备份",
+  mcp: "MCP",
   system: "系统",
   other: "其他",
 };
@@ -57,6 +58,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "job.resume": "继续任务",
   "job.retry": "重试任务",
   "ai.chat": "AI 问答",
+  "mcp.call": "MCP 调用",
   "auth.sign_in": "登录",
   "auth.sign_in_denied": "拒绝登录",
   "auth.sign_out": "退出登录",

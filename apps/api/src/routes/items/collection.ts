@@ -1,10 +1,8 @@
 // Listing, stats, trash, categories and creating items.
 
 import { Hono } from "hono";
-import { normalizeUrl } from "@pickit/shared";
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
-import { getSettings } from "#settings";
-import { toItemJson, findDuplicate, embedItem } from "./helpers";
+import { toItemJson, createItem, type NewItem } from "./helpers";
 
 export const collectionRoutes = new Hono<{ Bindings: Env }>();
 
@@ -80,43 +78,12 @@ collectionRoutes.get("/categories", async (c) => {
 });
 
 collectionRoutes.post("/", async (c) => {
-  const body = await c.req.json<{
-    name: string;
-    url?: string;
-    icon?: string;
-    note?: string;
-    category?: string;
-    tags?: string[];
-    allowDuplicate?: boolean;
-  }>();
+  const body = await c.req.json<NewItem & { allowDuplicate?: boolean }>();
   if (!body.name) return c.json({ error: "name required" }, 400);
-  const urlNorm = normalizeUrl(body.url ?? "");
-  if (!body.allowDuplicate) {
-    const dup = await findDuplicate(c.env.DB, urlNorm);
-    if (dup) return c.json({ error: "duplicate", existing: dup }, 409);
-  }
-  const now = Date.now();
-  const { success, meta } = await c.env.DB.prepare(
-    "INSERT INTO items (name, url, icon, note, category, tags, url_norm, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-  )
-    .bind(
-      body.name,
-      body.url ?? "",
-      body.icon ?? "",
-      body.note ?? "",
-      body.category ?? "",
-      JSON.stringify(body.tags ?? []),
-      urlNorm,
-      now,
-      now,
-    )
-    .run();
-  const id = meta.last_row_id;
-  const settings = await getSettings(c.env.DB);
-  if (settings) {
-    c.executionCtx.waitUntil(
-      embedItem(c.env, Number(id), body, settings).catch(() => {}),
-    );
-  }
-  return c.json({ id }, success ? 201 : 500);
+  const result = await createItem(c.env, body, {
+    allowDuplicate: body.allowDuplicate,
+    waitUntil: (p) => c.executionCtx.waitUntil(p),
+  });
+  if ("duplicate" in result) return c.json({ error: "duplicate", existing: result.duplicate }, 409);
+  return c.json({ id: result.id }, 201);
 });

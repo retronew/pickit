@@ -3,6 +3,8 @@
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { nearest, vectorColumns } from "#vectors";
 import { createProvider, embedText, embeddingInput, type Provider, type AiSettings } from "#ai";
+import { normalizeUrl } from "@pickit/shared";
+import { getSettings } from "#settings";
 
 export async function itemsByIds(db: D1Database, ids: number[]): Promise<Map<number, ItemRow>> {
   if (!ids.length) return new Map();
@@ -89,4 +91,49 @@ export async function embedItem(
   )
     .bind(cols.embedding, cols.vec, provider.embeddingModelId, id)
     .run();
+}
+
+export interface NewItem {
+  name: string;
+  url?: string;
+  icon?: string;
+  note?: string;
+  category?: string;
+  tags?: string[];
+}
+
+/**
+ * Inserts an item unless its URL is already saved (then returns that one),
+ * and embeds it in the background when an embedding model is configured.
+ */
+export async function createItem(
+  env: Env,
+  item: NewItem,
+  opts: { allowDuplicate?: boolean; waitUntil: (p: Promise<unknown>) => void },
+): Promise<{ id: number } | { duplicate: Awaited<ReturnType<typeof findDuplicate>> }> {
+  const urlNorm = normalizeUrl(item.url ?? "");
+  if (!opts.allowDuplicate) {
+    const dup = await findDuplicate(env.DB, urlNorm);
+    if (dup) return { duplicate: dup };
+  }
+  const now = Date.now();
+  const { meta } = await env.DB.prepare(
+    "INSERT INTO items (name, url, icon, note, category, tags, url_norm, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  )
+    .bind(
+      item.name,
+      item.url ?? "",
+      item.icon ?? "",
+      item.note ?? "",
+      item.category ?? "",
+      JSON.stringify(item.tags ?? []),
+      urlNorm,
+      now,
+      now,
+    )
+    .run();
+  const id = Number(meta.last_row_id);
+  const settings = await getSettings(env.DB);
+  if (settings) opts.waitUntil(embedItem(env, id, item, settings).catch(() => {}));
+  return { id };
 }

@@ -9,6 +9,7 @@ import { ApiTokenCard } from "#components/settings/ApiTokenCard";
 import { AllowedEmailsCard } from "#components/settings/AllowedEmailsCard";
 import { AiSettingsCard } from "#components/settings/ai/AiSettingsCard";
 import { SharesCard } from "#components/settings/SharesCard";
+import { McpCard } from "#components/settings/McpCard";
 import { ReembedCard } from "#components/settings/ReembedCard";
 import { BuildInfo } from "#components/settings/BuildInfo";
 import { BackupsCard } from "#components/settings/backups/BackupsCard";
@@ -69,11 +70,12 @@ const TABS: SettingsTab[] = [
     id: "access",
     label: "访问与分享",
     icon: ShieldCheckIcon,
-    description: "谁能登录、脚本访问用的 API Token 和公开分享链接",
+    description: "谁能登录、脚本和 AI 助手（MCP）用的 API Token，以及公开分享链接",
     content: (
       <div className={TWO_COLUMNS}>
         <AllowedEmailsCard />
         <ApiTokenCard />
+        <McpCard />
         <SharesCard />
       </div>
     ),

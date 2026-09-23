@@ -22,6 +22,22 @@ const BULK_VERBS: Record<string, string> = {
   apply: "应用整理建议",
 };
 
+/** MCP tool calls are audited; protocol chatter (initialize, tools/list…) is not. */
+function describeMcp(body: Body): Described | false {
+  if (body.method !== "tools/call") return false;
+  const name = String(body.params?.name ?? "");
+  const args = (body.params?.arguments ?? {}) as Body;
+  const detail =
+    name === "search_bookmarks"
+      ? `搜索${quote(args.query)}`
+      : name === "add_bookmark"
+        ? `添加收藏 ${args.url ?? ""}`.trim()
+        : name === "get_bookmark"
+          ? `查看收藏 #${args.id}`
+          : name;
+  return { action: "mcp.call", target: `mcp:${name}`, summary: `MCP：${detail}` };
+}
+
 /**
  * Maps a request to an action name and a readable summary. `name` is the
  * item's name looked up before the handler ran (for /api/items/:id routes),
@@ -33,8 +49,9 @@ export function describe(
   body: Body,
   name: string | undefined,
   res: Body,
-): Described | null {
+): Described | null | false {
   const p = path.replace(/^\/api/, "");
+  if (p === "/mcp") return method === "POST" ? describeMcp(body) : false;
   let m: RegExpMatchArray | null;
 
   if ((m = p.match(/^\/items\/(\d+)(?:\/(\w+))?$/))) {
