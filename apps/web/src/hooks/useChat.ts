@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Item } from "@pickit/shared";
+import { m } from "#lib/i18n";
 
 export interface ChatMsg {
   role: "user" | "assistant";
@@ -18,7 +19,7 @@ function loadStoredMessages(): ChatMsg[] {
 }
 
 export function extractRefIds(content: string): number[] {
-  return [...content.matchAll(/\[\[(\d+)\]\]/g)].map((m) => Number(m[1]));
+  return [...content.matchAll(/\[\[(\d+)\]\]/g)].map((match) => Number(match[1]));
 }
 
 export function renderableText(content: string, cache: Record<number, Item>): string {
@@ -71,13 +72,13 @@ export function useChat(onChunk?: () => void) {
   useEffect(() => {
     // Only for the messages restored from localStorage on first mount —
     // messages sent afterwards resolve their refs at the end of send().
-    const ids = messages.flatMap((m) => (m.role === "assistant" ? extractRefIds(m.content) : []));
+    const ids = messages.flatMap((msg) => (msg.role === "assistant" ? extractRefIds(msg.content) : []));
     if (ids.length > 0) loadRefItems(ids);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function setLastReply(content: string) {
-    setMessages((m) => [...m.slice(0, -1), { role: "assistant", content }]);
+    setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content }]);
   }
 
   async function send(text: string) {
@@ -92,7 +93,7 @@ export function useChat(onChunk?: () => void) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setLastReply(data.error ?? "请求失败，请稍后重试");
+        setLastReply(data.error ?? m.error_request_later());
         return;
       }
       const reader = res.body!.getReader();
@@ -107,7 +108,7 @@ export function useChat(onChunk?: () => void) {
       }
       await loadRefItems(extractRefIds(acc));
     } catch {
-      setLastReply("网络出问题了，请重试");
+      setLastReply(m.error_network());
     } finally {
       setStreaming(false);
     }

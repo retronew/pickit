@@ -22,12 +22,13 @@ import {
 import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
 import { Favicon } from "#components/Favicon";
+import { intlLocale, m } from "#lib/i18n";
 
 // Single newlines in a note render as line breaks, like they were typed.
 const NOTE_REMARK_PLUGINS = [...Object.values(defaultRemarkPlugins), remarkBreaks];
 
 function formatDate(ts: number): string {
-  return new Date(ts).toLocaleString("zh-CN", {
+  return new Date(ts).toLocaleString(intlLocale(), {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -99,8 +100,8 @@ export function ItemDetailSheet({
                     size="sm"
                   >
                     {linkStatus.httpStatus != null && linkStatus.httpStatus < 400
-                      ? "链接正常"
-                      : "链接失效"}
+                      ? m.link_ok()
+                      : m.link_dead()}
                   </Badge>
                 )}
                 <Button
@@ -110,7 +111,7 @@ export function ItemDetailSheet({
                   loading={checking}
                 >
                   <LinkIcon />
-                  检查链接
+                  {m.link_check()}
                 </Button>
               </div>
             </SheetHeader>
@@ -132,19 +133,19 @@ export function ItemDetailSheet({
               )}
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                <dt className="text-muted-foreground">分类</dt>
-                <dd>{item.category || "未分类"}</dd>
-                <dt className="text-muted-foreground">点击次数</dt>
+                <dt className="text-muted-foreground">{m.field_category()}</dt>
+                <dd>{item.category || m.uncategorized()}</dd>
+                <dt className="text-muted-foreground">{m.detail_clicks()}</dt>
                 <dd>{item.clickCount}</dd>
-                <dt className="text-muted-foreground">添加时间</dt>
+                <dt className="text-muted-foreground">{m.detail_created()}</dt>
                 <dd>{formatDate(item.createdAt)}</dd>
-                <dt className="text-muted-foreground">更新时间</dt>
+                <dt className="text-muted-foreground">{m.detail_updated()}</dt>
                 <dd>{formatDate(item.updatedAt)}</dd>
               </dl>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-sm">AI 摘要</h3>
+                  <h3 className="font-medium text-sm">{m.detail_summary()}</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -152,7 +153,7 @@ export function ItemDetailSheet({
                     loading={summarizing}
                   >
                     <SparklesIcon />
-                    {summary ? "重新生成" : "生成摘要"}
+                    {summary ? m.detail_regenerate() : m.detail_generate()}
                   </Button>
                 </div>
                 {summary && (
@@ -164,7 +165,7 @@ export function ItemDetailSheet({
 
               {related.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-medium text-sm">相似收藏</h3>
+                  <h3 className="font-medium text-sm">{m.detail_related()}</h3>
                   <div className="space-y-1">
                     {related.map((r) => (
                       <button
@@ -187,7 +188,7 @@ export function ItemDetailSheet({
             <SheetFooter>
               <Button variant="outline" onClick={share} loading={sharing}>
                 <Share2Icon />
-                {shared ? "已复制链接" : "分享"}
+                {shared ? m.detail_link_copied() : m.action_share()}
               </Button>
               <Button
                 variant="outline"
@@ -195,11 +196,11 @@ export function ItemDetailSheet({
                 className={item.pinned ? "text-foreground" : undefined}
               >
                 <PinIcon className={item.pinned ? "fill-current" : undefined} />
-                {item.pinned ? "取消置顶" : "置顶"}
+                {item.pinned ? m.action_unpin() : m.action_pin()}
               </Button>
               <Button variant="outline" onClick={onEdit}>
                 <PencilIcon />
-                编辑
+                {m.action_edit()}
               </Button>
               <Button
                 variant="outline"
@@ -207,7 +208,7 @@ export function ItemDetailSheet({
                 className="text-destructive-foreground"
               >
                 <Trash2Icon />
-                删除
+                {m.action_delete()}
               </Button>
             </SheetFooter>
           </>

@@ -13,14 +13,15 @@ import {
   tagCounts,
   type SortKey,
 } from "#lib/itemFilters";
+import { m } from "#lib/i18n";
 
 export type { SortKey };
 
 export const SORT_LABELS: Record<SortKey, string> = {
-  pinned: "默认排序",
-  created: "最近添加",
-  updated: "最近更新",
-  name: "按名称",
+  pinned: m.sort_default(),
+  created: m.sort_created(),
+  updated: m.sort_updated(),
+  name: m.sort_name(),
 };
 
 /**

@@ -15,6 +15,7 @@ import { BuildInfo } from "#components/settings/BuildInfo";
 import { BackupsCard } from "#components/settings/backups/BackupsCard";
 import { Confirm } from "#components/Confirm";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
+import { m } from "#lib/i18n";
 
 interface SettingsTab {
   id: string;
@@ -29,9 +30,9 @@ const TWO_COLUMNS = "grid gap-6 lg:grid-cols-2 lg:items-start";
 const TABS: SettingsTab[] = [
   {
     id: "ai",
-    label: "AI 配置",
+    label: m.settings_tab_ai(),
     icon: BotIcon,
-    description: "用于自动整理、智能搜索和问答",
+    description: m.settings_tab_ai_description(),
     content: (
       <div className="space-y-6">
         <AiSettingsCard />
@@ -41,9 +42,9 @@ const TABS: SettingsTab[] = [
   },
   {
     id: "organize",
-    label: "整理与去重",
+    label: m.settings_tab_organize(),
     icon: WandSparklesIcon,
-    description: "用 AI 批量整理分类和标签，找出并合并重复的收藏",
+    description: m.settings_tab_organize_description(),
     content: (
       <div className={TWO_COLUMNS}>
         <OrganizeCard />
@@ -53,9 +54,9 @@ const TABS: SettingsTab[] = [
   },
   {
     id: "data",
-    label: "数据与备份",
+    label: m.settings_tab_data(),
     icon: DatabaseIcon,
-    description: "导入、导出收藏，备份与恢复，以及一键收藏的书签工具",
+    description: m.settings_tab_data_description(),
     content: (
       <div className="space-y-6">
         <div className={TWO_COLUMNS}>
@@ -68,9 +69,9 @@ const TABS: SettingsTab[] = [
   },
   {
     id: "access",
-    label: "访问与分享",
+    label: m.settings_tab_access(),
     icon: ShieldCheckIcon,
-    description: "谁能登录、脚本和 AI 助手（MCP）用的 API Token，以及公开分享链接",
+    description: m.settings_tab_access_description(),
     content: (
       <div className={TWO_COLUMNS}>
         <AllowedEmailsCard />
@@ -90,7 +91,7 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-lg font-semibold">设置</h1>
+      <h1 className="font-heading text-lg font-semibold">{m.nav_settings()}</h1>
 
       <Tabs
         value={tab}

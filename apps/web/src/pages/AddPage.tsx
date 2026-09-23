@@ -7,12 +7,13 @@ import { ItemFormDialog, type ItemFormPayload } from "#components/items/ItemForm
 import { saveItem } from "#lib/items";
 import { Confirm } from "#components/Confirm";
 import { Spinner } from "#components/ui/spinner";
+import { m } from "#lib/i18n";
 
 export function AddPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const ran = useRef(false);
-  const [status, setStatus] = useState("正在识别这个链接…");
+  const [status, setStatus] = useState<string>(m.add_recognizing());
 
   useEffect(() => {
     if (ran.current) return;

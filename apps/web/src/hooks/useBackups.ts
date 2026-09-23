@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage, toastError, toastSuccess } from "#lib/api";
+import { m } from "#lib/i18n";
 
 export type BackupKind = "daily" | "manual" | "pre-restore";
 export type RestoreMode = "merge" | "replace";
@@ -54,10 +55,10 @@ export function useBackups() {
     setCreating(true);
     try {
       const b = await api<BackupInfo>("/api/backups", { method: "POST" });
-      toastSuccess("已备份", { description: `${b.count} 条收藏`, id: "backup" });
+      toastSuccess(m.backup_done(), { description: m.items_total({ count: b.count ?? 0 }), id: "backup" });
       await reload();
     } catch (err) {
-      toastError("备份失败", err, { id: "backup" });
+      toastError(m.backup_failed(), err, { id: "backup" });
     } finally {
       setCreating(false);
     }
@@ -66,10 +67,10 @@ export function useBackups() {
   async function remove(name: string) {
     try {
       await api(`/api/backups/${encodeURIComponent(name)}`, { method: "DELETE" });
-      toastSuccess("已删除备份", { description: name, id: "backup" });
+      toastSuccess(m.backup_deleted(), { description: name, id: "backup" });
       await reload();
     } catch (err) {
-      toastError("删除备份失败", err, { id: "backup" });
+      toastError(m.backup_delete_failed(), err, { id: "backup" });
     }
   }
 

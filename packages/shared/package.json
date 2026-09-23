@@ -7,10 +7,16 @@
     "#*": "./src/*"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./i18n": "./src/i18n.ts"
   },
   "scripts": {
+    "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage preferredLanguage baseLocale --emit-ts-declarations --no-emit-readme",
+    "postinstall": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage preferredLanguage baseLocale --emit-ts-declarations --no-emit-readme",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "devDependencies": {
+    "@inlang/paraglide-js": "^2.25.4"
   }
 }

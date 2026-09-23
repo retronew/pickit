@@ -3,8 +3,9 @@ import { Button } from "#components/ui/button";
 import { Switch } from "#components/ui/switch";
 import { Label } from "#components/ui/label";
 import { cn } from "#lib/utils";
+import { intlLocale, m } from "#lib/i18n";
 
-const clock = new Intl.DateTimeFormat("zh-CN", {
+const clock = new Intl.DateTimeFormat(intlLocale(), {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
@@ -29,12 +30,12 @@ export function AuditToolbar({
     <div className="flex items-center gap-3">
       {updatedAt && (
         <span className="hidden text-muted-foreground text-xs sm:inline">
-          更新于 {clock.format(updatedAt)}
+          {m.audit_updated_at({ time: clock.format(updatedAt) })}
         </span>
       )}
       <Label className="flex items-center gap-2 text-sm">
         <Switch checked={live} onCheckedChange={onLiveChange} />
-        实时刷新
+        {m.audit_live()}
         {live && (
           <span className="relative flex size-2" aria-hidden>
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75" />
@@ -44,7 +45,7 @@ export function AuditToolbar({
       </Label>
       <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
         <RefreshCwIcon className={cn(refreshing && "animate-spin")} />
-        刷新
+        {m.audit_refresh()}
       </Button>
     </div>
   );

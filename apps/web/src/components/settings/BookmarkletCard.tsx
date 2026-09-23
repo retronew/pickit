@@ -9,6 +9,7 @@ import {
   CardContent,
 } from "#components/ui/card";
 import { Button } from "#components/ui/button";
+import { m } from "#lib/i18n";
 
 function buildBookmarklet(): string {
   const origin = window.location.origin;
@@ -30,7 +31,7 @@ export function BookmarkletCard() {
   }, [code]);
 
   async function copy() {
-    if (!(await copyText(code, "代码已复制"))) return;
+    if (!(await copyText(code, m.bookmarklet_copied()))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -38,9 +39,9 @@ export function BookmarkletCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>一键收藏（书签小工具）</CardTitle>
+        <CardTitle>{m.bookmarklet_title()}</CardTitle>
         <CardDescription>
-          把下面这个按钮拖到浏览器书签栏，以后在任何页面点一下就能收藏。
+          {m.bookmarklet_description()}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -51,14 +52,14 @@ export function BookmarkletCard() {
             onClick={(e) => e.preventDefault()}
             draggable
           >
-            📌 收藏到 PickIt
+            {m.bookmarklet_button()}
           </a>
-          <Button variant="outline" size="icon-sm" aria-label="复制代码" onClick={copy}>
+          <Button variant="outline" size="icon-sm" aria-label={m.bookmarklet_copy()} onClick={copy}>
             {copied ? <CheckIcon /> : <CopyIcon />}
           </Button>
         </div>
         <p className="text-muted-foreground text-xs">
-          有些浏览器不能直接拖动：先复制代码，再新建书签，把代码粘贴到「网址」栏。
+          {m.bookmarklet_hint()}
         </p>
       </CardContent>
     </Card>

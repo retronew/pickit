@@ -10,14 +10,15 @@ import { RestoreDialog } from "#components/settings/backups/RestoreDialog";
 import { useBackups, type BackupInfo, type BackupKind } from "#hooks/useBackups";
 import { formatBytes } from "#lib/format";
 import { toastSuccess } from "#lib/api";
+import { intlLocale, m } from "#lib/i18n";
 
 const KIND: Record<BackupKind, { label: string; variant: "secondary" | "info" | "warning" }> = {
-  daily: { label: "每日", variant: "secondary" },
-  manual: { label: "手动", variant: "info" },
-  "pre-restore": { label: "恢复前", variant: "warning" },
+  daily: { label: m.backup_kind_daily(), variant: "secondary" },
+  manual: { label: m.backup_kind_manual(), variant: "info" },
+  "pre-restore": { label: m.backup_kind_pre_restore(), variant: "warning" },
 };
 
-const time = new Intl.DateTimeFormat("zh-CN", {
+const time = new Intl.DateTimeFormat(intlLocale(), {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -44,8 +45,10 @@ export function BackupsCard() {
   async function restore(b: BackupInfo) {
     const result = await RestoreDialog.call({ name: b.name });
     if (!result) return;
-    toastSuccess("已恢复备份", {
-      description: `恢复 ${result.inserted} 条${result.trashed ? `，${result.trashed} 条移到回收站` : ""}`,
+    toastSuccess(m.backup_restored(), {
+      description: result.trashed
+        ? m.backup_restored_trashed({ inserted: result.inserted, trashed: result.trashed })
+        : m.backup_restored_count({ inserted: result.inserted }),
       id: "restore",
     });
     reload();
@@ -53,9 +56,9 @@ export function BackupsCard() {
 
   async function confirmRemove(b: BackupInfo) {
     const ok = await Confirm.call({
-      title: "删除这个备份？",
-      message: `${b.name} 删除后无法找回。`,
-      confirmLabel: "删除",
+      title: m.backup_delete_title(),
+      message: m.backup_delete_message({ name: b.name }),
+      confirmLabel: m.action_delete(),
       danger: true,
     });
     if (ok) remove(b.name);
@@ -64,15 +67,15 @@ export function BackupsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>备份与恢复</CardTitle>
+        <CardTitle>{m.backup_title()}</CardTitle>
         <CardDescription>
-          每天自动备份到 R2，保留 30 天。恢复前会自动再备份一次当前数据。
+          {m.backup_description()}
         </CardDescription>
         {configured && (
           <CardAction>
             <Button variant="outline" size="sm" onClick={create} loading={creating}>
               <ArchiveIcon />
-              立即备份
+              {m.backup_now()}
             </Button>
           </CardAction>
         )}
@@ -80,20 +83,20 @@ export function BackupsCard() {
       <CardContent>
         {!configured ? (
           <p className="text-muted-foreground text-sm">
-            没有配置 R2 备份存储。在 wrangler.jsonc 里绑定 BACKUPS 后即可使用。
+            {m.backup_not_configured()}
           </p>
         ) : error && backups?.length === 0 ? (
-          <p className="text-destructive text-sm">加载失败：{error}</p>
+          <p className="text-destructive text-sm">{m.load_failed({ error })}</p>
         ) : backups?.length === 0 ? (
-          <p className="text-muted-foreground text-sm">还没有备份，点「立即备份」创建第一个。</p>
+          <p className="text-muted-foreground text-sm">{m.backup_none()}</p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>时间</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead className="text-right">收藏数</TableHead>
-                <TableHead className="text-right">大小</TableHead>
+                <TableHead>{m.field_time()}</TableHead>
+                <TableHead>{m.field_type()}</TableHead>
+                <TableHead className="text-right">{m.backup_items()}</TableHead>
+                <TableHead className="text-right">{m.field_size()}</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -115,24 +118,24 @@ export function BackupsCard() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Menu>
-                        <MenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label="操作" />}>
+                        <MenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={m.field_actions()} />}>
                           <EllipsisIcon />
                         </MenuTrigger>
                         <MenuPopup align="end">
                           <MenuItem onClick={() => restore(b)}>
                             <HistoryIcon />
-                            恢复…
+                            {m.backup_restore()}
                           </MenuItem>
                           <MenuItem
                             render={<a href={`/api/backups/${encodeURIComponent(b.name)}`} download={b.name} />}
                           >
                             <DownloadIcon />
-                            下载
+                            {m.action_download()}
                           </MenuItem>
                           <MenuSeparator />
                           <MenuItem variant="destructive" onClick={() => confirmRemove(b)}>
                             <Trash2Icon />
-                            删除
+                            {m.action_delete()}
                           </MenuItem>
                         </MenuPopup>
                       </Menu>

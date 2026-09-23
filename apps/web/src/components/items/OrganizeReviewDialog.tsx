@@ -25,6 +25,7 @@ import {
 } from "#hooks/useOrganizeSuggestions";
 import { api, toastError } from "#lib/api";
 import { cn } from "#lib/utils";
+import { m } from "#lib/i18n";
 
 function Tags({ tags, muted }: { tags: string[]; muted?: boolean }) {
   if (tags.length === 0) return <span className="text-muted-foreground">—</span>;
@@ -69,8 +70,8 @@ function Row({ row, checked, onCheck }: { row: SuggestionRow; checked: boolean; 
         <>
           <TableCell>
             <Change
-              from={row.category || "未分类"}
-              to={s!.category || "未分类"}
+              from={row.category || m.uncategorized()}
+              to={s!.category || m.uncategorized()}
               changed={s!.category !== row.category}
             />
           </TableCell>
@@ -123,7 +124,7 @@ export const OrganizeReviewDialog = createCallable<{ ids: number[] }, number | n
       });
       call.end(selected.length);
     } catch (err) {
-      toastError("应用失败", err, { id: "organize-apply" });
+      toastError(m.organize_apply_failed(), err, { id: "organize-apply" });
       setApplying(false);
     }
   }
@@ -132,10 +133,10 @@ export const OrganizeReviewDialog = createCallable<{ ids: number[] }, number | n
     <Dialog open={entered && !call.ended} onOpenChange={(open) => !open && !applying && call.end(null)}>
       <DialogPopup className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>AI 整理建议</DialogTitle>
+          <DialogTitle>{m.organize_title()}</DialogTitle>
           <DialogDescription>
-            勾选要采纳的建议，没有变化的条目会自动跳过。
-            {ids.length > MAX_REVIEW && `一次最多处理 ${MAX_REVIEW} 项，这次只看前 ${MAX_REVIEW} 项。`}
+            {m.organize_hint()}
+            {ids.length > MAX_REVIEW && ` ${m.organize_limit({ max: MAX_REVIEW })}`}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-3">
@@ -143,11 +144,11 @@ export const OrganizeReviewDialog = createCallable<{ ids: number[] }, number | n
             <div className="space-y-1.5">
               <Progress value={(loaded / total) * 100} />
               <p className="text-muted-foreground text-xs tabular-nums">
-                正在生成建议 {loaded}/{total}…
+                {m.organize_progress({ loaded, total })}
               </p>
             </div>
           )}
-          {error && <p className="text-destructive text-sm">生成建议失败：{error}</p>}
+          {error && <p className="text-destructive text-sm">{m.organize_failed({ error })}</p>}
           <Table>
             <TableHeader>
               <TableRow>
@@ -157,12 +158,12 @@ export const OrganizeReviewDialog = createCallable<{ ids: number[] }, number | n
                     indeterminate={selected.length > 0 && !allChecked}
                     disabled={changeable.length === 0}
                     onCheckedChange={(v) => setUnchecked(v ? new Set() : new Set(changeable.map((r) => r.id)))}
-                    aria-label="全选"
+                    aria-label={m.select_all()}
                   />
                 </TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead>分类</TableHead>
-                <TableHead>标签</TableHead>
+                <TableHead>{m.field_name()}</TableHead>
+                <TableHead>{m.field_category()}</TableHead>
+                <TableHead>{m.field_tags()}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -182,15 +183,15 @@ export const OrganizeReviewDialog = createCallable<{ ids: number[] }, number | n
             </TableBody>
           </Table>
           {done && rows.length > 0 && changeable.length === 0 && (
-            <p className="text-muted-foreground text-sm">AI 觉得这些收藏的分类和标签都不用改。</p>
+            <p className="text-muted-foreground text-sm">{m.organize_nothing()}</p>
           )}
         </DialogPanel>
         <DialogFooter>
           <Button variant="ghost" disabled={applying} onClick={() => call.end(null)}>
-            取消
+            {m.common_cancel()}
           </Button>
           <Button disabled={selected.length === 0 || applying} loading={applying} onClick={apply}>
-            应用 {selected.length} 项
+            {m.organize_apply({ count: selected.length })}
           </Button>
         </DialogFooter>
       </DialogPopup>

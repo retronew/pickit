@@ -7,6 +7,7 @@ import {
   ComboboxList,
   ComboboxPopup,
 } from "#components/ui/combobox";
+import { m } from "#lib/i18n";
 
 export interface TagOption {
   value: string;
@@ -40,12 +41,12 @@ export function TagFilter({
         onValueChange={onChange}
       >
         <ComboboxInput
-          aria-label="筛选标签"
-          placeholder={selected.length ? `标签 · ${selected.length}` : "标签"}
+          aria-label={m.filter_tag_label()}
+          placeholder={selected.length ? `${m.field_tags()} · ${selected.length}` : m.field_tags()}
           size="sm"
         />
         <ComboboxPopup>
-          <ComboboxEmpty>没有匹配的标签</ComboboxEmpty>
+          <ComboboxEmpty>{m.filter_no_tag()}</ComboboxEmpty>
           <ComboboxList>
             {(tag) => (
               <ComboboxItem key={tag} value={tag}>

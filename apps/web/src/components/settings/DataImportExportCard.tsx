@@ -29,13 +29,14 @@ import {
 } from "#components/ui/table";
 import { buttonVariants } from "#components/ui/button";
 import { cn } from "#lib/utils";
+import { m } from "#lib/i18n";
 
 type Format = "markdown" | "json" | "html";
 
 const FORMAT_LABELS: Record<Format, string> = {
-  markdown: "Markdown 表格",
-  json: "JSON（PickIt 格式）",
-  html: "浏览器书签 HTML",
+  markdown: m.import_format_markdown(),
+  json: m.import_format_json(),
+  html: m.import_format_html(),
 };
 
 interface PreviewRow {
@@ -72,8 +73,8 @@ export function DataImportExportCard() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setMessage(data.error ?? "导入失败");
-        toastError("导入失败", new Error(data.error ?? "请检查内容格式"), { id: "import" });
+        setMessage(data.error ?? m.import_failed());
+        toastError(m.import_failed(), new Error(data.error ?? m.import_check_format()), { id: "import" });
         setPreview(null);
         return;
       }
@@ -82,9 +83,9 @@ export function DataImportExportCard() {
       } else {
         setPreview(null);
         setContent("");
-        setMessage(`导入完成：新增 ${data.inserted} 条，跳过 ${data.skipped} 条重复`);
-        toastSuccess("导入完成", {
-          description: `新增 ${data.inserted} 条，跳过 ${data.skipped} 条重复`,
+        setMessage(m.import_done_message({ inserted: data.inserted, skipped: data.skipped }));
+        toastSuccess(m.import_done(), {
+          description: m.batch_summary({ added: data.inserted, skipped: data.skipped }),
           id: "import",
         });
       }
@@ -96,15 +97,15 @@ export function DataImportExportCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>数据导入导出</CardTitle>
+        <CardTitle>{m.import_title()}</CardTitle>
         <CardDescription>
-          支持 Markdown 表格、浏览器书签 HTML、PickIt 自身的 JSON 导出格式。
+          {m.import_description()}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-3">
           <span className="block text-xs font-medium text-muted-foreground">
-            导入
+            {m.import_label()}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             <Select
@@ -129,7 +130,7 @@ export function DataImportExportCard() {
               onClick={() => fileRef.current?.click()}
             >
               <UploadIcon />
-              选择文件
+              {m.import_choose_file()}
             </Button>
             <input
               ref={fileRef}
@@ -144,7 +145,7 @@ export function DataImportExportCard() {
             />
           </div>
           <Field>
-            <FieldLabel htmlFor="import-content">或直接粘贴内容</FieldLabel>
+            <FieldLabel htmlFor="import-content">{m.import_paste_label()}</FieldLabel>
             <Textarea
               id="import-content"
               className="min-h-32 font-mono text-xs"
@@ -153,23 +154,22 @@ export function DataImportExportCard() {
                 setContent(e.target.value);
                 setPreview(null);
               }}
-              placeholder="粘贴 Markdown 表格 / 浏览器导出的书签 HTML / PickIt 导出的 JSON"
+              placeholder={m.import_paste_placeholder()}
             />
           </Field>
 
           {preview && (
             <div className="space-y-2">
               <p className="text-muted-foreground text-sm">
-                识别到 {preview.parsed} 条：将新增 {preview.inserted} 条，跳过{" "}
-                {preview.skipped} 条重复
+                {m.import_preview_summary({ parsed: preview.parsed, inserted: preview.inserted, skipped: preview.skipped })}
               </p>
               <div className="max-h-56 overflow-y-auto rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>名称</TableHead>
-                      <TableHead>分类</TableHead>
-                      <TableHead>状态</TableHead>
+                      <TableHead>{m.field_name()}</TableHead>
+                      <TableHead>{m.field_category()}</TableHead>
+                      <TableHead>{m.field_status()}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -181,9 +181,9 @@ export function DataImportExportCard() {
                         <TableCell>{row.category || "—"}</TableCell>
                         <TableCell>
                           {row.skipped ? (
-                            <span className="text-muted-foreground">已存在</span>
+                            <span className="text-muted-foreground">{m.import_exists()}</span>
                           ) : (
-                            <span className="text-success-foreground">将新增</span>
+                            <span className="text-success-foreground">{m.import_will_add()}</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -202,7 +202,7 @@ export function DataImportExportCard() {
               disabled={!content.trim() || busy}
               onClick={() => runImport(true)}
             >
-              预览导入
+              {m.import_preview()}
             </Button>
             <Button
               size="lg"
@@ -210,7 +210,7 @@ export function DataImportExportCard() {
               loading={busy}
               onClick={() => runImport(false)}
             >
-              确认导入
+              {m.import_confirm()}
             </Button>
           </div>
         </div>
@@ -219,7 +219,7 @@ export function DataImportExportCard() {
 
         <div className="space-y-2">
           <span className="block text-xs font-medium text-muted-foreground">
-            导出全部数据
+            {m.export_all()}
           </span>
           <div className="flex flex-wrap items-center gap-1.5">
             {(["json", "markdown", "html"] as const).map((f) => (

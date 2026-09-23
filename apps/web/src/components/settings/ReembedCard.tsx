@@ -15,12 +15,13 @@ import {
   SelectItem,
 } from "#components/ui/select";
 import { JobProgress, JobProgressSkeleton, JobActions, useJob } from "#components/settings/JobProgress";
+import { m } from "#lib/i18n";
 
 type Mode = "missing" | "all";
 
 const MODE_LABELS: Record<Mode, string> = {
-  missing: "只补缺失或模型不一致的",
-  all: "全部重建",
+  missing: m.reembed_mode_missing(),
+  all: m.reembed_mode_all(),
 };
 
 export function ReembedCard() {
@@ -31,9 +32,9 @@ export function ReembedCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>向量索引重建</CardTitle>
+        <CardTitle>{m.reembed_title()}</CardTitle>
         <CardDescription>
-          为收藏生成向量索引。换了向量模型后，旧索引无法和新模型比较，需要重新生成。
+          {m.reembed_description()}
         </CardDescription>
       </CardHeader>
       {!job && !error ? (
@@ -59,14 +60,14 @@ export function ReembedCard() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
-              <SelectItem key={m} value={m}>
-                {MODE_LABELS[m]}
+            {(Object.keys(MODE_LABELS) as Mode[]).map((mode) => (
+              <SelectItem key={mode} value={mode}>
+                {MODE_LABELS[mode]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <JobActions job={job} startLabel="开始重建" onStart={() => run("start", { mode })} run={run} />
+        <JobActions job={job} startLabel={m.reembed_start()} onStart={() => run("start", { mode })} run={run} />
         {error && <span className="text-destructive text-sm">{error}</span>}
       </CardFooter>
     </Card>

@@ -15,12 +15,13 @@ import {
   SelectItem,
 } from "#components/ui/select";
 import { JobProgress, JobProgressSkeleton, JobActions, useJob } from "#components/settings/JobProgress";
+import { m } from "#lib/i18n";
 
 type Mode = "missing" | "all";
 
 const MODE_LABELS: Record<Mode, string> = {
-  missing: "只补缺分类和标签的",
-  all: "全部重新整理",
+  missing: m.organize_mode_missing(),
+  all: m.organize_mode_all(),
 };
 
 export function OrganizeCard() {
@@ -31,9 +32,9 @@ export function OrganizeCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI 批量整理</CardTitle>
+        <CardTitle>{m.organize_job_title()}</CardTitle>
         <CardDescription>
-          让 AI 重新给收藏分类、打标签，尽量沿用已有分类。
+          {m.organize_job_description()}
         </CardDescription>
       </CardHeader>
       {!job && !error ? (
@@ -59,14 +60,14 @@ export function OrganizeCard() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
-              <SelectItem key={m} value={m}>
-                {MODE_LABELS[m]}
+            {(Object.keys(MODE_LABELS) as Mode[]).map((mode) => (
+              <SelectItem key={mode} value={mode}>
+                {MODE_LABELS[mode]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <JobActions job={job} startLabel="开始整理" onStart={() => run("start", { mode })} run={run} />
+        <JobActions job={job} startLabel={m.organize_job_start()} onStart={() => run("start", { mode })} run={run} />
         {error && <span className="text-destructive text-sm">{error}</span>}
       </CardFooter>
     </Card>

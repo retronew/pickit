@@ -7,6 +7,7 @@ import {
   ComboboxList,
   ComboboxPopup,
 } from "#components/ui/combobox";
+import { m } from "#lib/i18n";
 
 export interface CategoryOption {
   value: string;
@@ -24,7 +25,7 @@ export function CategoryFilter({
 }) {
   const items = useMemo(
     () => [
-      { value: "", label: "全部分类", count: null as number | null },
+      { value: "", label: m.filter_all_categories() as string, count: null as number | null },
       ...options.map((option) => ({ ...option, label: option.value })),
     ],
     [options],
@@ -38,9 +39,9 @@ export function CategoryFilter({
         value={selected}
         onValueChange={(item) => onChange(item?.value ?? "")}
       >
-        <ComboboxInput aria-label="筛选分类" placeholder="全部分类" size="sm" />
+        <ComboboxInput aria-label={m.filter_category_label()} placeholder={m.filter_all_categories()} size="sm" />
         <ComboboxPopup>
-          <ComboboxEmpty>没有匹配的分类</ComboboxEmpty>
+          <ComboboxEmpty>{m.filter_no_category()}</ComboboxEmpty>
           <ComboboxList>
             {(item) => (
               <ComboboxItem key={item.value} value={item}>

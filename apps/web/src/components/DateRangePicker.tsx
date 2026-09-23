@@ -1,16 +1,21 @@
 import type { DateRange } from "@daypicker/react";
 import { zhCN } from "@daypicker/react/locale/zh-CN";
+import { enUS } from "@daypicker/react/locale/en-US";
+import { ja } from "@daypicker/react/locale/ja";
 import { CalendarIcon, XIcon } from "lucide-react";
 import { Button } from "#components/ui/button";
 import { Calendar } from "#components/ui/calendar";
 import { Popover, PopoverPopup, PopoverTrigger } from "#components/ui/popover";
 import { cn } from "#lib/utils";
+import { m, getLocale, intlLocale } from "#lib/i18n";
+
+const CALENDAR_LOCALES = { zh: zhCN, en: enUS, ja };
 
 /** yyyy-mm-dd in local time ⇄ Date. */
 function toDate(value: string): Date | undefined {
   if (!value) return undefined;
-  const [y, m, d] = value.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  const [y, mo, d] = value.split("-").map(Number);
+  return new Date(y, mo - 1, d);
 }
 
 function toValue(date: Date | undefined): string {
@@ -19,7 +24,7 @@ function toValue(date: Date | undefined): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-const label = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" });
+const label = new Intl.DateTimeFormat(intlLocale(), { year: "numeric", month: "short", day: "numeric" });
 
 function daysAgo(n: number) {
   const d = new Date();
@@ -28,10 +33,10 @@ function daysAgo(n: number) {
   return d;
 }
 
-const PRESETS: { label: string; from: () => Date }[] = [
-  { label: "今天", from: () => daysAgo(0) },
-  { label: "近 7 天", from: () => daysAgo(6) },
-  { label: "近 30 天", from: () => daysAgo(29) },
+const PRESETS: { label: () => string; from: () => Date }[] = [
+  { label: () => m.date_today(), from: () => daysAgo(0) },
+  { label: () => m.date_last_days({ days: 7 }), from: () => daysAgo(6) },
+  { label: () => m.date_last_days({ days: 30 }), from: () => daysAgo(29) },
 ];
 
 /** Date range picker; `from` / `to` are yyyy-mm-dd strings ("" = open-ended). */
@@ -39,7 +44,7 @@ export function DateRangePicker({
   from,
   to,
   onChange,
-  placeholder = "选择日期范围",
+  placeholder = m.date_pick_range(),
   className,
 }: {
   from: string;
@@ -79,18 +84,18 @@ export function DateRangePicker({
           <div className="mb-2 flex gap-1">
             {PRESETS.map((p) => (
               <Button
-                key={p.label}
+                key={p.label()}
                 size="xs"
                 variant="secondary"
                 onClick={() => onChange({ from: toValue(p.from()), to: toValue(daysAgo(0)) })}
               >
-                {p.label}
+                {p.label()}
               </Button>
             ))}
           </div>
           <Calendar
             mode="range"
-            locale={zhCN}
+            locale={CALENDAR_LOCALES[getLocale()]}
             numberOfMonths={2}
             defaultMonth={selected?.from ?? daysAgo(30)}
             disabled={{ after: new Date() }}
@@ -103,7 +108,7 @@ export function DateRangePicker({
         <Button
           variant="outline"
           size="icon-sm"
-          aria-label="清除日期"
+          aria-label={m.date_clear()}
           className="-ms-px rounded-s-none"
           onClick={() => onChange({ from: "", to: "" })}
         >

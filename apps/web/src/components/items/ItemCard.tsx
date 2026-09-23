@@ -6,6 +6,7 @@ import { Card } from "#components/ui/card";
 import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
 import { cn } from "#lib/utils";
+import { m } from "#lib/i18n";
 
 function isDeadLink(item: Item): boolean {
   return item.checkedAt != null && (item.httpStatus == null || item.httpStatus >= 400);
@@ -30,7 +31,7 @@ function SelectionCheckbox({
         checked={checked}
         onChange={onChange}
         onClick={(e) => e.stopPropagation()}
-        aria-label="选择"
+        aria-label={m.action_select()}
         className="peer absolute inset-0 m-0 size-full cursor-pointer opacity-0"
       />
       <svg
@@ -113,7 +114,7 @@ export const ItemCard = memo(function ItemCard({
           )}
           {!selectMode && isDeadLink(item) && (
             <Badge variant="destructive" size="sm" className="shrink-0">
-              失效
+              {m.item_dead()}
             </Badge>
           )}
         </div>
@@ -127,7 +128,7 @@ export const ItemCard = memo(function ItemCard({
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label={item.pinned ? "取消置顶" : "置顶"}
+              aria-label={item.pinned ? m.action_unpin() : m.action_pin()}
               onClick={(e) => {
                 e.stopPropagation();
                 onTogglePin(item);
@@ -139,7 +140,7 @@ export const ItemCard = memo(function ItemCard({
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label="编辑"
+              aria-label={m.action_edit()}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(item);
@@ -150,7 +151,7 @@ export const ItemCard = memo(function ItemCard({
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label="删除"
+              aria-label={m.action_delete()}
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(item);
@@ -176,7 +177,7 @@ export const ItemCard = memo(function ItemCard({
           ))}
           {item.clickCount > 0 && (
             <span className="ml-auto text-muted-foreground/72 text-xs">
-              点击 {item.clickCount} 次
+              {m.item_clicks({ count: item.clickCount })}
             </span>
           )}
         </div>

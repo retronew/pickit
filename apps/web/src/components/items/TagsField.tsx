@@ -9,6 +9,7 @@ import {
   ComboboxList,
   ComboboxPopup,
 } from "#components/ui/combobox";
+import { m } from "#lib/i18n";
 
 interface Props {
   tags: string[];
@@ -42,7 +43,7 @@ export function TagsField({ tags, onChange, suggestions }: Props) {
         <ComboboxChipsInput
           ref={draftInputRef}
           size="lg"
-          placeholder={tags.length ? undefined : "输入后回车添加，或从建议中选择"}
+          placeholder={tags.length ? undefined : m.tags_field_placeholder()}
           onKeyDown={(e) => {
             if (e.nativeEvent.isComposing) return;
             if (e.key !== "Enter" && e.key !== ",") return;
@@ -62,7 +63,7 @@ export function TagsField({ tags, onChange, suggestions }: Props) {
         />
       </ComboboxChips>
       <ComboboxPopup>
-        <ComboboxEmpty>输入后回车即可创建新标签</ComboboxEmpty>
+        <ComboboxEmpty>{m.tags_field_new()}</ComboboxEmpty>
         <ComboboxList>
           {items.map((s) => (
             <ComboboxItem key={s} value={s}>

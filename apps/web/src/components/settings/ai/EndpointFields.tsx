@@ -12,6 +12,7 @@ import { Input } from "#components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "#components/ui/select";
 import { PROVIDER_LABELS, originOf } from "./shared";
 import type { Target, SavedEndpoint } from "./shared";
+import { m } from "#lib/i18n";
 
 export function EndpointFields<P extends string>({
   target,
@@ -50,14 +51,14 @@ export function EndpointFields<P extends string>({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
-          <FieldLabel>服务商</FieldLabel>
+          <FieldLabel>{m.ai_provider()}</FieldLabel>
           <Select
             value={endpoint.provider || null}
             onValueChange={(v) => v && onProviderChange(v as string)}
             items={providerItems}
           >
             <SelectTrigger size="lg">
-              <SelectValue placeholder="选择服务商" />
+              <SelectValue placeholder={m.ai_provider_pick()} />
             </SelectTrigger>
             <SelectContent>
               {Object.entries(providerItems).map(([value, label]) => (
@@ -69,7 +70,7 @@ export function EndpointFields<P extends string>({
           </Select>
         </Field>
         <Field>
-          <FieldLabel>接口模式</FieldLabel>
+          <FieldLabel>{m.ai_protocol()}</FieldLabel>
           <Select
             value={endpoint.protocol}
             onValueChange={(v) => v && onChange({ protocol: v as P } as Partial<AiEndpoint<P>>)}
@@ -94,7 +95,7 @@ export function EndpointFields<P extends string>({
       </div>
       {endpoint.provider && (
         <Field>
-          <FieldLabel htmlFor={id("baseUrl")}>接口地址</FieldLabel>
+          <FieldLabel htmlFor={id("baseUrl")}>{m.ai_base_url()}</FieldLabel>
           <Input
             id={id("baseUrl")}
             size="lg"
@@ -106,8 +107,8 @@ export function EndpointFields<P extends string>({
           />
           <FieldDescription>
             {urlEditable
-              ? "填到版本号为止，通常以 /v1 结尾，不要带 /chat/completions。不确定的话只填域名，点「检测并获取模型」会自动判断要不要加 /v1。"
-              : "使用该服务商的官方地址，无需填写。需要使用其他地址时，请选择「自定义」。"}
+              ? m.ai_base_url_custom_hint()
+              : m.ai_base_url_official_hint()}
           </FieldDescription>
           {warnings.map((w) => (
             <p key={w} className="text-xs text-amber-700 dark:text-amber-400">
@@ -119,19 +120,19 @@ export function EndpointFields<P extends string>({
       {endpoint.provider && (
         <Field>
           <FieldLabel htmlFor={id("apiKey")}>
-            API 密钥{preset?.keyOptional && "（可选）"}
+            {preset?.keyOptional ? m.ai_api_key_optional() : m.ai_api_key()}
           </FieldLabel>
           <Input
             id={id("apiKey")}
             size="lg"
             type="password"
             autoComplete="off"
-            placeholder={keySaved ? `已保存 ${saved!.apiKeyMasked}，留空表示不修改` : "sk-…"}
+            placeholder={keySaved ? m.ai_key_saved({ masked: saved!.apiKeyMasked }) : "sk-…"}
             value={endpoint.apiKey}
             onChange={(e) => onChange({ apiKey: e.target.value } as Partial<AiEndpoint<P>>)}
           />
           {!keySaved && saved?.apiKeyMasked && (
-            <FieldDescription>服务商或地址变了，之前保存的密钥不会被带过去，请重新填写。</FieldDescription>
+            <FieldDescription>{m.ai_key_not_carried()}</FieldDescription>
           )}
         </Field>
       )}

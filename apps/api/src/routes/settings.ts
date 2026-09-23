@@ -17,6 +17,8 @@ import { getRawSettings, saveSettings, getApiToken, setApiToken } from "#setting
 import { createChatModel, createEmbeddingModel, describeError } from "#ai";
 import { listModels, ModelListError, type ModelFamily } from "#ai-models";
 import { ownerEmails, getExtraEmails, setExtraEmails, parseEmails, isValidEmail } from "#auth";
+import { isLocale } from "@pickit/shared/i18n";
+import { getLocalePrefs, setLocalePrefs, isAiLanguage, type LocalePrefs } from "#locale";
 
 export const settingsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -181,4 +183,17 @@ settingsRoutes.put("/allowed-emails", async (c) => {
   const extra = emails.filter((e) => !owners.has(e));
   await setExtraEmails(c.env.DB, extra);
   return c.json({ owners: [...owners], emails: extra });
+});
+
+settingsRoutes.get("/locale", async (c) => c.json(await getLocalePrefs(c.env.DB)));
+
+/** body: { locale?: "zh" | "en" | "ja", aiLanguage?: "auto" | locale } */
+settingsRoutes.put("/locale", async (c) => {
+  const body = await c.req.json<{ locale?: unknown; aiLanguage?: unknown }>().catch(() => ({}) as Record<string, unknown>);
+  if (body.locale !== undefined && !isLocale(body.locale)) return c.json({ error: "unsupported locale" }, 400);
+  if (body.aiLanguage !== undefined && !isAiLanguage(body.aiLanguage)) {
+    return c.json({ error: "unsupported aiLanguage" }, 400);
+  }
+  await setLocalePrefs(c.env.DB, body as Partial<LocalePrefs>);
+  return c.json(await getLocalePrefs(c.env.DB));
 });

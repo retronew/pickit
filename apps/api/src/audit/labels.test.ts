@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe as suite, expect, it } from "vitest";
-import { AUDIT_ACTION_LABELS } from "@pickit/shared";
+import { AUDIT_ACTIONS } from "@pickit/shared";
 import { describe } from "./describe";
 
 const srcDir = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,10 +36,12 @@ function templatedActions(): string[] {
 }
 
 suite("audit action labels", () => {
-  it("has a display label for every action the API records", () => {
+  // AUDIT_ACTIONS is what gets a translated label (see shared audit.test.ts).
+  it("lists every action the API records", () => {
     const actions = [...literalActions(), ...templatedActions()];
     expect(actions.length).toBeGreaterThan(30);
-    const missing = actions.filter((a) => !AUDIT_ACTION_LABELS[a]);
+    const known: readonly string[] = AUDIT_ACTIONS;
+    const missing = actions.filter((a) => !known.includes(a));
     expect(missing).toEqual([]);
   });
 });

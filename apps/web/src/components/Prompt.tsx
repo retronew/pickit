@@ -12,6 +12,7 @@ import {
 } from "#components/ui/dialog";
 import { Input } from "#components/ui/input";
 import { Button } from "#components/ui/button";
+import { m } from "#lib/i18n";
 
 interface Props {
   title: string;
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export const Prompt = createCallable<Props, string | null>(
-  ({ title, description, defaultValue = "", confirmLabel = "确定", call }) => {
+  ({ title, description, defaultValue = "", confirmLabel = m.common_ok(), call }) => {
     const [entered, setEntered] = useState(false);
     const [value, setValue] = useState(defaultValue);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -68,7 +69,7 @@ export const Prompt = createCallable<Props, string | null>(
           </DialogPanel>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
-              取消
+              {m.common_cancel()}
             </DialogClose>
             <Button onClick={submit} disabled={!value.trim()}>
               {confirmLabel}

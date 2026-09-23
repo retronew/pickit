@@ -7,6 +7,7 @@ import { Button } from "#components/ui/button";
 import { Confirm } from "#components/Confirm";
 import { api, toastError, toastSuccess } from "#lib/api";
 import { formatBytes, formatDate } from "#lib/format";
+import { intlLocale, m } from "#lib/i18n";
 
 interface Stats {
   count: number;
@@ -22,16 +23,16 @@ interface AuditSettings {
 }
 
 const PRESETS: Record<string, string> = {
-  "30": "30 天",
-  "90": "90 天",
-  "180": "180 天",
-  "365": "1 年",
-  "730": "2 年",
-  "0": "永久保留",
-  custom: "自定义…",
+  "30": m.retention_days({ days: 30 }),
+  "90": m.retention_days({ days: 90 }),
+  "180": m.retention_days({ days: 180 }),
+  "365": m.retention_years({ years: 1 }),
+  "730": m.retention_years({ years: 2 }),
+  "0": m.retention_forever(),
+  custom: m.retention_custom(),
 };
 
-const retentionLabel = (days: number) => (days === 0 ? "永久保留" : `${days} 天`);
+const retentionLabel = (days: number) => (days === 0 ? m.retention_forever() : m.retention_days({ days }));
 
 /** Usage of the audit log and how long entries are kept. */
 export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
@@ -50,9 +51,9 @@ export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
     const shorter = days !== 0 && (data.retentionDays === 0 || days < data.retentionDays);
     if (shorter) {
       const ok = await Confirm.call({
-        title: `保留时间改为 ${days} 天？`,
-        message: `早于 ${days} 天的审计记录会立即删除，无法恢复。`,
-        confirmLabel: "确认修改",
+        title: m.retention_confirm_title({ days }),
+        message: m.retention_confirm_message({ days }),
+        confirmLabel: m.retention_confirm(),
         danger: true,
       });
       if (!ok) return;
@@ -65,12 +66,12 @@ export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
       );
       setData({ ...data, retentionDays: res.retentionDays, stats: res.stats });
       setCustom(null);
-      toastSuccess(`审计日志保留时间：${retentionLabel(res.retentionDays)}`, {
-        description: res.deleted ? `已清理 ${res.deleted} 条过期记录` : undefined,
+      toastSuccess(m.retention_saved({ retention: retentionLabel(res.retentionDays) }), {
+        description: res.deleted ? m.retention_pruned({ count: res.deleted }) : undefined,
         id: "audit-retention",
       });
     } catch (err) {
-      toastError("修改保留时间失败", err, { id: "audit-retention" });
+      toastError(m.retention_failed(), err, { id: "audit-retention" });
     } finally {
       setSaving(false);
     }
@@ -87,19 +88,18 @@ export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
   const { stats } = data;
   const current = String(data.retentionDays);
   const selectValue = custom !== null ? "custom" : current in PRESETS ? current : "custom";
-  const items = current in PRESETS ? PRESETS : { ...PRESETS, custom: `${data.retentionDays} 天` };
+  const items = current in PRESETS ? PRESETS : { ...PRESETS, custom: m.retention_days({ days: data.retentionDays }) };
 
   return (
     <div className="flex animate-fade-in flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border bg-muted/30 px-3 py-2 text-sm">
       <span className="flex items-center gap-1.5 text-muted-foreground">
         <DatabaseIcon className="size-4" />
-        共 <span className="font-medium text-foreground tabular-nums">{stats.count.toLocaleString()}</span> 条
-        · 约 <span className="font-medium text-foreground">{formatBytes(stats.bytes)}</span>
-        {stats.databaseBytes != null && <>（数据库共 {formatBytes(stats.databaseBytes)}）</>}
-        {stats.oldest != null && <> · 最早 {formatDate(stats.oldest)}</>}
+        {m.audit_usage({ count: stats.count.toLocaleString(intlLocale()), size: formatBytes(stats.bytes) })}
+        {stats.databaseBytes != null && ` ${m.audit_usage_database({ size: formatBytes(stats.databaseBytes) })}`}
+        {stats.oldest != null && ` · ${m.audit_usage_oldest({ date: formatDate(stats.oldest) })}`}
       </span>
       <span className="flex items-center gap-2 sm:ml-auto">
-        <span className="text-muted-foreground">保留时间</span>
+        <span className="text-muted-foreground">{m.retention_label()}</span>
         <Select
           value={selectValue}
           items={items}
@@ -137,15 +137,15 @@ export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
               className="w-20"
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
-              aria-label="保留天数"
+              aria-label={m.retention_days_label()}
               autoFocus
             />
-            <span className="text-muted-foreground">天</span>
+            <span className="text-muted-foreground">{m.retention_day_unit()}</span>
             <Button size="sm" type="submit" disabled={saving || !custom}>
-              保存
+              {m.common_save()}
             </Button>
             <Button size="sm" variant="ghost" type="button" onClick={() => setCustom(null)}>
-              取消
+              {m.common_cancel()}
             </Button>
           </form>
         )}

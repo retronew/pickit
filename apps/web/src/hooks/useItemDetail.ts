@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Item } from "@pickit/shared";
 import { api, copyText, toastError, toastSuccess } from "#lib/api";
+import { m } from "#lib/i18n";
 
 interface LinkStatus {
   httpStatus: number | null;
@@ -43,13 +44,13 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
       setLinkStatus(data);
       onChanged();
       if (data.httpStatus != null && data.httpStatus < 400) {
-        toastSuccess("链接可以访问", { id: "check" });
+        toastSuccess(m.link_reachable(), { id: "check" });
       } else {
-        const reason = data.httpStatus ? `HTTP ${data.httpStatus}` : "请求超时或被拒绝";
-        toastError("链接无法访问", new Error(reason), { id: "check" });
+        const reason = data.httpStatus ? `HTTP ${data.httpStatus}` : m.link_timeout();
+        toastError(m.link_unreachable(), new Error(reason), { id: "check" });
       }
     } catch (err) {
-      toastError("检查失败", err, { id: "check" });
+      toastError(m.link_check_failed(), err, { id: "check" });
     } finally {
       setChecking(false);
     }
@@ -65,7 +66,7 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
       setSummary(data.summary);
       onChanged();
     } catch (err) {
-      toastError("生成摘要失败", err, { id: "summarize" });
+      toastError(m.summarize_failed(), err, { id: "summarize" });
     } finally {
       setSummarizing(false);
     }
@@ -78,12 +79,12 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
       const data = await api<{ slug: string }>("/api/shares", {
         json: { type: "item", value: String(item.id), title: item.name },
       });
-      if (await copyText(`${window.location.origin}/s/${data.slug}`, "分享链接已复制")) {
+      if (await copyText(`${window.location.origin}/s/${data.slug}`, m.share_link_copied())) {
         setShared(true);
         setTimeout(() => setShared(false), 2000);
       }
     } catch (err) {
-      toastError("分享失败", err, { id: "share" });
+      toastError(m.share_failed(), err, { id: "share" });
     } finally {
       setSharing(false);
     }

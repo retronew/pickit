@@ -1,7 +1,8 @@
+import { intlLocale, m } from "#lib/i18n";
 /** Version, commit and deploy time injected at build time (vite.config.ts). */
 export function BuildInfo() {
   const commit = __APP_COMMIT__.slice(0, 7);
-  const builtAt = new Date(__APP_BUILD_TIME__).toLocaleString("zh-CN", {
+  const builtAt = new Date(__APP_BUILD_TIME__).toLocaleString(intlLocale(), {
     hour12: false,
   });
   return (
@@ -25,7 +26,7 @@ export function BuildInfo() {
         </>
       )}
       {" · "}
-      <time dateTime={__APP_BUILD_TIME__}>部署于 {builtAt}</time>
+      <time dateTime={__APP_BUILD_TIME__}>{m.build_deployed({ time: builtAt })}</time>
     </p>
   );
 }

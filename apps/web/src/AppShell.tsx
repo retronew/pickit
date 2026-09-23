@@ -6,10 +6,17 @@ import { Button } from "#components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipPopup } from "#components/ui/tooltip";
 import { BackToTop } from "#components/BackToTop";
 import { CommandPalette } from "#components/CommandPalette";
+import { LanguageMenu } from "#components/LanguageMenu";
+import { syncLocaleWithServer } from "#lib/i18n";
 import { cn } from "#lib/utils";
 import { authClient } from "#lib/auth-client";
+import { m } from "#lib/i18n";
 
-const MODE_LABEL = { system: "跟随系统", light: "浅色", dark: "深色" } as const;
+const MODE_LABEL = {
+  system: m.theme_system(),
+  light: m.theme_light(),
+  dark: m.theme_dark(),
+} as const;
 const MODE_ICON = { system: MonitorIcon, light: SunIcon, dark: MoonIcon } as const;
 
 /** Login URL that returns here afterwards, e.g. to /add from the bookmarklet. */
@@ -30,6 +37,7 @@ export function AppShell() {
       .then((r) => {
         setAuthed(r.ok);
         if (!r.ok) navigate(loginUrl());
+        else syncLocaleWithServer();
       })
       .catch(() => navigate(loginUrl()));
   }, [navigate]);
@@ -38,12 +46,12 @@ export function AppShell() {
   if (authed !== true) return null;
 
   const navItems = [
-    { to: "/", label: "收藏", end: true },
-    { to: "/tags", label: "标签" },
-    { to: "/stats", label: "统计" },
-    { to: "/trash", label: "回收站" },
-    { to: "/audit", label: "审计" },
-    { to: "/settings", label: "设置" },
+    { to: "/", label: m.nav_items(), end: true },
+    { to: "/tags", label: m.nav_tags() },
+    { to: "/stats", label: m.nav_stats() },
+    { to: "/trash", label: m.nav_trash() },
+    { to: "/audit", label: m.nav_audit() },
+    { to: "/settings", label: m.nav_settings() },
   ];
 
   return (
@@ -73,6 +81,7 @@ export function AppShell() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-1">
+            <LanguageMenu />
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -80,17 +89,17 @@ export function AppShell() {
                     variant="ghost"
                     size="icon-sm"
                     onClick={(e) => cycle({ x: e.clientX, y: e.clientY })}
-                    aria-label={`主题：${MODE_LABEL[mode]}，点击切换为${MODE_LABEL[nextMode]}`}
+                    aria-label={m.theme_aria({ mode: MODE_LABEL[mode], next: MODE_LABEL[nextMode] })}
                   />
                 }
               >
                 <ModeIcon />
               </TooltipTrigger>
               <TooltipPopup side="bottom">
-                主题：{MODE_LABEL[mode]}
-                {mode === "system" && `（当前${MODE_LABEL[theme]}）`}
+                {m.theme_current({ mode: MODE_LABEL[mode] })}
+                {mode === "system" && m.theme_resolved({ theme: MODE_LABEL[theme] })}
                 <span className="text-muted-foreground">
-                  {" · "}点击切换为{MODE_LABEL[nextMode]}
+                  {" · "}{m.theme_next({ next: MODE_LABEL[nextMode] })}
                 </span>
               </TooltipPopup>
             </Tooltip>
@@ -103,7 +112,7 @@ export function AppShell() {
               }}
             >
               <LogOutIcon />
-              退出
+              {m.nav_sign_out()}
             </Button>
           </div>
         </div>

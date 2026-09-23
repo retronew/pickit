@@ -5,6 +5,7 @@ import { CardContent, CardFooter } from "#components/ui/card";
 import { Skeleton } from "#components/ui/skeleton";
 import { FieldSkeleton, ButtonsSkeleton } from "#components/settings/skeletons";
 import type { TestState } from "./shared";
+import { m } from "#lib/i18n";
 
 export function PanelHeading({ title, configured }: { title: string; configured?: boolean }) {
   return (
@@ -18,7 +19,7 @@ export function PanelHeading({ title, configured }: { title: string; configured?
               : "bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs"
           }
         >
-          {configured ? "已启用" : "未配置"}
+          {configured ? m.ai_enabled() : m.ai_not_configured()}
         </span>
       )}
     </div>
@@ -28,7 +29,7 @@ export function PanelHeading({ title, configured }: { title: string; configured?
 export function RequestPreview({ urls }: { urls: RequestUrl[] }) {
   return (
     <div className="bg-muted/50 space-y-1 rounded-lg px-3 py-2">
-      <p className="text-muted-foreground text-xs">按当前设置，实际请求的地址：</p>
+      <p className="text-muted-foreground text-xs">{m.ai_request_preview()}</p>
       {urls.map((u) => (
         <p key={u.label} className="flex gap-2 text-xs">
           <span className="text-muted-foreground w-14 shrink-0">{u.label}</span>
@@ -70,7 +71,7 @@ function PanelSkeleton() {
 export function AiSettingsSkeleton() {
   return (
     <>
-      <CardContent className="grid gap-8 lg:grid-cols-[1fr_auto_1fr]" aria-busy="true" aria-label="加载中">
+      <CardContent className="grid gap-8 lg:grid-cols-[1fr_auto_1fr]" aria-busy="true" aria-label={m.common_loading()}>
         <PanelSkeleton />
         <div className="h-px bg-border lg:h-auto lg:w-px" />
         <PanelSkeleton />

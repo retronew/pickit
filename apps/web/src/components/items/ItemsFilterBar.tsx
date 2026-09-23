@@ -5,6 +5,7 @@ import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#co
 import { CategoryFilter, type CategoryOption } from "#components/items/CategoryFilter";
 import { TagFilter, type TagOption } from "#components/items/TagFilter";
 import { SORT_LABELS, type SortKey } from "#hooks/useItemFilters";
+import { m } from "#lib/i18n";
 
 interface Props {
   categoryOptions: CategoryOption[];
@@ -22,8 +23,8 @@ interface Props {
 
 /** A category alone or a single tag alone can be shared as a public list. */
 function shareTarget(category: string, tags: string[]) {
-  if (category && tags.length === 0) return { type: "category" as const, value: category, label: "分享这个分类" };
-  if (!category && tags.length === 1) return { type: "tag" as const, value: tags[0], label: "分享这个标签" };
+  if (category && tags.length === 0) return { type: "category" as const, value: category, label: m.share_this_category() };
+  if (!category && tags.length === 1) return { type: "tag" as const, value: tags[0], label: m.share_this_tag() };
   return null;
 }
 
@@ -63,14 +64,14 @@ export function ItemsFilterBar(p: Props) {
             onClick={p.onToggleSelectMode}
           >
             <CheckSquareIcon />
-            选择
+            {m.action_select()}
           </Button>
         </div>
       </div>
 
       {(p.category || p.selectedTags.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-xs text-muted-foreground">已筛选</span>
+          <span className="mr-1 text-xs text-muted-foreground">{m.filter_active()}</span>
           {p.category && (
             <Button size="xs" variant="secondary" onClick={() => p.onCategoryChange("")}>
               {p.category}
@@ -93,7 +94,7 @@ export function ItemsFilterBar(p: Props) {
             onClick={p.onClearFilters}
             type="button"
           >
-            清除全部
+            {m.filter_clear_all()}
           </button>
           {share && (
             <Button

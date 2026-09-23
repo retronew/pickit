@@ -3,8 +3,9 @@ import { ChevronRightIcon } from "lucide-react";
 import { Badge } from "#components/ui/badge";
 import { cn } from "#lib/utils";
 import { actionLabel, isFailure, type AuditEntry } from "#lib/audit";
+import { intlLocale, m } from "#lib/i18n";
 
-const timeFormat = new Intl.DateTimeFormat("zh-CN", {
+const timeFormat = new Intl.DateTimeFormat(intlLocale(), {
   month: "2-digit",
   day: "2-digit",
   hour: "2-digit",
@@ -16,9 +17,9 @@ const timeFormat = new Intl.DateTimeFormat("zh-CN", {
 function StatusBadge({ entry }: { entry: AuditEntry }) {
   if (entry.status == null) return null;
   return isFailure(entry) ? (
-    <Badge variant="error">失败 {entry.status}</Badge>
+    <Badge variant="error">{m.audit_failed_status({ status: String(entry.status) })}</Badge>
   ) : (
-    <Badge variant="success">成功</Badge>
+    <Badge variant="success">{m.audit_ok()}</Badge>
   );
 }
 
@@ -67,12 +68,12 @@ export function AuditEntryRow({ entry, fresh }: { entry: AuditEntry; fresh: bool
       </button>
       {open && (
         <dl className="space-y-1.5 bg-muted/40 px-3 py-3 pl-10 text-xs">
-          <DetailRow label="动作">
+          <DetailRow label={m.audit_detail_action()}>
             <code>{entry.action}</code>
           </DetailRow>
-          {entry.target && <DetailRow label="对象">{entry.target}</DetailRow>}
+          {entry.target && <DetailRow label={m.audit_detail_target()}>{entry.target}</DetailRow>}
           {path && (
-            <DetailRow label="请求">
+            <DetailRow label={m.audit_detail_request()}>
               <code>
                 {method} {path}
               </code>
@@ -80,9 +81,9 @@ export function AuditEntryRow({ entry, fresh }: { entry: AuditEntry; fresh: bool
             </DetailRow>
           )}
           {entry.ip && <DetailRow label="IP">{entry.ip}</DetailRow>}
-          {entry.userAgent && <DetailRow label="客户端">{entry.userAgent}</DetailRow>}
+          {entry.userAgent && <DetailRow label={m.audit_detail_client()}>{entry.userAgent}</DetailRow>}
           {Object.keys(rest).length > 0 && (
-            <DetailRow label="详情">
+            <DetailRow label={m.audit_detail_more()}>
               <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-background p-2 font-mono">
                 {JSON.stringify(rest, null, 2)}
               </pre>

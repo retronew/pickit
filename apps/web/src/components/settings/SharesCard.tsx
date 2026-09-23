@@ -12,6 +12,7 @@ import {
   CardContent,
 } from "#components/ui/card";
 import { Button } from "#components/ui/button";
+import { m } from "#lib/i18n";
 
 interface Share {
   slug: string;
@@ -37,30 +38,30 @@ export function SharesCard() {
   async function remove(slug: string) {
     try {
       await api(`/api/shares/${slug}`, { method: "DELETE" });
-      toastSuccess("已撤销分享", { id: "share" });
+      toastSuccess(m.share_revoked(), { id: "share" });
     } catch (err) {
-      toastError("撤销失败", err, { id: "share" });
+      toastError(m.share_revoke_failed(), err, { id: "share" });
     }
     refresh();
   }
 
   async function copy(slug: string) {
-    await copyText(`${window.location.origin}/s/${slug}`, "分享链接已复制");
+    await copyText(`${window.location.origin}/s/${slug}`, m.share_link_copied());
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>公开分享</CardTitle>
+        <CardTitle>{m.shares_title()}</CardTitle>
         <CardDescription>
-          单条收藏在详情里分享；分类或标签可以在收藏页筛选后分享，或在标签页分享，访问者看到的列表会随收藏自动更新，并提供 RSS 订阅。
+          {m.shares_description()}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {shares === null ? (
           <ListSkeleton rows={2} />
         ) : shares.length === 0 ? (
-          <p className="animate-fade-in text-muted-foreground text-sm">还没有分享链接。</p>
+          <p className="animate-fade-in text-muted-foreground text-sm">{m.shares_none()}</p>
         ) : (
           <div className="animate-fade-in space-y-1">
             {shares.map((s) => (
@@ -86,9 +87,9 @@ export function SharesCard() {
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      aria-label="复制 RSS 订阅地址"
-                      title="复制 RSS 订阅地址"
-                      onClick={() => copyText(rssUrl(s.slug), "RSS 地址已复制")}
+                      aria-label={m.shares_copy_rss()}
+                      title={m.shares_copy_rss()}
+                      onClick={() => copyText(rssUrl(s.slug), m.shares_rss_copied())}
                     >
                       <RssIcon />
                     </Button>
@@ -96,7 +97,7 @@ export function SharesCard() {
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    aria-label="复制链接"
+                    aria-label={m.shares_copy_link()}
                     onClick={() => copy(s.slug)}
                   >
                     <CopyIcon />
@@ -104,7 +105,7 @@ export function SharesCard() {
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    aria-label="撤销分享"
+                    aria-label={m.shares_revoke()}
                     onClick={() => remove(s.slug)}
                     className="text-muted-foreground hover:text-destructive-foreground"
                   >

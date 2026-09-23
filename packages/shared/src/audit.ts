@@ -1,85 +1,86 @@
-// Audit action names (written by the API) and their display labels (used
-// by the web app). audit.test.ts in the API checks every emitted action has one.
+// Audit action names (written by the API) and their display labels (from
+// the message catalogs, key audit_action_<action with "." → "_">). The API's
+// labels.test.ts checks every emitted action is listed here, and the i18n
+// test checks every listed action has a translation.
 
-export const AUDIT_CATEGORIES: Record<string, string> = {
-  item: "收藏",
-  tag: "标签",
-  share: "分享",
-  settings: "设置",
-  job: "批量任务",
-  ai: "AI",
-  auth: "登录",
-  backup: "备份",
-  mcp: "MCP",
-  system: "系统",
-  other: "其他",
-};
+import { m, type Locale } from "./i18n";
 
-export const AUDIT_ACTION_LABELS: Record<string, string> = {
-  "item.create": "添加收藏",
-  "item.update": "编辑收藏",
-  "item.pin": "置顶",
-  "item.unpin": "取消置顶",
-  "item.delete": "删除",
-  "item.restore": "恢复",
-  "item.purge": "彻底删除",
-  "item.summarize": "AI 摘要",
-  "item.check": "检查链接",
-  "item.reembed": "重建向量",
-  "item.visit": "打开收藏",
-  "item.analyze": "AI 识别",
-  "item.import": "导入",
-  "item.import_preview": "预览导入",
-  "item.export": "导出",
-  "item.merge": "合并重复",
-  "item.bulk_delete": "批量删除",
-  "item.bulk_pin": "批量置顶",
-  "item.bulk_unpin": "批量取消置顶",
-  "item.bulk_category": "批量改分类",
-  "item.bulk_purge": "清空回收站",
-  "item.bulk_restore": "批量恢复",
-  "item.bulk_add_tags": "批量添加标签",
-  "item.bulk_remove_tags": "批量移除标签",
-  "item.bulk_apply": "应用整理建议",
-  "item.suggest": "AI 整理建议",
-  "tag.rename": "重命名标签",
-  "tag.delete": "删除标签",
-  "share.create": "创建分享",
-  "share.revoke": "撤销分享",
-  "settings.ai_update": "修改 AI 配置",
-  "settings.ai_models": "获取模型列表",
-  "settings.ai_test": "测试模型",
-  "settings.token_reset": "重置 API Token",
-  "settings.token_delete": "删除 API Token",
-  "settings.allowed_emails": "修改允许邮箱",
-  "settings.audit_retention": "修改审计保留时间",
-  "job.start": "开始任务",
-  "job.pause": "暂停任务",
-  "job.resume": "继续任务",
-  "job.retry": "重试任务",
-  "ai.chat": "AI 问答",
-  "mcp.call": "MCP 调用",
-  "auth.sign_in": "登录",
-  "auth.sign_in_denied": "拒绝登录",
-  "auth.sign_out": "退出登录",
-  "backup.create": "手动备份",
-  "backup.restore": "恢复备份",
-  "backup.restore_preview": "预览恢复",
-  "backup.download": "下载备份",
-  "backup.delete": "删除备份",
-  "system.backup": "每日备份",
-  "system.link_check": "链接检查",
-  other: "其他",
-};
+export const AUDIT_CATEGORIES = ["item", "tag", "share", "settings", "job", "ai", "auth", "backup", "mcp", "system", "other"] as const;
+export type AuditCategory = (typeof AUDIT_CATEGORIES)[number];
+
+export const AUDIT_ACTIONS = [
+  "item.create",
+  "item.update",
+  "item.pin",
+  "item.unpin",
+  "item.delete",
+  "item.restore",
+  "item.purge",
+  "item.summarize",
+  "item.translate",
+  "item.check",
+  "item.reembed",
+  "item.visit",
+  "item.analyze",
+  "item.import",
+  "item.import_preview",
+  "item.export",
+  "item.merge",
+  "item.bulk_delete",
+  "item.bulk_pin",
+  "item.bulk_unpin",
+  "item.bulk_category",
+  "item.bulk_purge",
+  "item.bulk_restore",
+  "item.bulk_add_tags",
+  "item.bulk_remove_tags",
+  "item.bulk_apply",
+  "item.suggest",
+  "tag.rename",
+  "tag.delete",
+  "share.create",
+  "share.revoke",
+  "settings.ai_update",
+  "settings.ai_models",
+  "settings.ai_test",
+  "settings.token_reset",
+  "settings.token_delete",
+  "settings.allowed_emails",
+  "settings.audit_retention",
+  "settings.locale",
+  "job.start",
+  "job.pause",
+  "job.resume",
+  "job.retry",
+  "ai.chat",
+  "mcp.call",
+  "auth.sign_in",
+  "auth.sign_in_denied",
+  "auth.sign_out",
+  "backup.create",
+  "backup.restore",
+  "backup.restore_preview",
+  "backup.download",
+  "backup.delete",
+  "system.backup",
+  "system.link_check",
+  "other",
+] as const;
+
+type Message = (inputs?: Record<string, never>, options?: { locale?: Locale }) => string;
+const messages = m as unknown as Record<string, Message | undefined>;
 
 export function auditActionCategory(action: string): string {
   return action.includes(".") ? action.split(".")[0] : "other";
 }
 
+export function auditCategoryLabel(category: string, locale?: Locale): string {
+  return messages[`audit_category_${category}`]?.({}, { locale }) ?? category;
+}
+
 /** Label for an action; unknown ones fall back to "<category> · <action>". */
-export function auditActionLabel(action: string): string {
-  const label = AUDIT_ACTION_LABELS[action];
-  if (label) return label;
-  const category = AUDIT_CATEGORIES[auditActionCategory(action)] ?? "其他";
-  return `${category} · ${action}`;
+export function auditActionLabel(action: string, locale?: Locale): string {
+  const label = messages[`audit_action_${action.replace(/\./g, "_")}`];
+  if (label) return label({}, { locale });
+  return `${auditCategoryLabel(auditActionCategory(action), locale)} · ${action}`;
 }

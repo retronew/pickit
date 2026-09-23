@@ -1,4 +1,5 @@
 import { toastManager } from "#components/ui/toast";
+import { m } from "#lib/i18n";
 
 /** A failed API call; `message` is ready to show to the user. */
 export class ApiError extends Error {
@@ -27,11 +28,11 @@ export async function api<T = unknown>(
       body: init.json === undefined ? undefined : JSON.stringify(init.json),
     });
   } catch {
-    throw new ApiError("网络出问题了，请重试", 0);
+    throw new ApiError(m.error_network(), 0);
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message = typeof data?.error === "string" ? data.error : `请求失败（${res.status}）`;
+    const message = typeof data?.error === "string" ? data.error : m.error_status({ status: res.status });
     throw new ApiError(message, res.status, data);
   }
   return data as T;
@@ -40,7 +41,7 @@ export async function api<T = unknown>(
 export function errorMessage(err: unknown): string {
   if (err instanceof ApiError) return err.message;
   if (err instanceof Error && err.message) return err.message;
-  return "出了点问题，请重试";
+  return m.error_generic();
 }
 
 interface ToastOptions {
@@ -70,13 +71,13 @@ export function toastError(title: string, err?: unknown, { id }: Pick<ToastOptio
 }
 
 /** Copies text and reports the result with a toast. */
-export async function copyText(text: string, title = "已复制") {
+export async function copyText(text: string, title: string = m.copy_done()) {
   try {
     await navigator.clipboard.writeText(text);
     toastSuccess(title, { id: "copy" });
     return true;
   } catch {
-    toastError("复制失败", new Error("浏览器没有授予剪贴板权限"), { id: "copy" });
+    toastError(m.copy_failed(), new Error(m.copy_no_permission()), { id: "copy" });
     return false;
   }
 }

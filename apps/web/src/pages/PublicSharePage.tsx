@@ -5,6 +5,7 @@ import { Button } from "#components/ui/button";
 import { Skeleton } from "#components/ui/skeleton";
 import { SharedItemCard, type SharedItem } from "#components/share/SharedItemCard";
 import { api } from "#lib/api";
+import { m } from "#lib/i18n";
 
 type Shared =
   | { type: "item"; title: string; item: SharedItem }
@@ -49,7 +50,7 @@ export function PublicSharePage() {
         document.title = `${d.title} · PickIt`;
       })
       .catch((err) =>
-        setError(err?.status === 404 ? "这个分享链接不存在或已失效。" : "加载失败，请稍后再试。"),
+        setError(err?.status === 404 ? m.public_not_found() : m.public_load_failed()),
       );
   }, [slug]);
 
@@ -62,7 +63,7 @@ export function PublicSharePage() {
       <div className="w-full space-y-5">
         <div className="text-center">
           <span className="font-heading font-bold tracking-tight">PickIt</span>
-          <p className="text-muted-foreground text-xs">来自朋友的分享</p>
+          <p className="text-muted-foreground text-xs">{m.public_from_friend()}</p>
         </div>
 
         {error && <p className="text-center text-muted-foreground text-sm">{error}</p>}
@@ -80,16 +81,16 @@ export function PublicSharePage() {
               <div>
                 <h1 className="font-heading font-semibold text-xl">{data.title}</h1>
                 <p className="text-muted-foreground text-sm">
-                  {data.type === "category" ? "分类" : "标签"} · {data.items.length} 条收藏
+                  {data.type === "category" ? m.share_type_category() : m.share_type_tag()} · {m.items_total({ count: data.items.length })}
                 </p>
               </div>
               <Button variant="outline" size="sm" render={<a href={feed!} target="_blank" rel="noreferrer" />}>
                 <RssIcon />
-                RSS 订阅
+                {m.public_rss()}
               </Button>
             </div>
             {data.items.length === 0 ? (
-              <p className="text-muted-foreground text-sm">这里还没有收藏。</p>
+              <p className="text-muted-foreground text-sm">{m.public_empty()}</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {data.items.map((item) => (

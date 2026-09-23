@@ -10,6 +10,7 @@ import { Button } from "#components/ui/button";
 import { Spinner } from "#components/ui/spinner";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { api } from "#lib/api";
+import { m } from "#lib/i18n";
 
 const LIVE_KEY = "pickit-audit-live";
 
@@ -52,9 +53,9 @@ export function AuditPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-heading font-semibold text-lg">审计日志</h1>
+          <h1 className="font-heading font-semibold text-lg">{m.audit_title()}</h1>
           <p className="text-muted-foreground text-xs">
-            记录所有修改操作、导出、登录和定时任务。
+            {m.audit_description()}
           </p>
         </div>
         <AuditToolbar
@@ -75,16 +76,16 @@ export function AuditPage() {
         actors={facets.actors}
       />
 
-      {log.error && <p className="text-destructive text-sm">加载失败：{log.error}</p>}
+      {log.error && <p className="text-destructive text-sm">{m.load_failed({ error: log.error })}</p>}
 
       {log.loading && log.entries.length === 0 ? (
         <PageLoading />
       ) : log.entries.length === 0 ? (
         <Empty className="animate-fade-in">
           <EmptyHeader>
-            <EmptyTitle>{filtered ? "没有符合条件的记录" : "还没有审计记录"}</EmptyTitle>
+            <EmptyTitle>{filtered ? m.audit_empty_filtered() : m.audit_empty()}</EmptyTitle>
             <EmptyDescription>
-              {filtered ? "换个筛选条件试试。" : "之后的每一次操作都会记录在这里。"}
+              {filtered ? m.audit_empty_filtered_hint() : m.audit_empty_hint()}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -99,7 +100,7 @@ export function AuditPage() {
             <div className="flex justify-center">
               <Button variant="outline" onClick={log.loadMore} disabled={log.loadingMore}>
                 {log.loadingMore && <Spinner />}
-                加载更多
+                {m.load_more()}
               </Button>
             </div>
           )}

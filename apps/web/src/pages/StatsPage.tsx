@@ -16,6 +16,7 @@ import {
 } from "#components/ui/chart";
 import { PageLoading } from "#components/PageLoading";
 import { Empty, EmptyHeader, EmptyTitle } from "#components/ui/empty";
+import { m } from "#lib/i18n";
 
 interface Stats {
   total: number;
@@ -37,15 +38,15 @@ function StatTile({ label, value }: { label: string; value: string }) {
 }
 
 const categoryChartConfig = {
-  count: { label: "收藏数", color: "var(--chart-2)" },
+  count: { label: m.stats_count(), color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
 const monthChartConfig = {
-  count: { label: "新增数", color: "var(--chart-2)" },
+  count: { label: m.stats_added(), color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
 const clickChartConfig = {
-  clickCount: { label: "点击次数", color: "var(--chart-2)" },
+  clickCount: { label: m.detail_clicks(), color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
 function truncateLabel(label: string, max = 8) {
@@ -56,7 +57,7 @@ function ChartEmpty() {
   return (
     <Empty className="py-8">
       <EmptyHeader>
-        <EmptyTitle>暂无数据</EmptyTitle>
+        <EmptyTitle>{m.stats_empty()}</EmptyTitle>
       </EmptyHeader>
     </Empty>
   );
@@ -95,23 +96,23 @@ export function StatsPage() {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <h1 className="font-heading font-semibold text-lg">统计</h1>
+      <h1 className="font-heading font-semibold text-lg">{m.nav_stats()}</h1>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="总收藏数" value={String(stats.total)} />
+        <StatTile label={m.stats_total()} value={String(stats.total)} />
         <StatTile
-          label="智能搜索覆盖"
+          label={m.stats_embedding_coverage()}
           value={`${Math.round(stats.embeddingCoverage * 100)}%`}
         />
-        <StatTile label="失效链接" value={String(stats.deadLinks)} />
-        <StatTile label="回收站" value={String(stats.trash)} />
+        <StatTile label={m.stats_dead_links()} value={String(stats.deadLinks)} />
+        <StatTile label={m.nav_trash()} value={String(stats.trash)} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <Card>
           <CardHeader>
-            <CardTitle>分类分布</CardTitle>
-            <CardDescription>按收藏数量排序，前 15 个</CardDescription>
+            <CardTitle>{m.stats_by_category()}</CardTitle>
+            <CardDescription>{m.stats_by_category_hint()}</CardDescription>
           </CardHeader>
           <CardContent>
             {categoryData.length === 0 ? (
@@ -152,15 +153,15 @@ export function StatsPage() {
           </CardContent>
           {categoryData.length > 0 && (
             <CardFooter className="text-muted-foreground text-sm">
-              共 {stats.byCategory.length} 个分类
+              {m.stats_category_total({ count: stats.byCategory.length })}
             </CardFooter>
           )}
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>每月新增</CardTitle>
-            <CardDescription>按添加时间统计</CardDescription>
+            <CardTitle>{m.stats_by_month()}</CardTitle>
+            <CardDescription>{m.stats_by_month_hint()}</CardDescription>
           </CardHeader>
           <CardContent>
             {stats.byMonth.length === 0 ? (
@@ -194,8 +195,8 @@ export function StatsPage() {
       {clickData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>最常点击</CardTitle>
-            <CardDescription>点击次数最多的收藏</CardDescription>
+            <CardTitle>{m.stats_top_clicked()}</CardTitle>
+            <CardDescription>{m.stats_top_clicked_hint()}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer

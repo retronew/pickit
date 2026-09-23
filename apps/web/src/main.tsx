@@ -13,6 +13,9 @@ import { AuditPage } from "#pages/AuditPage";
 import { LoginPage } from "#pages/LoginPage";
 import { PublicSharePage } from "#pages/PublicSharePage";
 import { ToastProvider } from "#components/ui/toast";
+import { applyDocumentLocale } from "#lib/i18n";
+
+applyDocumentLocale();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

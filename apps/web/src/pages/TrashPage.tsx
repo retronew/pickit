@@ -8,6 +8,7 @@ import { Favicon } from "#components/Favicon";
 import { Confirm } from "#components/Confirm";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { PageLoading } from "#components/PageLoading";
+import { m } from "#lib/i18n";
 
 export function TrashPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -27,43 +28,43 @@ export function TrashPage() {
   async function restore(item: Item) {
     try {
       await api(`/api/items/${item.id}/restore`, { method: "POST" });
-      toastSuccess("已恢复", { description: item.name, id: "trash" });
+      toastSuccess(m.restored(), { description: item.name, id: "trash" });
     } catch (err) {
-      toastError("恢复失败", err, { id: "trash" });
+      toastError(m.restore_failed(), err, { id: "trash" });
     }
     refresh();
   }
 
   async function purge(item: Item) {
     const ok = await Confirm.call({
-      title: `彻底删除「${item.name}」？`,
-      message: "删除后就无法找回了。",
-      confirmLabel: "彻底删除",
+      title: m.purge_title({ name: item.name }),
+      message: m.purge_message(),
+      confirmLabel: m.action_purge(),
       danger: true,
     });
     if (!ok) return;
     try {
       await api(`/api/items/${item.id}/purge`, { method: "DELETE" });
-      toastSuccess("已彻底删除", { description: item.name, id: "trash" });
+      toastSuccess(m.purged(), { description: item.name, id: "trash" });
     } catch (err) {
-      toastError("删除失败", err, { id: "trash" });
+      toastError(m.delete_failed(), err, { id: "trash" });
     }
     refresh();
   }
 
   async function purgeAll() {
     const ok = await Confirm.call({
-      title: `清空回收站（${items.length} 项）？`,
-      message: "清空后就无法找回了。",
-      confirmLabel: "清空",
+      title: m.empty_trash_title({ count: items.length }),
+      message: m.empty_trash_message(),
+      confirmLabel: m.empty_trash_confirm(),
       danger: true,
     });
     if (!ok) return;
     try {
       await api("/api/items/bulk", { json: { ids: items.map((i) => i.id), action: "purge" } });
-      toastSuccess("回收站已清空", { id: "trash" });
+      toastSuccess(m.trash_emptied(), { id: "trash" });
     } catch (err) {
-      toastError("清空失败", err, { id: "trash" });
+      toastError(m.empty_trash_failed(), err, { id: "trash" });
     }
     refresh();
   }
@@ -71,11 +72,11 @@ export function TrashPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading font-semibold text-lg">回收站</h1>
+        <h1 className="font-heading font-semibold text-lg">{m.nav_trash()}</h1>
         {items.length > 0 && (
           <Button variant="outline" size="sm" onClick={purgeAll}>
             <Trash2Icon />
-            清空回收站
+            {m.empty_trash()}
           </Button>
         )}
       </div>
@@ -85,8 +86,8 @@ export function TrashPage() {
       ) : items.length === 0 ? (
         <Empty className="animate-fade-in">
           <EmptyHeader>
-            <EmptyTitle>回收站是空的</EmptyTitle>
-            <EmptyDescription>删除的收藏会先进入这里，可以恢复。</EmptyDescription>
+            <EmptyTitle>{m.trash_empty()}</EmptyTitle>
+            <EmptyDescription>{m.trash_empty_hint()}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -104,7 +105,7 @@ export function TrashPage() {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="恢复"
+                  aria-label={m.action_restore()}
                   onClick={() => restore(item)}
                 >
                   <RotateCcwIcon />
@@ -112,7 +113,7 @@ export function TrashPage() {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="彻底删除"
+                  aria-label={m.action_purge()}
                   onClick={() => purge(item)}
                   className="text-muted-foreground hover:text-destructive-foreground"
                 >

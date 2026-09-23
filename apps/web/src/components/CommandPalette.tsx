@@ -13,6 +13,7 @@ import {
   CommandShortcut,
 } from "#components/ui/command";
 import { Favicon } from "#components/Favicon";
+import { m } from "#lib/i18n";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -50,10 +51,10 @@ export function CommandPalette() {
           itemToStringValue={(i: unknown) => (i as Item).name}
         >
           <CommandPanel>
-            <CommandInput placeholder="搜索收藏，回车打开…" />
+            <CommandInput placeholder={m.palette_placeholder()} />
             <CommandList>
               <CommandEmpty>
-                {items === null ? "加载中…" : "没找到相关收藏"}
+                {items === null ? m.common_loading() : m.palette_empty()}
               </CommandEmpty>
               {(items ?? []).map((item) => (
                 <CommandItem
@@ -73,8 +74,8 @@ export function CommandPalette() {
             </CommandList>
           </CommandPanel>
           <CommandFooter>
-            <span>↑↓ 选择</span>
-            <CommandShortcut>Enter 打开 · Esc 关闭</CommandShortcut>
+            <span>{m.palette_hint_select()}</span>
+            <CommandShortcut>{m.palette_hint_keys()}</CommandShortcut>
           </CommandFooter>
         </Command>
       </CommandDialogPopup>

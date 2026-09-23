@@ -4,8 +4,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "#comp
 import { Button } from "#components/ui/button";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
 import { copyText } from "#lib/api";
+import { m } from "#lib/i18n";
 
-const TOKEN = "<你的 API Token>";
+const token = () => m.mcp_token_placeholder();
 
 function Snippet({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
@@ -15,7 +16,7 @@ function Snippet({ code }: { code: string }) {
       <Button
         variant="ghost"
         size="icon-xs"
-        aria-label="复制"
+        aria-label={m.action_copy()}
         className="absolute top-2 right-2"
         onClick={async () => {
           if (await copyText(code)) {
@@ -36,12 +37,12 @@ export function McpCard() {
   const clients = {
     "claude-code": {
       label: "Claude Code",
-      code: `claude mcp add --transport http pickit ${url} \\\n  --header "Authorization: Bearer ${TOKEN}"`,
+      code: `claude mcp add --transport http pickit ${url} \\\n  --header "Authorization: Bearer ${token()}"`,
     },
     json: {
-      label: "JSON 配置",
+      label: m.mcp_json(),
       code: JSON.stringify(
-        { mcpServers: { pickit: { type: "http", url, headers: { Authorization: `Bearer ${TOKEN}` } } } },
+        { mcpServers: { pickit: { type: "http", url, headers: { Authorization: `Bearer ${token()}` } } } },
         null,
         2,
       ),
@@ -51,14 +52,14 @@ export function McpCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>MCP 接入</CardTitle>
+        <CardTitle>{m.mcp_title()}</CardTitle>
         <CardDescription>
-          让 Claude 等 AI 助手直接搜索、查看和添加你的收藏。鉴权使用上面的 API Token，调用会记录在审计日志里。
+          {m.mcp_description()}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-1">
-          <p className="text-muted-foreground text-xs">服务地址（Streamable HTTP）</p>
+          <p className="text-muted-foreground text-xs">{m.mcp_endpoint()}</p>
           <Snippet code={url} />
         </div>
         <Tabs defaultValue="claude-code">
@@ -76,7 +77,7 @@ export function McpCard() {
           ))}
         </Tabs>
         <p className="text-muted-foreground text-xs">
-          可用工具：搜索收藏、查看收藏、按分类或标签列出收藏、列出分类、列出标签、添加收藏。
+          {m.mcp_tools()}
         </p>
       </CardContent>
     </Card>

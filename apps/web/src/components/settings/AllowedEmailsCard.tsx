@@ -12,6 +12,7 @@ import {
 import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Confirm } from "#components/Confirm";
+import { m } from "#lib/i18n";
 
 interface AllowedEmails {
   owners: string[];
@@ -27,7 +28,7 @@ export function AllowedEmailsCard() {
   useEffect(() => {
     api<AllowedEmails>("/api/settings/allowed-emails")
       .then(setData)
-      .catch((err) => setError(`加载失败：${errorMessage(err)}`));
+      .catch((err) => setError(m.load_failed({ error: errorMessage(err) })));
   }, []);
 
   async function save(emails: string[]) {
@@ -41,14 +42,14 @@ export function AllowedEmailsCard() {
       });
       const body = await res.json();
       if (!res.ok) {
-        setError(body.error ?? "保存失败");
+        setError(body.error ?? m.save_failed());
         return false;
       }
       setData(body);
-      toastSuccess("已保存允许登录的邮箱", { id: "allowed-emails" });
+      toastSuccess(m.emails_saved(), { id: "allowed-emails" });
       return true;
     } catch {
-      setError("网络出问题了，请重试");
+      setError(m.error_network());
       return false;
     } finally {
       setSaving(false);
@@ -64,9 +65,9 @@ export function AllowedEmailsCard() {
   async function remove(email: string) {
     if (!data) return;
     const ok = await Confirm.call({
-      title: `移除 ${email}？`,
-      message: "移除后这个邮箱立即无法访问，已登录的会话也会失效。",
-      confirmLabel: "移除",
+      title: m.emails_remove_title({ email }),
+      message: m.emails_remove_message(),
+      confirmLabel: m.action_remove(),
       danger: true,
     });
     if (ok) await save(data.emails.filter((x) => x !== email));
@@ -75,10 +76,9 @@ export function AllowedEmailsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>允许登录的邮箱</CardTitle>
+        <CardTitle>{m.emails_title()}</CardTitle>
         <CardDescription>
-          只有列表里的 Google / GitHub 账号邮箱可以登录。带锁的来自部署密钥
-          ALLOWED_EMAILS，不能在这里移除。
+          {m.emails_description()}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -91,7 +91,7 @@ export function AllowedEmailsCard() {
                 className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm"
               >
                 <span className="truncate">{email}</span>
-                <LockIcon className="text-muted-foreground size-3.5 shrink-0" aria-label="部署密钥" />
+                <LockIcon className="text-muted-foreground size-3.5 shrink-0" aria-label={m.emails_owner()} />
               </div>
             ))}
             {data.emails.map((email) => (
@@ -103,7 +103,7 @@ export function AllowedEmailsCard() {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="移除"
+                  aria-label={m.action_remove()}
                   disabled={saving}
                   onClick={() => remove(email)}
                   className="text-muted-foreground hover:text-destructive-foreground"
@@ -121,11 +121,11 @@ export function AllowedEmailsCard() {
             placeholder="name@example.com"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            aria-label="新增邮箱"
+            aria-label={m.emails_new()}
           />
           <Button type="submit" variant="outline" size="lg" disabled={saving || !draft.trim()}>
             <PlusIcon />
-            添加
+            {m.action_add()}
           </Button>
         </form>
         {error && <p className="text-destructive text-xs">{error}</p>}

@@ -17,6 +17,7 @@ import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
 import { Confirm } from "#components/Confirm";
 import { AskAi } from "#components/AskAi";
 import { PageLoading } from "#components/PageLoading";
+import { m } from "#lib/i18n";
 
 /** Keeps the open detail sheet showing the latest copy of its item. */
 function useDetailSheet(items: Item[]) {
@@ -89,7 +90,7 @@ export function ItemsPage() {
       />
 
       {!loading && (
-        <p className="text-xs text-muted-foreground">共 {filters.visibleItems.length} 条收藏</p>
+        <p className="text-xs text-muted-foreground">{m.items_total({ count: filters.visibleItems.length })}</p>
       )}
 
       {selection.selectMode && selection.selectedIds.size > 0 && (

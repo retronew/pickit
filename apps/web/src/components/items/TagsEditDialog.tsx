@@ -11,6 +11,7 @@ import {
 } from "#components/ui/dialog";
 import { Button } from "#components/ui/button";
 import { TagsField } from "#components/items/TagsField";
+import { m } from "#lib/i18n";
 
 interface Props {
   mode: "add" | "remove";
@@ -34,11 +35,11 @@ export const TagsEditDialog = createCallable<Props, string[] | null>(
       <Dialog open={entered && !call.ended} onOpenChange={(open) => !open && call.end(null)}>
         <DialogPopup>
           <DialogHeader>
-            <DialogTitle>{adding ? "批量添加标签" : "批量移除标签"}</DialogTitle>
+            <DialogTitle>{adding ? m.tags_add_title() : m.tags_remove_title()}</DialogTitle>
             <DialogDescription>
               {adding
-                ? `给选中的 ${count} 项加上这些标签，已有的不会重复。`
-                : `从选中的 ${count} 项里移除这些标签。`}
+                ? m.tags_add_hint({ count })
+                : m.tags_remove_hint({ count })}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
@@ -46,14 +47,14 @@ export const TagsEditDialog = createCallable<Props, string[] | null>(
           </DialogPanel>
           <DialogFooter>
             <Button variant="ghost" onClick={() => call.end(null)}>
-              取消
+              {m.common_cancel()}
             </Button>
             <Button
               variant={adding ? "default" : "destructive"}
               disabled={tags.length === 0}
               onClick={() => call.end(tags)}
             >
-              {adding ? "添加" : "移除"} {tags.length > 0 && `${tags.length} 个标签`}
+              {adding ? m.tags_add_button({ count: tags.length }) : m.tags_remove_button({ count: tags.length })}
             </Button>
           </DialogFooter>
         </DialogPopup>

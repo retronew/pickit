@@ -2,6 +2,7 @@ import type { Item } from "#hooks/useItems";
 import { ItemCard } from "#components/items/ItemCard";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { cn } from "#lib/utils";
+import { m } from "#lib/i18n";
 
 interface Props {
   grouped: [string, Item[]][];
@@ -22,11 +23,11 @@ export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds,
     return (
       <Empty className="animate-fade-in">
         <EmptyHeader>
-          <EmptyTitle>{filtered ? "没有符合条件的收藏" : "还没有收藏"}</EmptyTitle>
+          <EmptyTitle>{filtered ? m.items_empty_filtered() : m.items_empty()}</EmptyTitle>
           <EmptyDescription>
             {filtered
-              ? "试试其他关键词，或清除筛选条件。"
-              : "点右上角「添加」；也可以粘贴一批网址批量导入。"}
+              ? m.items_empty_filtered_hint()
+              : m.items_empty_hint()}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>

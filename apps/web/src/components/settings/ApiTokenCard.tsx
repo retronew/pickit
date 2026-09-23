@@ -12,6 +12,7 @@ import {
 } from "#components/ui/card";
 import { Button } from "#components/ui/button";
 import { Confirm } from "#components/Confirm";
+import { m } from "#lib/i18n";
 
 export function ApiTokenCard() {
   const [masked, setMasked] = useState<string | null>(null);
@@ -33,9 +34,9 @@ export function ApiTokenCard() {
   async function reset() {
     if (masked) {
       const ok = await Confirm.call({
-        title: "重置 API Token？",
-        message: "重置后旧 token 立即失效，正在使用它的脚本或工具需要更新。",
-        confirmLabel: "重置",
+        title: m.token_reset_title(),
+        message: m.token_reset_message(),
+        confirmLabel: m.token_reset(),
         danger: true,
       });
       if (!ok) return;
@@ -43,15 +44,15 @@ export function ApiTokenCard() {
     try {
       const data = await api<{ token: string }>("/api/settings/api-token/reset", { method: "POST" });
       setNewToken(data.token);
-      toastSuccess(masked ? "已重置 Token" : "已生成 Token", { description: "记得马上复制", id: "api-token" });
+      toastSuccess(masked ? m.token_was_reset() : m.token_generated(), { description: m.token_copy_now(), id: "api-token" });
       refresh();
     } catch (err) {
-      toastError(masked ? "重置 Token 失败" : "生成 Token 失败", err, { id: "api-token" });
+      toastError(masked ? m.token_reset_failed() : m.token_generate_failed(), err, { id: "api-token" });
     }
   }
 
   async function copy() {
-    if (!(await copyText(newToken, "Token 已复制"))) return;
+    if (!(await copyText(newToken, m.token_copied()))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -61,7 +62,7 @@ export function ApiTokenCard() {
       <CardHeader>
         <CardTitle>API Token</CardTitle>
         <CardDescription>
-          脚本、第三方工具或 AI 助手（MCP）访问接口时使用这个 token。
+          {m.token_description()}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -70,7 +71,7 @@ export function ApiTokenCard() {
             <code className="min-w-0 flex-1 truncate rounded-lg bg-muted px-3 py-2 text-xs">
               {newToken}
             </code>
-            <Button variant="outline" size="icon-sm" aria-label="复制" onClick={copy}>
+            <Button variant="outline" size="icon-sm" aria-label={m.action_copy()} onClick={copy}>
               {copied ? <CheckIcon /> : <CopyIcon />}
             </Button>
           </div>
@@ -78,21 +79,21 @@ export function ApiTokenCard() {
           <TextSkeleton className="my-0.5 w-48" />
         ) : masked ? (
           <p className="animate-fade-in text-muted-foreground text-sm">
-            当前：<code className="text-foreground">{masked}</code>
+            {m.token_current()}<code className="text-foreground">{masked}</code>
           </p>
         ) : (
-          <p className="animate-fade-in text-muted-foreground text-sm">还没有生成</p>
+          <p className="animate-fade-in text-muted-foreground text-sm">{m.token_none()}</p>
         )}
         {newToken && (
           <p className="text-muted-foreground text-xs">
-            完整内容只显示这一次，记得马上复制。
+            {m.token_shown_once()}
           </p>
         )}
       </CardContent>
       <CardFooter>
         <Button variant="outline" size="lg" onClick={reset} disabled={!loaded}>
           <RefreshCwIcon />
-          {masked ? "重置" : "生成"} Token
+          {masked ? m.token_reset_button() : m.token_generate_button()}
         </Button>
       </CardFooter>
     </Card>

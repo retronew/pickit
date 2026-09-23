@@ -13,7 +13,7 @@ export interface AuditEntry {
 
 export {
   AUDIT_CATEGORIES,
-  AUDIT_ACTION_LABELS,
+  auditCategoryLabel as categoryLabel,
   auditActionLabel as actionLabel,
   auditActionCategory as actionCategory,
 } from "@pickit/shared";

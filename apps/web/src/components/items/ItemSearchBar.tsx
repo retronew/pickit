@@ -5,6 +5,7 @@ import { Button, buttonVariants } from "#components/ui/button";
 import { Kbd } from "#components/ui/kbd";
 import { Menu, MenuTrigger, MenuPopup, MenuItem } from "#components/ui/menu";
 import { cn } from "#lib/utils";
+import { m } from "#lib/i18n";
 
 export function ItemSearchBar({
   query,
@@ -31,7 +32,7 @@ export function ItemSearchBar({
           size="lg"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="搜索收藏，也可以直接描述你在找什么…"
+          placeholder={m.search_placeholder()}
           aria-busy={searching}
           className="pl-7 pr-14"
         />
@@ -39,7 +40,7 @@ export function ItemSearchBar({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="清空搜索"
+            aria-label={m.search_clear()}
             onClick={() => onQueryChange("")}
             className="z-raised absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground"
           >
@@ -54,7 +55,7 @@ export function ItemSearchBar({
       <div className="flex">
         <Button size="lg" onClick={onAdd} className="rounded-e-none">
           <PlusIcon />
-          添加
+          {m.action_add()}
         </Button>
         <Menu>
           <MenuTrigger
@@ -62,18 +63,18 @@ export function ItemSearchBar({
               buttonVariants({ size: "lg" }),
               "-ms-px w-auto rounded-s-none px-2",
             )}
-            aria-label="更多添加方式"
+            aria-label={m.add_more()}
           >
             <ChevronDownIcon />
           </MenuTrigger>
           <MenuPopup align="end">
             <MenuItem onClick={onAdd}>
               <PlusIcon />
-              单个添加
+              {m.add_single()}
             </MenuItem>
             <MenuItem onClick={onBatchAdd}>
               <ListPlusIcon />
-              批量粘贴网址
+              {m.add_batch()}
             </MenuItem>
           </MenuPopup>
         </Menu>

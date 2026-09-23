@@ -27,6 +27,7 @@ import { useUrlAnalyzer } from "#hooks/useUrlAnalyzer";
 import { SparklesIcon } from "lucide-react";
 import { Spinner } from "#components/ui/spinner";
 import { errorMessage, toastError } from "#lib/api";
+import { m } from "#lib/i18n";
 
 export interface ItemFormPayload {
   name: string;
@@ -98,7 +99,7 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
         if (await onSubmit(payload)) call.end(payload);
       } catch (err) {
         setSaveError(errorMessage(err));
-        toastError("保存失败", err, { id: "item-save" });
+        toastError(m.save_failed(), err, { id: "item-save" });
       } finally {
         setSaving(false);
       }
@@ -113,7 +114,7 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
       >
         <DialogPopup>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "编辑收藏" : "添加收藏"}</DialogTitle>
+            <DialogTitle>{isEditing ? m.form_edit_title() : m.form_add_title()}</DialogTitle>
           </DialogHeader>
           <DialogPanel>
             <form
@@ -125,12 +126,12 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
               }}
             >
               <Field>
-                <FieldLabel htmlFor="item-url">网址</FieldLabel>
+                <FieldLabel htmlFor="item-url">{m.field_url()}</FieldLabel>
                 <div className="flex w-full gap-2">
                   <Input
                     id="item-url"
                     size="lg"
-                    placeholder="粘贴网址，可让 AI 自动识别"
+                    placeholder={m.form_url_placeholder()}
                     value={form.url}
                     onChange={(e) => setForm({ ...form, url: e.target.value })}
                   />
@@ -144,7 +145,7 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
                     className="shrink-0"
                   >
                     <SparklesIcon />
-                    AI 识别
+                    {m.form_analyze()}
                   </Button>
                 </div>
                 {analyzeMsg && (
@@ -155,27 +156,27 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
                 <PossibleDuplicates items={possibleDuplicates} />
               </Field>
               <Field>
-                <FieldLabel htmlFor="item-name">名称 *</FieldLabel>
+                <FieldLabel htmlFor="item-name">{m.field_name_required()}</FieldLabel>
                 <Input
                   id="item-name"
                   size="lg"
-                  placeholder="例如：Recharts"
+                  placeholder={m.form_name_placeholder()}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="item-note">备注</FieldLabel>
+                <FieldLabel htmlFor="item-note">{m.field_note()}</FieldLabel>
                 <Textarea
                   id="item-note"
                   size="lg"
-                  placeholder="介绍一下它，方便以后搜索（支持多行和 Markdown）"
+                  placeholder={m.form_note_placeholder()}
                   value={form.note}
                   onChange={(e) => setForm({ ...form, note: e.target.value })}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="item-category">分类</FieldLabel>
+                <FieldLabel htmlFor="item-category">{m.field_category()}</FieldLabel>
                 <Combobox
                   items={categories}
                   onValueChange={(v) =>
@@ -189,10 +190,10 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
                     id="item-category"
                     size="lg"
                     value={form.category}
-                    placeholder="选择或输入分类，支持「前端/React」这样的两级分类"
+                    placeholder={m.form_category_placeholder()}
                   />
                   <ComboboxPopup>
-                    <ComboboxEmpty>输入即可新建分类</ComboboxEmpty>
+                    <ComboboxEmpty>{m.form_category_new()}</ComboboxEmpty>
                     <ComboboxList>
                       {categories.map((c) => (
                         <ComboboxItem key={c} value={c}>
@@ -204,7 +205,7 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
                 </Combobox>
               </Field>
               <Field>
-                <FieldLabel htmlFor="item-tags">标签</FieldLabel>
+                <FieldLabel htmlFor="item-tags">{m.field_tags()}</FieldLabel>
                 <TagsField
                   tags={form.tags}
                   onChange={(tags) => setForm((f) => ({ ...f, tags }))}
@@ -218,11 +219,11 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
               <p className="text-destructive me-auto text-sm">{saveError}</p>
             )}
             <Button variant="ghost" disabled={saving} onClick={() => call.end(null)}>
-              取消
+              {m.common_cancel()}
             </Button>
             <Button type="submit" form="item-form" disabled={!form.name || saving}>
               {saving && <Spinner />}
-              {saving ? "保存中…" : "保存"}
+              {saving ? m.common_saving() : m.common_save()}
             </Button>
           </DialogFooter>
         </DialogPopup>

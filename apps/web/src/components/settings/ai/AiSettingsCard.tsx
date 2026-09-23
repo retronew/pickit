@@ -17,6 +17,7 @@ import { PanelHeading, RequestPreview, TestResult, AiSettingsSkeleton } from "./
 import { EndpointFields } from "./EndpointFields";
 import { ModelField } from "./ModelField";
 import { emptyModels } from "./shared";
+import { m } from "#lib/i18n";
 
 export function AiSettingsCard() {
   const {
@@ -39,17 +40,17 @@ export function AiSettingsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI 服务</CardTitle>
+        <CardTitle>{m.ai_title()}</CardTitle>
         <CardDescription>
-          对话模型用于自动整理、摘要和问答；向量模型用于智能搜索和查重，两者可以使用不同的服务商。
+          {m.ai_description()}
         </CardDescription>
       </CardHeader>
       {!saved ? (
         loadError ? (
           <CardContent className="flex items-center gap-3 text-sm">
-            <span className="text-destructive">加载失败：{loadError}</span>
+            <span className="text-destructive">{m.load_failed({ error: loadError })}</span>
             <Button variant="outline" size="sm" onClick={load}>
-              重试
+              {m.common_retry()}
             </Button>
           </CardContent>
         ) : (
@@ -59,7 +60,7 @@ export function AiSettingsCard() {
         <>
           <CardContent className="grid animate-fade-in gap-8 lg:grid-cols-[1fr_auto_1fr]">
             <section className="space-y-4">
-              <PanelHeading title="对话模型" configured={saved?.chatConfigured} />
+              <PanelHeading title={m.ai_chat_model()} configured={saved?.chatConfigured} />
               <EndpointFields
                 target="chat"
                 endpoint={form.chat}
@@ -79,24 +80,24 @@ export function AiSettingsCard() {
                     apiKey: "",
                     model: "",
                   });
-                  setModels((m) => ({ ...m, chat: emptyModels }));
+                  setModels((prev) => ({ ...prev, chat: emptyModels }));
                 }}
                 onChange={patchChat}
               />
               <ModelField
                 target="chat"
                 value={form.chat.model}
-                placeholder={findProvider(form.chat.provider)?.chatModelHint ?? "模型名称"}
+                placeholder={findProvider(form.chat.provider)?.chatModelHint ?? m.ai_model_name()}
                 state={models.chat}
                 canFetch={!!form.chat.baseUrl}
-                fetchLabel={form.chat.provider === CUSTOM_PROVIDER ? "检测并获取模型" : "获取模型列表"}
+                fetchLabel={form.chat.provider === CUSTOM_PROVIDER ? m.ai_detect_models() : m.ai_fetch_models()}
                 onFetch={() => fetchModels("chat")}
                 onChange={(model) => patchChat({ model })}
               />
               <RequestPreview
                 urls={[
                   ...chatRequestUrls(form.chat.protocol, form.chat.baseUrl, form.chat.model),
-                  { label: "模型列表", url: modelsListUrl(form.chat.baseUrl) },
+                  { label: m.ai_models_list(), url: modelsListUrl(form.chat.baseUrl) },
                 ]}
               />
               <TestResult state={tests.chat} />
@@ -106,7 +107,7 @@ export function AiSettingsCard() {
             <div role="separator" className="h-px bg-border lg:h-auto lg:w-px" />
 
             <section className="space-y-4">
-              <PanelHeading title="向量模型（可选）" configured={saved?.embeddingConfigured} />
+              <PanelHeading title={m.ai_embedding_model()} configured={saved?.embeddingConfigured} />
                 <EndpointFields
                   target="embedding"
                   endpoint={form.embedding}
@@ -125,7 +126,7 @@ export function AiSettingsCard() {
                       apiKey: "",
                       model: "",
                     });
-                    setModels((m) => ({ ...m, embedding: emptyModels }));
+                    setModels((prev) => ({ ...prev, embedding: emptyModels }));
                   }}
                   onChange={patchEmbedding}
                 />
@@ -134,16 +135,16 @@ export function AiSettingsCard() {
                 value={form.embedding.model}
                 placeholder={
                   findProvider(form.embedding.provider)
-                    ?.embeddingModelHint ?? "留空表示不使用向量功能"
+                    ?.embeddingModelHint ?? m.ai_embedding_empty()
                 }
                 state={models.embedding}
                 canFetch={!!form.embedding.baseUrl}
-                fetchLabel="获取模型列表"
+                fetchLabel={m.ai_fetch_models()}
                 onFetch={() => fetchModels("embedding")}
                 onChange={(model) => patchEmbedding({ model })}
               />
               <p className="text-muted-foreground text-xs">
-                更换向量模型后，需要在下方「向量索引重建」里重新生成索引，否则旧向量无法和新模型比较。
+                {m.ai_embedding_change_hint()}
               </p>
               {embeddingEndpoint && (
                 <RequestPreview
@@ -159,7 +160,7 @@ export function AiSettingsCard() {
           </CardContent>
           <CardFooter className="flex animate-fade-in flex-wrap items-center gap-2">
             <Button size="lg" onClick={save}>
-              保存
+              {m.common_save()}
             </Button>
             <Button
               variant="outline"
@@ -167,7 +168,7 @@ export function AiSettingsCard() {
               disabled={tests.chat.running}
               onClick={() => runTest("chat")}
             >
-              {tests.chat.running ? "测试中…" : "测试对话模型"}
+              {tests.chat.running ? m.ai_testing() : m.ai_test_chat()}
             </Button>
             <Button
               variant="outline"
@@ -175,7 +176,7 @@ export function AiSettingsCard() {
               disabled={!form.embedding.model || tests.embedding.running}
               onClick={() => runTest("embedding")}
             >
-              {tests.embedding.running ? "测试中…" : "测试向量模型"}
+              {tests.embedding.running ? m.ai_testing() : m.ai_test_embedding()}
             </Button>
             {saveMessage && <span className="text-muted-foreground text-sm">{saveMessage}</span>}
           </CardFooter>

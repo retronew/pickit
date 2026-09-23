@@ -2,6 +2,7 @@ import type { Item } from "@pickit/shared";
 import type { ItemFormPayload } from "#components/items/ItemFormDialog";
 import { Confirm } from "#components/Confirm";
 import { api, ApiError, toastSuccess } from "#lib/api";
+import { m } from "#lib/i18n";
 
 /**
  * Creates or updates an item. Throws on failure so the form dialog can stay
@@ -16,13 +17,13 @@ export async function saveItem(payload: ItemFormPayload, item: Item | null): Pro
     if (!(err instanceof ApiError) || err.status !== 409) throw err;
     const existing = err.data.existing as { name?: string } | undefined;
     const ok = await Confirm.call({
-      title: "这条收藏已经存在",
-      message: `「${existing?.name ?? "这条收藏"}」已经在你收藏里了，还要再存一条吗？`,
-      confirmLabel: "继续保存",
+      title: m.dup_title(),
+      message: m.dup_message({ name: existing?.name ?? m.dup_this_item() }),
+      confirmLabel: m.dup_save_anyway(),
     });
     if (!ok) return false;
     await api(url, { method, json: { ...payload, allowDuplicate: true } });
   }
-  toastSuccess(item ? "已保存修改" : "已添加收藏", { description: payload.name, id: "item-save" });
+  toastSuccess(item ? m.item_saved() : m.item_added(), { description: payload.name, id: "item-save" });
   return true;
 }

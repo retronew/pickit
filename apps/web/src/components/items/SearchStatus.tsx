@@ -1,4 +1,5 @@
 import { cn } from "#lib/utils";
+import { m } from "#lib/i18n";
 
 /** One-line status under the search box: searching, error or result count. */
 export function SearchStatus({
@@ -19,11 +20,11 @@ export function SearchStatus({
   return (
     <p role="status" className={cn("-mt-2 text-xs", error ? "text-destructive" : "text-muted-foreground")}>
       {searching
-        ? `正在搜索「${q}」…`
+        ? m.search_searching({ query: q })
         : error
-          ? `搜索失败：${error}`
+          ? m.search_failed({ error })
           : hasHits
-            ? `找到 ${count} 条相关收藏，按相关度排序`
+            ? m.search_found({ count })
             : null}
     </p>
   );

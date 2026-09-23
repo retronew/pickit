@@ -4,6 +4,7 @@ import { ArrowUpIcon } from "lucide-react";
 import { Button } from "#components/ui/button";
 import { cn } from "#lib/utils";
 import { smoothScrollToTop } from "#lib/scroll";
+import { m } from "#lib/i18n";
 
 export function BackToTop() {
   const [show, setShow] = useState(false);
@@ -43,7 +44,7 @@ export function BackToTop() {
     <Button
       variant="secondary"
       size="icon"
-      aria-label="回到顶部"
+      aria-label={m.back_to_top()}
       onClick={() => smoothScrollToTop()}
       className={cn(
         // Cleared above AskAi's fixed input bar (~pb-4/6 + pill height) so

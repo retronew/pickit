@@ -4,6 +4,7 @@ import { Confirm } from "#components/Confirm";
 import { TagsEditDialog } from "#components/items/TagsEditDialog";
 import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
 import { api, toastError, toastSuccess } from "#lib/api";
+import { m } from "#lib/i18n";
 
 export type BulkAction = "delete" | "pin" | "unpin" | "category";
 
@@ -32,14 +33,14 @@ export function useBulkSelection(refresh: () => void, items: Item[], allTags: st
     try {
       await api("/api/items/bulk", { json: { ids: [...selectedIds], action, value } });
     } catch (err) {
-      toastError("批量操作失败", err, { id: "item-bulk" });
+      toastError(m.bulk_failed(), err, { id: "item-bulk" });
       return;
     }
     const done = {
-      delete: `已将 ${count} 项移到回收站`,
-      pin: `已置顶 ${count} 项`,
-      unpin: `已取消置顶 ${count} 项`,
-      category: `已将 ${count} 项移到「${value || "未分类"}」`,
+      delete: m.bulk_done_delete({ count }),
+      pin: m.bulk_done_pin({ count }),
+      unpin: m.bulk_done_unpin({ count }),
+      category: m.bulk_done_category({ count, category: value || m.uncategorized() }),
     }[action];
     toastSuccess(done, { id: "item-bulk" });
     exitSelectMode();
@@ -58,29 +59,29 @@ export function useBulkSelection(refresh: () => void, items: Item[], allTags: st
       const res = await api<{ changed: number }>("/api/items/bulk", {
         json: { ids, action: mode === "add" ? "add_tags" : "remove_tags", tags },
       });
-      toastSuccess(mode === "add" ? "已添加标签" : "已移除标签", {
-        description: `${res.changed} 项有变化：${tags.map((t) => `#${t}`).join(" ")}`,
+      toastSuccess(mode === "add" ? m.tags_added() : m.tags_removed(), {
+        description: m.tags_changed({ count: res.changed, tags: tags.map((t) => `#${t}`).join(" ") }),
         id: "item-bulk",
       });
       refresh();
     } catch (err) {
-      toastError(mode === "add" ? "添加标签失败" : "移除标签失败", err, { id: "item-bulk" });
+      toastError(mode === "add" ? m.tags_add_failed() : m.tags_remove_failed(), err, { id: "item-bulk" });
     }
   }
 
   async function aiOrganize() {
     const applied = await OrganizeReviewDialog.call({ ids: [...selectedIds] });
     if (!applied) return;
-    toastSuccess(`已按 AI 建议整理 ${applied} 项`, { id: "item-bulk" });
+    toastSuccess(m.organize_applied({ count: applied }), { id: "item-bulk" });
     exitSelectMode();
     refresh();
   }
 
   async function bulkDelete() {
     const ok = await Confirm.call({
-      title: `删除选中的 ${selectedIds.size} 项？`,
-      message: "删除后会放进回收站，随时可以恢复。",
-      confirmLabel: "删除",
+      title: m.bulk_delete_title({ count: selectedIds.size }),
+      message: m.delete_to_trash_hint(),
+      confirmLabel: m.action_delete(),
       danger: true,
     });
     if (ok) await bulkAction("delete");

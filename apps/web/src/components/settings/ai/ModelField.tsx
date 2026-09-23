@@ -12,6 +12,7 @@ import {
   AutocompleteEmpty,
 } from "#components/ui/autocomplete";
 import type { Target, ModelState } from "./shared";
+import { m } from "#lib/i18n";
 
 export function ModelField({
   target,
@@ -32,8 +33,8 @@ export function ModelField({
   onFetch: () => void;
   onChange: (value: string) => void;
 }) {
-  const preferred = state.models.filter((m) => m.kind === target).map((m) => m.id);
-  const items = preferred.length ? preferred : state.models.map((m) => m.id);
+  const preferred = state.models.filter((model) => model.kind === target).map((model) => model.id);
+  const items = preferred.length ? preferred : state.models.map((model) => model.id);
   // Show the full list when the popup opens; filter only once the user edits
   // the input. Otherwise a selected model filters the list down to itself.
   const [openedWith, setOpenedWith] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export function ModelField({
     openedWith === value || !query ? items : items.filter((id) => id.toLowerCase().includes(query));
   return (
     <Field>
-      <FieldLabel htmlFor={`${target}-model`}>模型</FieldLabel>
+      <FieldLabel htmlFor={`${target}-model`}>{m.ai_model()}</FieldLabel>
       <div className="flex gap-2">
         <Autocomplete
           items={items}
@@ -60,7 +61,7 @@ export function ModelField({
             showTrigger={items.length > 0}
           />
           <AutocompletePopup>
-            <AutocompleteEmpty>没有匹配的模型，可以直接输入</AutocompleteEmpty>
+            <AutocompleteEmpty>{m.ai_model_none()}</AutocompleteEmpty>
             <AutocompleteList>
               {(item: string) => (
                 <AutocompleteItem key={item} value={item} className="font-mono">
@@ -77,11 +78,11 @@ export function ModelField({
           disabled={!canFetch || state.loading}
           onClick={onFetch}
         >
-          {state.loading ? "获取中…" : fetchLabel}
+          {state.loading ? m.ai_fetching() : fetchLabel}
         </Button>
       </div>
       <FieldDescription>
-        可以从获取到的列表里选，也可以直接手动输入模型名称。
+        {m.ai_model_hint()}
       </FieldDescription>
       {state.message && (
         <p className={state.error ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>

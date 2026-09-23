@@ -11,6 +11,7 @@ import {
 import { Textarea } from "#components/ui/textarea";
 import { Button } from "#components/ui/button";
 import { Field, FieldLabel, FieldDescription } from "#components/ui/field";
+import { m } from "#lib/i18n";
 
 interface Progress {
   total: number;
@@ -113,9 +114,11 @@ export function BatchAddDialog({
     await Promise.all([worker(), worker()]);
 
     setRunning(false);
-    const summary = `新增 ${p.added} 条，跳过 ${p.skipped} 条重复${p.failed ? `，失败 ${p.failed} 条` : ""}`;
-    if (p.failed && !p.added) toastError("批量添加失败", new Error(summary), { id: "batch-add" });
-    else toastSuccess("批量添加完成", { description: summary, id: "batch-add" });
+    const summary = p.failed
+      ? m.batch_summary_failed({ added: p.added, skipped: p.skipped, failed: p.failed })
+      : m.batch_summary({ added: p.added, skipped: p.skipped });
+    if (p.failed && !p.added) toastError(m.batch_failed(), new Error(summary), { id: "batch-add" });
+    else toastSuccess(m.batch_done(), { description: summary, id: "batch-add" });
     onDone();
   }
 
@@ -130,11 +133,11 @@ export function BatchAddDialog({
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
       <DialogPopup>
         <DialogHeader>
-          <DialogTitle>批量添加</DialogTitle>
+          <DialogTitle>{m.batch_title()}</DialogTitle>
         </DialogHeader>
         <DialogPanel>
           <Field>
-            <FieldLabel htmlFor="batch-urls">每行一个网址</FieldLabel>
+            <FieldLabel htmlFor="batch-urls">{m.batch_label()}</FieldLabel>
             <Textarea
               id="batch-urls"
               className="min-h-40 font-mono text-xs"
@@ -144,27 +147,31 @@ export function BatchAddDialog({
               placeholder={"https://a.com\nhttps://b.com"}
             />
             <FieldDescription>
-              会逐个用 AI 识别并添加，一次处理两个。
+              {m.batch_hint()}
             </FieldDescription>
           </Field>
           {progress && (
             <p className="mt-3 text-muted-foreground text-sm">
-              已完成 {progress.done}/{progress.total} · 新增 {progress.added} ·
-              重复 {progress.skipped}
-              {progress.failed > 0 && ` · 失败 ${progress.failed}`}
+              {m.batch_progress({
+                done: progress.done,
+                total: progress.total,
+                added: progress.added,
+                skipped: progress.skipped,
+              })}
+              {progress.failed > 0 && ` · ${m.batch_progress_failed({ failed: progress.failed })}`}
             </p>
           )}
         </DialogPanel>
         <DialogFooter>
           <Button variant="ghost" onClick={close} disabled={running}>
-            {progress && !running ? "完成" : "取消"}
+            {progress && !running ? m.common_done() : m.common_cancel()}
           </Button>
           <Button
             onClick={start}
             disabled={running || !text.trim()}
             loading={running}
           >
-            开始添加
+            {m.batch_start()}
           </Button>
         </DialogFooter>
       </DialogPopup>

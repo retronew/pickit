@@ -5,8 +5,9 @@ import { Input } from "#components/ui/input";
 import { DateRangePicker } from "#components/DateRangePicker";
 import { Button } from "#components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#components/ui/select";
-import { AUDIT_CATEGORIES, actionCategory, actionLabel } from "#lib/audit";
+import { AUDIT_CATEGORIES, actionCategory, actionLabel, categoryLabel } from "#lib/audit";
 import { EMPTY_FILTERS, type AuditFilters } from "#hooks/useAuditLog";
+import { m } from "#lib/i18n";
 
 export interface Facet {
   value: string;
@@ -78,7 +79,7 @@ export function AuditFiltersBar({
       <Input
         size="sm"
         className="w-full sm:w-56"
-        placeholder="搜索描述、对象或 IP"
+        placeholder={m.audit_search_placeholder()}
         value={keyword}
         onChange={(e) => {
           const q = e.target.value;
@@ -87,39 +88,39 @@ export function AuditFiltersBar({
         }}
       />
       <FilterSelect
-        label="全部类别"
+        label={m.audit_all_categories()}
         value={filters.category}
-        items={AUDIT_CATEGORIES}
+        items={Object.fromEntries(AUDIT_CATEGORIES.map((c) => [c, categoryLabel(c)]))}
         onChange={(category) => set({ category, action: "" })}
       />
       <FilterSelect
-        label="全部动作"
+        label={m.audit_all_actions()}
         value={filters.action}
         items={actionItems}
         onChange={(action) => set({ action })}
       />
       <FilterSelect
-        label="全部操作者"
+        label={m.audit_all_actors()}
         value={filters.actor}
         items={actorItems}
         onChange={(actor) => set({ actor })}
       />
       <FilterSelect
-        label="全部结果"
+        label={m.audit_all_results()}
         value={filters.result}
-        items={{ ok: "成功", error: "失败" }}
+        items={{ ok: m.audit_ok(), error: m.audit_failed() }}
         onChange={(result) => set({ result: result as AuditFilters["result"] })}
       />
       <DateRangePicker
         from={filters.from}
         to={filters.to}
         onChange={(range) => set(range)}
-        placeholder="全部时间"
+        placeholder={m.audit_all_time()}
       />
       {dirty && (
         <Button variant="ghost" size="sm" onClick={() => onChange(EMPTY_FILTERS)}>
           <XIcon />
-          清除筛选
+          {m.audit_clear_filters()}
         </Button>
       )}
     </div>

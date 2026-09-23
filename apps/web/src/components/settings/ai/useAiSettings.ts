@@ -10,6 +10,7 @@ import {
 } from "@pickit/shared";
 import { hasUsableKey, emptyModels, postJson } from "./shared";
 import type { Target, ModelInfo, AiSettingsResponse, ModelState, TestState } from "./shared";
+import { m } from "#lib/i18n";
 
 export function useAiSettings() {
   const [form, setForm] = useState<AiSettings>(emptyAiSettings);
@@ -48,21 +49,21 @@ export function useAiSettings() {
 
   const fetchModels = async (target: Target) => {
     if (!hasUsableKey(form[target], saved?.[target])) {
-      setModels((m) => ({
-        ...m,
-        [target]: { models: [], loading: false, message: "请先填写 API 密钥，再获取模型列表", error: true },
+      setModels((prev) => ({
+        ...prev,
+        [target]: { models: [], loading: false, message: m.ai_need_key(), error: true },
       }));
       return;
     }
-    setModels((m) => ({ ...m, [target]: { ...m[target], loading: true, message: "" } }));
+    setModels((prev) => ({ ...prev, [target]: { ...prev[target], loading: true, message: "" } }));
     const { ok, data } = await postJson<{ baseUrl?: string; models?: ModelInfo[]; error?: string }>(
       "/api/settings/ai/models",
       { target, settings: form },
     );
     if (!ok || !data.models || !data.baseUrl) {
-      setModels((m) => ({
-        ...m,
-        [target]: { models: [], loading: false, message: data.error ?? "获取失败", error: true },
+      setModels((prev) => ({
+        ...prev,
+        [target]: { models: [], loading: false, message: data.error ?? m.ai_fetch_failed(), error: true },
       }));
       return;
     }
@@ -73,17 +74,21 @@ export function useAiSettings() {
       if (target === "chat") patchChat({ baseUrl: data.baseUrl });
       else patchEmbedding({ baseUrl: data.baseUrl });
     }
-    const wanted = data.models.filter((m) => m.kind === target).length;
-    setModels((m) => ({
-      ...m,
+    const wanted = data.models.filter((prev) => prev.kind === target).length;
+    setModels((prev) => ({
+      ...prev,
       [target]: {
         models: data.models!,
         loading: false,
         error: false,
         message:
-          `找到 ${data.models!.length} 个模型` +
-          (wanted ? `（其中 ${wanted} 个${target === "chat" ? "对话" : "向量"}模型）` : "") +
-          (adjusted ? `，接口地址已自动改为 ${data.baseUrl}` : ""),
+          m.ai_models_found({ count: data.models!.length }) +
+          (wanted
+            ? target === "chat"
+              ? m.ai_models_found_chat({ count: wanted })
+              : m.ai_models_found_embedding({ count: wanted })
+            : "") +
+          (adjusted ? m.ai_base_url_adjusted({ url: data.baseUrl! }) : ""),
       },
     }));
   };
@@ -103,9 +108,9 @@ export function useAiSettings() {
         ok: data.ok,
         text: data.ok
           ? target === "chat"
-            ? `连接成功，模型回复：${data.reply || "（空）"}`
-            : `连接成功，向量维度 ${data.dimensions}`
-          : `连接失败：${data.error}`,
+            ? m.ai_test_chat_ok({ reply: data.reply || m.ai_empty_reply() })
+            : m.ai_test_embedding_ok({ dimensions: String(data.dimensions) })
+          : m.ai_test_failed({ error: String(data.error) }),
       },
     }));
   };
@@ -116,13 +121,16 @@ export function useAiSettings() {
       embeddingConfigured: boolean;
     }>("/api/settings/ai", form);
     if (!ok) {
-      setSaveMessage("保存失败，请重试");
-      toastError("保存 AI 配置失败", undefined, { id: "ai-save" });
+      setSaveMessage(m.ai_save_failed_retry());
+      toastError(m.ai_save_failed(), undefined, { id: "ai-save" });
       return;
     }
-    toastSuccess("AI 配置已保存", { id: "ai-save" });
+    toastSuccess(m.ai_saved(), { id: "ai-save" });
     setSaveMessage(
-      `已保存 · 对话模型${data.chatConfigured ? "可用" : "未配置"} · 向量模型${data.embeddingConfigured ? "可用" : "未配置"}`,
+      m.ai_saved_status({
+        chat: data.chatConfigured ? m.ai_available() : m.ai_not_configured(),
+        embedding: data.embeddingConfigured ? m.ai_available() : m.ai_not_configured(),
+      }),
     );
     await load();
   };

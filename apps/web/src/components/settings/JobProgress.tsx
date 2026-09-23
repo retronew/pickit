@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Skeleton } from "#components/ui/skeleton";
 import { Button } from "#components/ui/button";
+import { m } from "#lib/i18n";
 
 export type JobKind = "reembed" | "organize";
 
@@ -33,7 +34,7 @@ async function call(kind: JobKind, action: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "操作失败，请稍后重试");
+  if (!res.ok) throw new Error(data.error ?? m.error_request_later());
   return data as JobView;
 }
 
@@ -100,22 +101,24 @@ export function useJob(kind: JobKind) {
 
 function formatDuration(ms: number) {
   const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 60) return `${s} 秒`;
-  const m = Math.floor(s / 60);
-  return m < 60 ? `${m} 分 ${s % 60} 秒` : `${Math.floor(m / 60)} 小时 ${m % 60} 分`;
+  if (s < 60) return m.duration_seconds({ s });
+  const min = Math.floor(s / 60);
+  return min < 60
+    ? m.duration_minutes({ min, s: s % 60 })
+    : m.duration_hours({ h: Math.floor(min / 60), min: min % 60 });
 }
 
 const STATUS_LABEL: Record<JobView["status"], string> = {
-  idle: "未开始",
-  running: "进行中",
-  paused: "已暂停",
-  done: "已完成",
+  idle: m.job_idle(),
+  running: m.job_running(),
+  paused: m.job_paused(),
+  done: m.job_done(),
 };
 
 /** Shaped like JobProgress, shown while the job status loads. */
 export function JobProgressSkeleton() {
   return (
-    <div className="space-y-2" aria-busy="true" aria-label="加载中">
+    <div className="space-y-2" aria-busy="true" aria-label={m.common_loading()}>
       <Skeleton className="h-2 w-full rounded-full" />
       <Skeleton className="h-4 w-56 max-w-full" />
     </div>
@@ -126,7 +129,7 @@ export function JobProgressSkeleton() {
 export function JobProgress({ job }: { job: JobView }) {
   if (job.status === "idle" || job.total === 0) {
     return job.status === "done" ? (
-      <p className="text-muted-foreground text-sm">没有需要处理的收藏。</p>
+      <p className="text-muted-foreground text-sm">{m.job_nothing()}</p>
     ) : null;
   }
   const failed = job.failures.length;
@@ -139,22 +142,22 @@ export function JobProgress({ job }: { job: JobView }) {
         <div className="bg-primary h-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <p className="text-muted-foreground text-sm tabular-nums">
-        {STATUS_LABEL[job.status]} · {processed}/{job.total}（{pct}%）· 成功 {job.done}
-        {failed > 0 && ` · 失败 ${failed}`}
-        {job.startedAt > 0 && ` · 用时 ${formatDuration(end - job.startedAt)}`}
+        {m.job_summary({ status: STATUS_LABEL[job.status], processed, total: job.total, pct, done: job.done })}
+        {failed > 0 && ` · ${m.job_failed_count({ failed })}`}
+        {job.startedAt > 0 && ` · ${m.job_elapsed({ time: formatDuration(end - job.startedAt) })}`}
       </p>
       {job.status === "running" && (
         <p className="text-muted-foreground text-xs">
-          离开这个页面后，任务会在后台每分钟继续推进。
+          {m.job_background()}
         </p>
       )}
       {job.lastError && job.status === "paused" && (
-        <p className="text-destructive text-sm break-all">已自动暂停：{job.lastError}</p>
+        <p className="text-destructive text-sm break-all">{m.job_auto_paused({ error: job.lastError })}</p>
       )}
       {failed > 0 && (
         <details className="text-sm">
           <summary className="text-muted-foreground cursor-pointer select-none">
-            查看失败详情（{failed} 条）
+            {m.job_failures({ count: failed })}
           </summary>
           <ul className="mt-2 max-h-56 space-y-2 overflow-y-auto">
             {job.failures.map((f) => (
@@ -187,21 +190,21 @@ export function JobActions({
     <>
       {status === "running" ? (
         <Button size="lg" variant="outline" onClick={() => run("pause")}>
-          暂停
+          {m.job_pause()}
         </Button>
       ) : (
         <>
           {status === "paused" && (
             <Button size="lg" onClick={() => run("resume")}>
-              继续
+              {m.job_resume()}
             </Button>
           )}
           <Button size="lg" variant={status === "paused" ? "outline" : "default"} onClick={onStart}>
-            {status === "paused" ? "重新开始" : startLabel}
+            {status === "paused" ? m.job_restart() : startLabel}
           </Button>
           {!!job?.failures.length && (
             <Button size="lg" variant="outline" onClick={() => run("retry")}>
-              重试失败项
+              {m.job_retry()}
             </Button>
           )}
         </>

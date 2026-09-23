@@ -8,6 +8,7 @@ import {
   type AiEndpoint,
   type AiSettings,
 } from "@pickit/shared";
+import { m } from "#lib/i18n";
 
 export type Target = "chat" | "embedding";
 
@@ -44,7 +45,7 @@ export interface TestState {
 
 export const PROVIDER_LABELS: Record<string, string> = {
   ...Object.fromEntries(AI_PROVIDERS.map((p) => [p.id, p.name])),
-  [CUSTOM_PROVIDER]: "自定义",
+  [CUSTOM_PROVIDER]: m.ai_custom(),
 };
 
 export function originOf(url: string): string | null {

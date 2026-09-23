@@ -6,6 +6,7 @@ import { Button } from "#components/ui/button";
 import { Favicon } from "#components/Favicon";
 import { cn } from "#lib/utils";
 import { useChat, extractRefIds, renderableText } from "#hooks/useChat";
+import { m } from "#lib/i18n";
 
 export function AskAi() {
   const [open, setOpen] = useState(false);
@@ -60,7 +61,7 @@ export function AskAi() {
           >
             <div className="flex items-center justify-between border-b px-4 py-2.5">
               <span className="text-muted-foreground text-xs font-medium">
-                AI 收藏助手
+                {m.chat_title()}
               </span>
               <div className="flex items-center gap-1">
                 {messages.length > 0 && (
@@ -69,13 +70,13 @@ export function AskAi() {
                     size="sm"
                     onClick={clear}
                   >
-                    新对话
+                    {m.chat_new()}
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="收起"
+                  aria-label={m.chat_collapse()}
                   onClick={() => setOpen(false)}
                 >
                   <XIcon />
@@ -85,31 +86,31 @@ export function AskAi() {
             <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.length === 0 && (
                 <div className="space-y-1 pt-2 text-muted-foreground text-sm">
-                  <p>说说你在找什么，我从收藏里帮你挑。</p>
+                  <p>{m.chat_intro()}</p>
                   <p className="text-muted-foreground/72">
-                    例如："Vue3 项目要一个流程图库，支持节点拖拽"
+                    {m.chat_example()}
                   </p>
                 </div>
               )}
-              {messages.map((m, i) => {
-                if (m.role === "user") {
+              {messages.map((msg, i) => {
+                if (msg.role === "user") {
                   return (
                     <div
                       key={i}
                       className="ml-auto max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-muted px-4 py-2.5 text-sm"
                     >
-                      {m.content}
+                      {msg.content}
                     </div>
                   );
                 }
-                const refIds = [...new Set(extractRefIds(m.content))];
+                const refIds = [...new Set(extractRefIds(msg.content))];
                 return (
                   <div
                     key={i}
                     className="max-w-[85%] space-y-2 rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm [&_a]:underline [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-muted [&_pre]:p-2"
                   >
-                    {m.content ? (
-                      <Streamdown>{renderableText(m.content, itemCache)}</Streamdown>
+                    {msg.content ? (
+                      <Streamdown>{renderableText(msg.content, itemCache)}</Streamdown>
                     ) : streaming ? (
                       "…"
                     ) : (
@@ -161,7 +162,7 @@ export function AskAi() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onFocus={() => messages.length > 0 && setOpen(true)}
-            placeholder="问点什么，比如「找个能做流程图的库」…"
+            placeholder={m.chat_placeholder()}
             disabled={streaming}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/72 disabled:opacity-50"
           />
@@ -170,7 +171,7 @@ export function AskAi() {
             size="icon-xs"
             className="rounded-full"
             disabled={streaming || !input.trim()}
-            aria-label="发送"
+            aria-label={m.chat_send()}
           >
             <ArrowUpIcon />
           </Button>

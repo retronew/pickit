@@ -10,6 +10,7 @@ import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { PageLoading } from "#components/PageLoading";
+import { m } from "#lib/i18n";
 
 interface TagRow {
   tag: string;
@@ -34,48 +35,48 @@ export function TagsPage() {
 
   async function rename(tag: string) {
     const to = await Prompt.call({
-      title: `重命名「${tag}」`,
+      title: m.tag_rename_title({ tag }),
       defaultValue: tag,
-      confirmLabel: "重命名",
+      confirmLabel: m.action_rename(),
     });
     if (!to || to === tag) return;
     try {
       await api("/api/tags/rename", { json: { from: tag, to } });
-      toastSuccess("已重命名", { description: `「${tag}」→「${to}」`, id: "tag" });
+      toastSuccess(m.tag_renamed(), { description: `「${tag}」→「${to}」`, id: "tag" });
     } catch (err) {
-      toastError("重命名失败", err, { id: "tag" });
+      toastError(m.tag_rename_failed(), err, { id: "tag" });
     }
     refresh();
   }
 
   async function remove(tag: string) {
     const ok = await Confirm.call({
-      title: `删除标签「${tag}」？`,
-      message: "会把这个标签从所有收藏上移除，收藏本身不会删除。",
-      confirmLabel: "删除",
+      title: m.tag_delete_title({ tag }),
+      message: m.tag_delete_message(),
+      confirmLabel: m.action_delete(),
       danger: true,
     });
     if (!ok) return;
     try {
       await api("/api/tags/delete", { json: { tag } });
-      toastSuccess("已删除标签", { description: tag, id: "tag" });
+      toastSuccess(m.tag_deleted(), { description: tag, id: "tag" });
     } catch (err) {
-      toastError("删除标签失败", err, { id: "tag" });
+      toastError(m.tag_delete_failed(), err, { id: "tag" });
     }
     refresh();
   }
 
   return (
     <div className="space-y-4">
-      <h1 className="font-heading font-semibold text-lg">标签</h1>
+      <h1 className="font-heading font-semibold text-lg">{m.nav_tags()}</h1>
 
       {loading ? (
         <PageLoading />
       ) : tags.length === 0 ? (
         <Empty className="animate-fade-in">
           <EmptyHeader>
-            <EmptyTitle>还没有标签</EmptyTitle>
-            <EmptyDescription>给收藏打上标签，就能在这里统一管理。</EmptyDescription>
+            <EmptyTitle>{m.tags_empty()}</EmptyTitle>
+            <EmptyDescription>{m.tags_empty_hint()}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -99,8 +100,8 @@ export function TagsPage() {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="公开分享"
-                  title="公开分享这个标签下的收藏"
+                  aria-label={m.tag_share()}
+                  title={m.tag_share_hint()}
                   onClick={() => shareAndCopy("tag", tag)}
                 >
                   <Share2Icon />
@@ -108,7 +109,7 @@ export function TagsPage() {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="重命名"
+                  aria-label={m.action_rename()}
                   onClick={() => rename(tag)}
                 >
                   <PencilIcon />
@@ -116,7 +117,7 @@ export function TagsPage() {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="删除"
+                  aria-label={m.action_delete()}
                   onClick={() => remove(tag)}
                   className="text-muted-foreground hover:text-destructive-foreground"
                 >

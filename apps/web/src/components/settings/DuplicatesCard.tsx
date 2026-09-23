@@ -12,6 +12,7 @@ import {
 import { Button } from "#components/ui/button";
 import { RadioGroup, Radio } from "#components/ui/radio-group";
 import { Favicon } from "#components/Favicon";
+import { m } from "#lib/i18n";
 
 export function DuplicatesCard() {
   const [groups, setGroups] = useState<Item[][] | null>(null);
@@ -29,10 +30,10 @@ export function DuplicatesCard() {
         initial[i] = g[0].id;
       });
       setKeepChoice(initial);
-      if (data.length) toastSuccess(`发现 ${data.length} 组重复`, { id: "duplicates" });
-      else toastSuccess("没有发现重复的收藏", { id: "duplicates" });
+      if (data.length) toastSuccess(m.dups_found({ count: data.length }), { id: "duplicates" });
+      else toastSuccess(m.dups_none(), { id: "duplicates" });
     } catch (err) {
-      toastError("检测失败", err, { id: "duplicates" });
+      toastError(m.dups_scan_failed(), err, { id: "duplicates" });
     } finally {
       setLoading(false);
     }
@@ -46,12 +47,12 @@ export function DuplicatesCard() {
     try {
       await api("/api/items/merge", { json: { keepId, removeIds } });
       setGroups((prev) => prev!.filter((_, i) => i !== groupIndex));
-      toastSuccess("已合并", {
-        description: `保留「${group.find((i) => i.id === keepId)?.name ?? ""}」，其余 ${removeIds.length} 项移到回收站`,
+      toastSuccess(m.dups_merged(), {
+        description: m.dups_merged_detail({ name: group.find((i) => i.id === keepId)?.name ?? "", count: removeIds.length }),
         id: "merge",
       });
     } catch (err) {
-      toastError("合并失败", err, { id: "merge" });
+      toastError(m.dups_merge_failed(), err, { id: "merge" });
     } finally {
       setMerging(null);
     }
@@ -60,15 +61,15 @@ export function DuplicatesCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>重复检测</CardTitle>
+        <CardTitle>{m.dups_title()}</CardTitle>
         <CardDescription>
-          先按网址找出完全相同的收藏，再用 AI 发现内容相近的。
+          {m.dups_description()}
         </CardDescription>
       </CardHeader>
       {groups && (
         <CardContent className="space-y-4">
           {groups.length === 0 ? (
-            <p className="text-muted-foreground text-sm">没有发现重复的收藏。</p>
+            <p className="text-muted-foreground text-sm">{m.dups_none()}</p>
           ) : (
             groups.map((group, gi) => (
               <div key={gi} className="space-y-3 rounded-lg border p-3">
@@ -88,7 +89,7 @@ export function DuplicatesCard() {
                       <Favicon url={item.url} name={item.name} />
                       <span className="truncate">{item.name}</span>
                       <span className="text-muted-foreground text-xs">
-                        {item.category || "未分类"}
+                        {item.category || m.uncategorized()}
                       </span>
                     </label>
                   ))}
@@ -99,7 +100,7 @@ export function DuplicatesCard() {
                   loading={merging === gi}
                   onClick={() => merge(gi)}
                 >
-                  保留这项，合并其余 {group.length - 1} 项
+                  {m.dups_keep({ count: group.length - 1 })}
                 </Button>
               </div>
             ))
@@ -108,7 +109,7 @@ export function DuplicatesCard() {
       )}
       <CardFooter>
         <Button variant="outline" size="lg" loading={loading} onClick={scan}>
-          {groups ? "重新检测" : "开始检测"}
+          {groups ? m.dups_rescan() : m.dups_scan()}
         </Button>
       </CardFooter>
     </Card>

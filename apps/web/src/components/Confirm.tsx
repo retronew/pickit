@@ -10,6 +10,7 @@ import {
   AlertDialogClose,
 } from "#components/ui/alert-dialog";
 import { Button } from "#components/ui/button";
+import { m } from "#lib/i18n";
 
 interface Props {
   title: string;
@@ -19,7 +20,7 @@ interface Props {
 }
 
 export const Confirm = createCallable<Props, boolean>(
-  ({ title, message, confirmLabel = "确定", danger, call }) => {
+  ({ title, message, confirmLabel = m.common_ok(), danger, call }) => {
     // Starts closed so Base UI has a real false→true transition to animate —
     // flips true one frame after mount (mirrors @retronew/call-vue's demo).
     const [entered, setEntered] = useState(false);
@@ -44,7 +45,7 @@ export const Confirm = createCallable<Props, boolean>(
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" />}>
-              取消
+              {m.common_cancel()}
             </AlertDialogClose>
             <Button
               variant={danger ? "destructive" : "default"}

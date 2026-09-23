@@ -14,15 +14,16 @@ import { RadioGroup, Radio } from "#components/ui/radio-group";
 import { Skeleton } from "#components/ui/skeleton";
 import { errorMessage, toastError } from "#lib/api";
 import { restoreBackup, type RestoreMode, type RestoreResult } from "#hooks/useBackups";
+import { m } from "#lib/i18n";
 
 const MODES: Record<RestoreMode, { label: string; hint: string }> = {
   merge: {
-    label: "合并",
-    hint: "只添加现在没有的收藏（按网址判断），不改动已有收藏。",
+    label: m.restore_merge(),
+    hint: m.restore_merge_hint(),
   },
   replace: {
-    label: "覆盖",
-    hint: "把现有收藏全部移到回收站（可恢复），再恢复备份里的全部收藏。",
+    label: m.restore_replace(),
+    hint: m.restore_replace_hint(),
   },
 };
 
@@ -30,13 +31,13 @@ function Preview({ result }: { result: RestoreResult }) {
   return (
     <ul className="space-y-1 text-sm">
       <li>
-        备份共 <b>{result.total}</b> 条，将恢复 <b>{result.inserted}</b> 条
-        {result.skipped > 0 && `，跳过 ${result.skipped} 条已存在的`}
+        {m.restore_preview({ total: result.total, inserted: result.inserted })}
+        {result.skipped > 0 && m.restore_preview_skipped({ skipped: result.skipped })}
       </li>
       {result.trashed > 0 && (
-        <li className="text-warning-foreground">现有的 {result.trashed} 条收藏会移到回收站</li>
+        <li className="text-warning-foreground">{m.restore_preview_trashed({ trashed: result.trashed })}</li>
       )}
-      <li className="text-muted-foreground text-xs">恢复前会自动备份当前数据，恢复错了也能再恢复回来。</li>
+      <li className="text-muted-foreground text-xs">{m.restore_safety()}</li>
     </ul>
   );
 }
@@ -72,7 +73,7 @@ export const RestoreDialog = createCallable<{ name: string }, RestoreResult | nu
       try {
         call.end(await restoreBackup(name, mode, false));
       } catch (err) {
-        toastError("恢复失败", err, { id: "restore" });
+        toastError(m.restore_failed(), err, { id: "restore" });
         setRestoring(false);
       }
     }
@@ -86,17 +87,17 @@ export const RestoreDialog = createCallable<{ name: string }, RestoreResult | nu
       >
         <DialogPopup>
           <DialogHeader>
-            <DialogTitle>恢复备份</DialogTitle>
+            <DialogTitle>{m.restore_title()}</DialogTitle>
             <DialogDescription className="break-all">{name}</DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-4">
             <RadioGroup value={mode} onValueChange={(v) => setMode(v as RestoreMode)} className="gap-3">
-              {(Object.keys(MODES) as RestoreMode[]).map((m) => (
-                <label key={m} className="flex items-start gap-2 text-sm">
-                  <Radio value={m} className="mt-0.5" />
+              {(Object.keys(MODES) as RestoreMode[]).map((key) => (
+                <label key={key} className="flex items-start gap-2 text-sm">
+                  <Radio value={key} className="mt-0.5" />
                   <span>
-                    <span className="font-medium">{MODES[m].label}</span>
-                    <span className="block text-muted-foreground text-xs">{MODES[m].hint}</span>
+                    <span className="font-medium">{MODES[key].label}</span>
+                    <span className="block text-muted-foreground text-xs">{MODES[key].hint}</span>
                   </span>
                 </label>
               ))}
@@ -118,7 +119,7 @@ export const RestoreDialog = createCallable<{ name: string }, RestoreResult | nu
           </DialogPanel>
           <DialogFooter>
             <Button variant="ghost" disabled={restoring} onClick={() => call.end(null)}>
-              取消
+              {m.common_cancel()}
             </Button>
             <Button
               variant={mode === "replace" ? "destructive" : "default"}
@@ -126,7 +127,7 @@ export const RestoreDialog = createCallable<{ name: string }, RestoreResult | nu
               loading={restoring}
               onClick={restore}
             >
-              {mode === "replace" ? "覆盖恢复" : "合并恢复"}
+              {mode === "replace" ? m.restore_replace_button() : m.restore_merge_button()}
             </Button>
           </DialogFooter>
         </DialogPopup>
