@@ -1,15 +1,9 @@
 import { Hono } from "hono";
 import type { Env } from "#types";
+import { defaultShareTitle, isShareType, sharedItem, type ShareRow } from "#shares";
 
 export const shareRoutes = new Hono<{ Bindings: Env }>();
 
-interface ShareRow {
-  slug: string;
-  title: string;
-  type: string;
-  value: string;
-  created_at: number;
-}
 
 shareRoutes.get("/", async (c) => {
   const { results } = await c.env.DB.prepare(
@@ -32,13 +26,17 @@ shareRoutes.post("/", async (c) => {
     value?: string;
     title?: string;
   }>();
-  if (!body.type || !body.value) {
-    return c.json({ error: "type and value required" }, 400);
+  if (!isShareType(body.type) || !body.value?.trim()) {
+    return c.json({ error: "type（item / category / tag）和 value 必填" }, 400);
+  }
+  const value = body.value.trim();
+  if (body.type === "item" && !(await sharedItem(c.env.DB, value))) {
+    return c.json({ error: "收藏不存在" }, 404);
   }
   const existing = await c.env.DB.prepare(
     "SELECT slug FROM shares WHERE type = ? AND value = ?",
   )
-    .bind(body.type, body.value)
+    .bind(body.type, value)
     .first<{ slug: string }>();
   if (existing) return c.json({ slug: existing.slug });
 
@@ -46,7 +44,7 @@ shareRoutes.post("/", async (c) => {
   await c.env.DB.prepare(
     "INSERT INTO shares (slug, title, type, value, created_at) VALUES (?, ?, ?, ?, ?)",
   )
-    .bind(slug, body.title ?? "", body.type, body.value, Date.now())
+    .bind(slug, body.title?.trim() || defaultShareTitle(body.type, value), body.type, value, Date.now())
     .run();
   return c.json({ slug });
 });

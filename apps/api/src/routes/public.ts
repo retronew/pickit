@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
+import type { Env } from "#types";
+import { defaultShareTitle, getShare, publicItem, sharedItem, sharedList, shareRss } from "#shares";
 import { enabledProviders } from "#auth";
 
 /** Routes that work without signing in, mounted at /api/public. */
@@ -8,38 +9,40 @@ export const publicRoutes = new Hono<{ Bindings: Env }>();
 // Lets the login page show only the providers that are configured.
 publicRoutes.get("/auth-providers", (c) => c.json({ providers: enabledProviders(c.env) }));
 
-interface ShareRow {
-  slug: string;
-  title: string;
-  type: string;
-  value: string;
-  created_at: number;
-}
-
 publicRoutes.get("/shares/:slug", async (c) => {
-  const share = await c.env.DB.prepare("SELECT * FROM shares WHERE slug = ?")
-    .bind(c.req.param("slug"))
-    .first<ShareRow>();
+  const share = await getShare(c.env.DB, c.req.param("slug"));
   if (!share) return c.json({ error: "not found" }, 404);
 
   if (share.type === "item") {
-    const item = await c.env.DB.prepare(
-      `SELECT ${ITEM_COLUMNS} FROM items WHERE id = ? AND deleted_at IS NULL`,
-    )
-      .bind(Number(share.value))
-      .first<ItemRow>();
-    if (!item) return c.json({ error: "not found" }, 404);
+    const row = await sharedItem(c.env.DB, share.value);
+    if (!row) return c.json({ error: "not found" }, 404);
+    const { createdAt: _createdAt, ...item } = publicItem(row);
+    return c.json({ type: "item", title: share.title || row.name, item });
+  }
+  if (share.type === "category" || share.type === "tag") {
+    const items = (await sharedList(c.env.DB, share.type, share.value)).map(publicItem);
     return c.json({
-      title: share.title || item.name,
-      item: {
-        name: item.name,
-        url: item.url,
-        icon: item.icon,
-        note: item.note,
-        category: item.category,
-        tags: JSON.parse(item.tags || "[]"),
-      },
+      type: share.type,
+      value: share.value,
+      title: share.title || defaultShareTitle(share.type, share.value),
+      items,
     });
   }
   return c.json({ error: "unsupported share type" }, 400);
+});
+
+/** RSS feed of a category / tag share. */
+publicRoutes.get("/shares/:slug/rss", async (c) => {
+  const share = await getShare(c.env.DB, c.req.param("slug"));
+  if (!share || (share.type !== "category" && share.type !== "tag")) {
+    return c.json({ error: "not found" }, 404);
+  }
+  const items = (await sharedList(c.env.DB, share.type, share.value)).map(publicItem);
+  const origin = c.env.BETTER_AUTH_URL ?? new URL(c.req.url).origin;
+  return new Response(shareRss(share, items, origin), {
+    headers: {
+      "Content-Type": "application/rss+xml; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+    },
+  });
 });

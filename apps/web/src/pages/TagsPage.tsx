@@ -1,7 +1,8 @@
 import { api, toastError, toastSuccess } from "#lib/api";
+import { shareAndCopy } from "#lib/shares";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { PencilIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, Trash2Icon, Share2Icon } from "lucide-react";
 import { Card } from "#components/ui/card";
 import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
@@ -95,6 +96,15 @@ export function TagsPage() {
                 </Badge>
               </button>
               <div className="flex shrink-0 items-center gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="公开分享"
+                  title="公开分享这个标签下的收藏"
+                  onClick={() => shareAndCopy("tag", tag)}
+                >
+                  <Share2Icon />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon-xs"

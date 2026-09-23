@@ -1,84 +1,103 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { Streamdown } from "streamdown";
-import { ExternalLinkIcon } from "lucide-react";
-import { Card } from "#components/ui/card";
-import { Badge } from "#components/ui/badge";
-import { Favicon } from "#components/Favicon";
+import { RssIcon } from "lucide-react";
+import { Button } from "#components/ui/button";
+import { Skeleton } from "#components/ui/skeleton";
+import { SharedItemCard, type SharedItem } from "#components/share/SharedItemCard";
+import { api } from "#lib/api";
 
-interface SharedItem {
-  name: string;
-  url: string;
-  icon: string;
-  note: string;
-  category: string;
-  tags: string[];
+type Shared =
+  | { type: "item"; title: string; item: SharedItem }
+  | { type: "category" | "tag"; title: string; value: string; items: SharedItem[] };
+
+/** Advertises the RSS feed to browsers and feed readers while the page is open. */
+function useFeedLink(href: string | null, title: string) {
+  useEffect(() => {
+    if (!href) return;
+    const link = document.createElement("link");
+    link.rel = "alternate";
+    link.type = "application/rss+xml";
+    link.title = title;
+    link.href = href;
+    document.head.append(link);
+    return () => link.remove();
+  }, [href, title]);
+}
+
+function LoadingCards() {
+  return (
+    <div className="space-y-3" aria-busy="true">
+      {[0, 1].map((i) => (
+        <div key={i} className="space-y-2 rounded-2xl border p-5">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function PublicSharePage() {
   const { slug } = useParams();
-  const [item, setItem] = useState<SharedItem | null>(null);
-  const [title, setTitle] = useState("");
+  const [data, setData] = useState<Shared | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/public/shares/${slug}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          setError("这个分享链接不存在或已失效。");
-          return;
-        }
-        setItem(data.item);
-        setTitle(data.title);
+    api<Shared>(`/api/public/shares/${slug}`)
+      .then((d) => {
+        setData(d);
+        document.title = `${d.title} · PickIt`;
       })
-      .catch(() => setError("加载失败，请稍后再试。"));
+      .catch((err) =>
+        setError(err?.status === 404 ? "这个分享链接不存在或已失效。" : "加载失败，请稍后再试。"),
+      );
   }, [slug]);
 
+  const isList = data && data.type !== "item";
+  const feed = isList ? `/api/public/shares/${slug}/rss` : null;
+  useFeedLink(feed, data?.title ?? "");
+
   return (
-    <div className="mx-auto flex min-h-svh max-w-lg flex-col items-center justify-center px-4 py-12">
-      <div className="w-full space-y-4">
+    <div className="mx-auto flex min-h-svh max-w-2xl flex-col px-4 py-12">
+      <div className="w-full space-y-5">
         <div className="text-center">
           <span className="font-heading font-bold tracking-tight">PickIt</span>
           <p className="text-muted-foreground text-xs">来自朋友的分享</p>
         </div>
 
-        {error && (
-          <p className="text-center text-muted-foreground text-sm">{error}</p>
+        {error && <p className="text-center text-muted-foreground text-sm">{error}</p>}
+        {!data && !error && <LoadingCards />}
+
+        {data?.type === "item" && (
+          <div className="mx-auto max-w-lg animate-fade-in">
+            <SharedItemCard item={data.item} title={data.title} />
+          </div>
         )}
 
-        {item && (
-          <Card className="p-5">
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 font-medium text-lg hover:underline"
-            >
-              <Favicon url={item.url} name={item.name} />
-              {title || item.name}
-              <ExternalLinkIcon className="size-4 shrink-0 text-muted-foreground" />
-            </a>
-            {item.note && (
-              <div className="mt-2 text-muted-foreground text-sm leading-relaxed">
-                <Streamdown>{item.note}</Streamdown>
+        {data && data.type !== "item" && (
+          <div className="animate-fade-in space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h1 className="font-heading font-semibold text-xl">{data.title}</h1>
+                <p className="text-muted-foreground text-sm">
+                  {data.type === "category" ? "分类" : "标签"} · {data.items.length} 条收藏
+                </p>
               </div>
-            )}
-            {(item.category || item.tags.length > 0) && (
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                {item.category && (
-                  <Badge variant="outline" size="sm">
-                    {item.category}
-                  </Badge>
-                )}
-                {item.tags.map((t) => (
-                  <Badge key={t} variant="secondary" size="sm">
-                    {t}
-                  </Badge>
+              <Button variant="outline" size="sm" render={<a href={feed!} target="_blank" rel="noreferrer" />}>
+                <RssIcon />
+                RSS 订阅
+              </Button>
+            </div>
+            {data.items.length === 0 ? (
+              <p className="text-muted-foreground text-sm">这里还没有收藏。</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {data.items.map((item) => (
+                  <SharedItemCard key={`${item.url}-${item.name}`} item={item} compact />
                 ))}
               </div>
             )}
-          </Card>
+          </div>
         )}
       </div>
     </div>

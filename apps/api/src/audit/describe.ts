@@ -99,7 +99,9 @@ export function describe(
       return {
         action: "share.create",
         target: res.slug ? `share:${res.slug}` : undefined,
-        summary: `创建分享链接${quote(body.title)}`,
+        summary: `创建分享链接：${
+          body.type === "category" ? `分类${quote(body.value)}` : body.type === "tag" ? `标签${quote(body.value)}` : quote(body.title) || `#${body.value}`
+        }`,
       };
     case "POST /settings/ai":
       return { action: "settings.ai_update", summary: "修改 AI 配置" };

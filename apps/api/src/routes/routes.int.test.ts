@@ -67,6 +67,7 @@ describe("public shares", () => {
 
     const shared = await t.json(`/api/public/shares/${slug}`, { auth: false });
     expect(shared).toEqual({
+      type: "item",
       title: "看看",
       item: { name: "Vite", url: "https://vite.dev", icon: "", note: "fast", category: "", tags: ["build"] },
     });
@@ -84,6 +85,50 @@ describe("public shares", () => {
 
   it("validates input", async () => {
     await t.json("/api/shares", { json: { type: "item" } }, 400);
+    await t.json("/api/shares", { json: { type: "folder", value: "x" } }, 400);
+    await t.json("/api/shares", { json: { type: "category", value: "  " } }, 400);
+    await t.json("/api/shares", { json: { type: "item", value: "404" } }, 404);
+  });
+
+  it("shares a live category list, including sub-categories", async () => {
+    await create({ name: "React", url: "https://react.dev", category: "前端/React" });
+    await create({ name: "CSS", url: "https://css.dev", category: "前端" });
+    await create({ name: "前端工具", url: "https://tools.dev", category: "前端工具" });
+    const gone = await create({ name: "Old", url: "https://old.dev", category: "前端" });
+    await t.json(`/api/items/${gone}`, { method: "DELETE" });
+
+    const { slug } = await t.json("/api/shares", { json: { type: "category", value: "前端" } });
+    const shared = await t.json(`/api/public/shares/${slug}`, { auth: false });
+    expect(shared).toMatchObject({ type: "category", value: "前端", title: "前端" });
+    expect(shared.items.map((i: { name: string }) => i.name).sort()).toEqual(["CSS", "React"]);
+    expect(shared.items[0]).not.toHaveProperty("id");
+
+    // Items added later show up without re-sharing.
+    await create({ name: "Vue", url: "https://vue.dev", category: "前端/Vue" });
+    expect((await t.json(`/api/public/shares/${slug}`, { auth: false })).items).toHaveLength(3);
+  });
+
+  it("shares a tag list with an escaped RSS feed", async () => {
+    await create({ name: "A & <B>", url: "https://a.dev/?x=1&y=2", note: "好用", tags: ["ai"] });
+    await create({ name: "Other", url: "https://o.dev", tags: ["misc"] });
+    const { slug } = await t.json("/api/shares", { json: { type: "tag", value: "ai" } });
+    const shared = await t.json(`/api/public/shares/${slug}`, { auth: false });
+    expect(shared).toMatchObject({ type: "tag", title: "#ai" });
+    expect(shared.items.map((i: { name: string }) => i.name)).toEqual(["A & <B>"]);
+
+    const res = await t.request(`/api/public/shares/${slug}/rss`, { auth: false });
+    expect(res.headers.get("content-type")).toContain("application/rss+xml");
+    const rss = await res.text();
+    expect(rss).toContain("<title>A &amp; &lt;B&gt;</title>");
+    expect(rss).toContain("<link>https://a.dev/?x=1&amp;y=2</link>");
+    expect(rss).toContain(`<link>http://localhost/s/${slug}</link>`);
+    expect(rss).not.toContain("Other");
+  });
+
+  it("has no RSS feed for single-item shares", async () => {
+    const id = await create({ name: "A", url: "https://a.dev" });
+    const { slug } = await t.json("/api/shares", { json: { type: "item", value: String(id) } });
+    await t.json(`/api/public/shares/${slug}/rss`, { auth: false }, 404);
   });
 });
 

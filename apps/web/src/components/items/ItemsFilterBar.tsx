@@ -1,4 +1,5 @@
-import { ArrowUpDownIcon, CheckSquareIcon, XIcon } from "lucide-react";
+import { ArrowUpDownIcon, CheckSquareIcon, Share2Icon, XIcon } from "lucide-react";
+import { shareAndCopy } from "#lib/shares";
 import { Button } from "#components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#components/ui/select";
 import { CategoryFilter, type CategoryOption } from "#components/items/CategoryFilter";
@@ -19,8 +20,16 @@ interface Props {
   onToggleSelectMode: () => void;
 }
 
+/** A category alone or a single tag alone can be shared as a public list. */
+function shareTarget(category: string, tags: string[]) {
+  if (category && tags.length === 0) return { type: "category" as const, value: category, label: "分享这个分类" };
+  if (!category && tags.length === 1) return { type: "tag" as const, value: tags[0], label: "分享这个标签" };
+  return null;
+}
+
 /** Category / tag filters, sort order, select mode and the active filter chips. */
 export function ItemsFilterBar(p: Props) {
+  const share = shareTarget(p.category, p.selectedTags);
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -86,6 +95,17 @@ export function ItemsFilterBar(p: Props) {
           >
             清除全部
           </button>
+          {share && (
+            <Button
+              size="xs"
+              variant="ghost"
+              className="ml-auto text-muted-foreground"
+              onClick={() => shareAndCopy(share.type, share.value)}
+            >
+              <Share2Icon />
+              {share.label}
+            </Button>
+          )}
         </div>
       )}
     </div>
