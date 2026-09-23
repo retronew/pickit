@@ -61,6 +61,7 @@ function describeItem(method: string, id: string, sub: string | undefined, body:
     return { action: "item.update", target, summary: msg("item_update", { label }) };
   }
   if (!sub && method === "DELETE") return { action: "item.delete", target, summary: msg("item_delete", { label }) };
+  if (sub === "translate" && body.save) return { action: "item.translate", target, summary: msg("item_translate_save", { label }) };
   const subs = ["restore", "purge", "summarize", "translate", "check", "reembed", "visit"];
   if (sub && subs.includes(sub)) return { action: `item.${sub}`, target, summary: msg(`item_${sub}`, { label }) };
   return null;

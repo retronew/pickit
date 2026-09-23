@@ -1,4 +1,4 @@
-// AI-backed routes: analyze, related, summarize, re-embed.
+// AI-backed routes: analyze, related, summarize, translate, re-embed.
 
 import { Hono } from "hono";
 import { isEmbeddingConfigured } from "@pickit/shared";
@@ -8,6 +8,9 @@ import { createProvider } from "#ai";
 import { getSettings } from "#settings";
 import { itemsByIds, toItemJson, findSimilarItems, embedItem } from "./helpers";
 import { tr } from "#i18n";
+import { aiLocale } from "#locale";
+import { analyzePrompt, parseJsonReply, summarizePrompt, translatePrompt } from "#prompts";
+import { isLocale } from "@pickit/shared/i18n";
 
 export const aiRoutes = new Hono<{ Bindings: Env }>();
 
@@ -58,12 +61,12 @@ aiRoutes.post("/analyze", async (c) => {
   const { generateText } = await import("ai");
   const { text } = await generateText({
     model: provider.chat,
-    system:
-      "你是技术收藏库的整理助手。根据网页信息输出 JSON（不要输出其他内容）：" +
-      '{"name":"简短名称(中文或原名)","note":"一句话介绍(中文)","category":"分类名(简短中文,从已有分类中选择；都不合适才新建)","tags":["标签1","标签2"]}',
-    prompt:
-      `已有分类：${catRows.map((r) => r.category).join("、") || "（暂无）"}\n` +
-      `URL：${url}\n网页标题：${pageTitle || "（未获取到）"}\n网页描述：${description || "（未获取到）"}`,
+    ...analyzePrompt(await aiLocale(c.env.DB), {
+      categories: catRows.map((r) => r.category),
+      url,
+      title: pageTitle,
+      description,
+    }),
   });
 
   let analyzed: {
@@ -81,7 +84,7 @@ aiRoutes.post("/analyze", async (c) => {
 
   const name = analyzed.name || pageTitle || new URL(url).hostname;
   const note = analyzed.note || description;
-  const category = analyzed.category || "未分类";
+  const category = analyzed.category || "";
 
   const possibleDuplicates = provider.embedding
     ? await findSimilarItems(c.env.DB, provider, { name, note, category })
@@ -139,9 +142,7 @@ aiRoutes.post("/:id/summarize", async (c) => {
   const { generateText } = await import("ai");
   const { text } = await generateText({
     model: provider.chat,
-    system:
-      "你是技术收藏库助手。用 2-3 句中文简明总结这个收藏条目的用途、亮点或适用场景，不要输出多余内容。",
-    prompt: `名称：${row.name}\nURL：${row.url}\n备注：${row.note}\n分类：${row.category}`,
+    ...summarizePrompt(await aiLocale(c.env.DB), row),
   });
   const summary = text.trim();
   await c.env.DB.prepare("UPDATE items SET ai_summary=? WHERE id=?")
@@ -179,3 +180,60 @@ aiRoutes.post("/:id/reembed", async (c) => {
 // Registered last among GET routes: Hono matches route patterns in
 // registration order, and this catch-all-looking single segment would
 // otherwise shadow every other static GET route above it.
+
+interface TranslateBody {
+  target?: unknown;
+  /** Store the given (reviewed) texts instead of translating. */
+  save?: boolean;
+  note?: unknown;
+  summary?: unknown;
+}
+
+/**
+ * Translates an item's note and AI summary into `target` (default: the AI
+ * output language) without saving; `save: true` stores reviewed texts.
+ */
+aiRoutes.post("/:id/translate", async (c) => {
+  const id = Number(c.req.param("id"));
+  const row = await c.env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ? AND deleted_at IS NULL`)
+    .bind(id)
+    .first<ItemRow>();
+  if (!row) return c.json({ error: await tr(c, "api_item_not_found") }, 404);
+  const body = await c.req.json<TranslateBody>().catch(() => ({}) as TranslateBody);
+
+  if (body.save) {
+    const note = typeof body.note === "string" ? body.note : null;
+    const summary = typeof body.summary === "string" ? body.summary : null;
+    await c.env.DB.prepare(
+      "UPDATE items SET note = COALESCE(?, note), ai_summary = COALESCE(?, ai_summary), updated_at = ? WHERE id = ?",
+    )
+      .bind(note, summary, Date.now(), id)
+      .run();
+    const settings = await getSettings(c.env.DB);
+    if (note !== null && settings) {
+      c.executionCtx.waitUntil(embedItem(c.env, id, { ...row, note }, settings).catch(() => {}));
+    }
+    return c.json({ saved: true });
+  }
+
+  const texts: Record<string, string> = {};
+  if (row.note.trim()) texts.note = row.note;
+  if (row.ai_summary?.trim()) texts.summary = row.ai_summary;
+  if (Object.keys(texts).length === 0) return c.json({ error: await tr(c, "api_translate_empty") }, 400);
+
+  const settings = await getSettings(c.env.DB);
+  const provider = settings ? createProvider(settings) : null;
+  if (!provider?.chat) return c.json({ error: await tr(c, "api_need_chat") }, 400);
+
+  const locale = isLocale(body.target) ? body.target : await aiLocale(c.env.DB);
+  const { generateText } = await import("ai");
+  const { text } = await generateText({ model: provider.chat, maxRetries: 1, ...translatePrompt(locale, texts) });
+  let translated: Record<string, unknown>;
+  try {
+    translated = parseJsonReply(text);
+  } catch {
+    return c.json({ error: await tr(c, "api_ai_no_json", { reply: text.slice(0, 100) }) }, 502);
+  }
+  const pick = (key: string) => (typeof translated[key] === "string" && key in texts ? (translated[key] as string) : "");
+  return c.json({ locale, note: pick("note"), summary: pick("summary") });
+});

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, type TestApp } from "../../test/app";
 import { parseSuggestion } from "../../organize";
+import { configureChat, stubChatModel } from "../../test/ai";
 
 let t: TestApp;
 
@@ -100,41 +101,6 @@ describe("parseSuggestion", () => {
 });
 
 describe("AI suggestions", () => {
-  async function configureChat() {
-    await t.json("/api/settings/ai", {
-      json: {
-        chat: {
-          provider: "custom",
-          baseUrl: "https://llm.test/v1",
-          apiKey: "k",
-          protocol: "openai-chat",
-          model: "m",
-        },
-        embedding: {},
-      },
-    });
-  }
-
-  /** Answers chat completions with `reply(prompt)`. */
-  function stubModel(reply: (prompt: string) => string) {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_url: string, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
-        const prompt = body.messages.at(-1).content;
-        const content = reply(typeof prompt === "string" ? prompt : JSON.stringify(prompt));
-        return Response.json({
-          id: "x",
-          object: "chat.completion",
-          created: 0,
-          model: "m",
-          choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
-          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
-        });
-      }),
-    );
-  }
-
   it("needs a chat model", async () => {
     const a = await create({ name: "A", url: "https://a.dev" });
     const res = await t.json("/api/items/suggest", { json: { ids: [a] } }, 400);
@@ -144,8 +110,8 @@ describe("AI suggestions", () => {
   it("returns suggestions and per-item errors without changing anything", async () => {
     const a = await create({ name: "React", url: "https://react.dev", category: "杂项", tags: ["x"] });
     const b = await create({ name: "Broken", url: "https://b.dev" });
-    await configureChat();
-    stubModel((prompt) =>
+    await configureChat(t);
+    stubChatModel((prompt) =>
       prompt.includes("Broken") ? "no json here" : '{"category":"前端","tags":["react","ui"]}',
     );
 

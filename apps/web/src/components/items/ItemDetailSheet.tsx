@@ -22,6 +22,7 @@ import {
 import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
 import { Favicon } from "#components/Favicon";
+import { TranslatePanel } from "#components/items/TranslatePanel";
 import { intlLocale, m } from "#lib/i18n";
 
 // Single newlines in a note render as line breaks, like they were typed.
@@ -121,6 +122,8 @@ export function ItemDetailSheet({
                   <Streamdown remarkPlugins={NOTE_REMARK_PLUGINS}>{item.note}</Streamdown>
                 </div>
               )}
+
+              <TranslatePanel item={item} onChanged={onChanged} />
 
               {item.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">

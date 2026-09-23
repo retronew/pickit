@@ -1,5 +1,7 @@
 import type { LanguageModel } from "ai";
 import type { ItemRow } from "#types";
+import { LocalizedError, type Locale } from "#i18n";
+import { organizePrompt } from "#prompts";
 
 // AI category / tag suggestions, shared by the batch organize job (applies
 // them directly) and the review flow on the items page (user picks).
@@ -10,10 +12,6 @@ export interface Suggestion {
 }
 
 const MAX_TAGS = 5;
-
-const SYSTEM =
-  "你是技术收藏库的整理助手。根据条目信息输出 JSON（不要输出其他内容）：" +
-  '{"category":"分类名(简短中文,优先从已有分类中选择；都不合适才新建)","tags":["标签1","标签2"]}';
 
 export async function activeCategories(db: D1Database): Promise<string[]> {
   const { results } = await db
@@ -29,7 +27,9 @@ export async function activeCategories(db: D1Database): Promise<string[]> {
 export function parseSuggestion(text: string, current: Suggestion): Suggestion {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start < 0 || end < start) throw new Error(`模型没有返回 JSON：${text.slice(0, 100)}`);
+  if (start < 0 || end < start) {
+    throw new LocalizedError({ key: "api_ai_no_json", params: { reply: text.slice(0, 100) } });
+  }
   const parsed = JSON.parse(text.slice(start, end + 1)) as { category?: unknown; tags?: unknown };
   const category =
     typeof parsed.category === "string" && parsed.category.trim() ? parsed.category.trim() : current.category;
@@ -39,20 +39,25 @@ export function parseSuggestion(text: string, current: Suggestion): Suggestion {
   return { category, tags: tags.slice(0, MAX_TAGS) };
 }
 
+/** `locale` is the language new categories and tags are written in. */
 export async function suggestOrganize(
   chat: LanguageModel,
   row: ItemRow,
   categories: string[],
+  locale: Locale,
 ): Promise<Suggestion> {
   const { generateText } = await import("ai");
   const { text } = await generateText({
     model: chat,
     maxRetries: 1,
-    system: SYSTEM,
-    prompt:
-      `已有分类：${categories.join("、") || "（暂无）"}\n` +
-      `名称：${row.name}\nURL：${row.url}\n备注：${row.note}\n` +
-      `当前分类：${row.category || "（无）"}\n当前标签：${row.tags}`,
+    ...organizePrompt(locale, {
+      categories,
+      name: row.name,
+      url: row.url,
+      note: row.note,
+      category: row.category,
+      tags: row.tags,
+    }),
   });
   return parseSuggestion(text, { category: row.category, tags: JSON.parse(row.tags || "[]") });
 }

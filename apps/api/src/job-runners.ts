@@ -5,7 +5,8 @@ import { createProvider, embedText, embedTexts, describeError, embeddingInput } 
 import { isChatConfigured, isEmbeddingConfigured, type AiSettings } from "@pickit/shared";
 import { stepJob, type JobKind, type JobState, type StepResult } from "#jobs";
 import { activeCategories, suggestOrganize } from "#organize";
-import { errorText } from "#i18n";
+import { errorText, LocalizedError, renderMessage } from "#i18n";
+import { aiLocale, uiLocale } from "#locale";
 
 /** How many items one step handles. Kept small so a step stays well under Worker limits. */
 const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4 };
@@ -114,20 +115,25 @@ async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Pro
   if (!chat) throw new Error(await errorText(env, "api_chat_unavailable"));
   const rows = await loadRows(env, ids);
   const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
-  const categories = await activeCategories(env.DB);
+  const [categories, locale] = await Promise.all([activeCategories(env.DB), aiLocale(env.DB)]);
 
   const outcomes = await Promise.allSettled(
     rows.map(async (row) => {
-      const { category, tags } = await suggestOrganize(chat, row, categories);
+      const { category, tags } = await suggestOrganize(chat, row, categories, locale);
       await env.DB.prepare("UPDATE items SET category=?, tags=?, updated_at=? WHERE id=?")
         .bind(category, JSON.stringify(tags), Date.now(), row.id)
         .run();
     }),
   );
+  const errorLocale = await uiLocale(env.DB);
   outcomes.forEach((o, i) => {
     const row = rows[i];
     if (o.status === "fulfilled") result.doneIds.push(row.id);
-    else result.failures.push({ id: row.id, name: row.name, error: describeError(o.reason) });
+    else {
+      const error =
+        o.reason instanceof LocalizedError ? renderMessage(o.reason.ref, errorLocale) : describeError(o.reason);
+      result.failures.push({ id: row.id, name: row.name, error });
+    }
   });
   assertNotAllFailed(rows, result);
   return result;

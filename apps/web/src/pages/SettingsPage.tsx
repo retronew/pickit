@@ -8,6 +8,7 @@ import { DuplicatesCard } from "#components/settings/DuplicatesCard";
 import { ApiTokenCard } from "#components/settings/ApiTokenCard";
 import { AllowedEmailsCard } from "#components/settings/AllowedEmailsCard";
 import { AiSettingsCard } from "#components/settings/ai/AiSettingsCard";
+import { AiLanguageCard } from "#components/settings/ai/AiLanguageCard";
 import { SharesCard } from "#components/settings/SharesCard";
 import { McpCard } from "#components/settings/McpCard";
 import { ReembedCard } from "#components/settings/ReembedCard";
@@ -36,6 +37,7 @@ const TABS: SettingsTab[] = [
     content: (
       <div className="space-y-6">
         <AiSettingsCard />
+        <AiLanguageCard />
         <ReembedCard />
       </div>
     ),

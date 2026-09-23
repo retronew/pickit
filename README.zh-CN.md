@@ -10,11 +10,12 @@
 - **批量编辑**：选中多条后置顶、移动分类、删除、添加 / 移除标签；也可以让 AI 给出分类和标签建议，在表格里逐条勾选后再应用
 - **整理**：分类、标签（重命名 / 删除）、访问次数统计、数据统计页
 - **搜索**：基于 SQLite FTS5 的全文搜索，以及基于 embedding 的语义搜索。相似度计算先用 512 维压缩向量粗筛，再用完整向量精排候选，即使是 4096 维的模型也能控制在免费版 10 毫秒的 CPU 限制内
-- **AI**（可选，支持 OpenAI、Anthropic、Gemini 及任意 OpenAI 兼容接口）：新链接自动填写名称 / 分类 / 标签、单条摘要、基于收藏库的对话、批量整理。对话模型和向量模型各自独立配置，可以来自不同的服务商
+- **AI**（可选，支持 OpenAI、Anthropic、Gemini 及任意 OpenAI 兼容接口）：新链接自动填写名称 / 分类 / 标签、单条摘要、基于收藏库的对话、批量整理、备注和摘要一键翻译。AI 的输出语言可以设置（默认跟随界面语言），智能搜索支持跨语言。对话模型和向量模型各自独立配置，可以来自不同的服务商
 - **导入 / 导出**：Markdown 表格、JSON、浏览器书签 HTML
 - **分享**：公开只读链接（`/s/:slug`），可以分享单条收藏，也可以分享一个分类（含子分类）或标签下的收藏列表，列表会自动更新并提供 RSS 订阅
 - **快速收藏**：书签小工具（bookmarklet），一键打开当前页面的 `/add?url=...`
 - **登录**：通过 [Better Auth](https://better-auth.com) 使用 Google / GitHub 登录，并限制为允许列表里的邮箱，列表可在设置页修改（不使用密码）
+- **多语言**：界面支持中文、English、日本語（顶栏菜单切换），选择会保存下来，API 错误信息和审计描述也会跟着变
 - **主题**：默认跟随系统的浅色 / 深色，顶栏按钮可在「跟随系统 → 浅色 → 深色」之间切换
 - **审计日志**：记录每一次修改操作、导出、登录 / 退出和定时任务（操作者、动作、对象、结果、IP、请求详情，敏感字段脱敏），默认保留 180 天（可在审计页改为 1 天到 10 年或永久保留，并显示日志的估算占用大小）；**审计**页面可按类别、动作、操作者、结果、日期范围（含快捷选项）和关键词筛选，支持实时刷新和手动刷新
 - **API 访问**：Bearer API Token，方便脚本和第三方集成；另有 MCP 服务，AI 助手可以直接搜索和添加收藏
@@ -86,6 +87,19 @@ pnpm import -- --file path/to/bookmarks.md
 | `pnpm db:migrate` / `pnpm db:migrate:remote` | 在本地 / 远程执行 D1 迁移 |
 | `pnpm deploy` | 构建并部署 Worker |
 
+### 多语言
+
+界面支持中文、English、日本語。文案放在 `packages/shared/messages/{zh,en,ja}.json`（以 zh 为准），`pnpm install` 时由 [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) 编译到 `packages/shared/src/paraglide`（也可以运行 `pnpm --filter @pickit/shared i18n`）。网页端和 API 共用同一套文案函数。
+
+- 新增文案：在三个文件里用同一个键添加，然后在代码里用 `m.your_key()`。如果某个语言缺键、文案为空、占位符不一致，或者用了 ICU 复数语法（Paraglide 的格式不支持；数量相关的文案要写成任何数字都通顺的说法），测试都会失败。
+- 用 AI 起草缺失的英文 / 日文文案，再检查改动：
+
+  ```bash
+  I18N_AI_BASE_URL=https://api.openai.com/v1 I18N_AI_KEY=sk-… I18N_AI_MODEL=gpt-4.1-mini pnpm i18n:translate
+  ```
+
+  任何 OpenAI 兼容接口都可以。`{占位符}` 和中文原文对不上的草稿会被跳过并列出来。
+
 ### 测试
 
 - **API 路由测试**（`*.int.test.ts`）运行真实的 Worker（路由、登录校验和审计中间件），数据库是用真实迁移文件建出来的内存 SQLite（`apps/api/src/test/`，使用 Node 内置的 `node:sqlite`，需要 Node 22.13 以上）。覆盖收藏、回收站、批量操作、导入导出、搜索、标签、分享、设置、登录鉴权、审计日志、备份恢复、批量编辑（用模拟的 AI 模型）和 MCP。
@@ -140,6 +154,8 @@ cd ../.. && pnpm deploy
 ```bash
 curl -H "Authorization: Bearer <token>" https://your-domain/api/items
 ```
+
+API 错误信息的语言依次取自网页端的 `pickit_locale` Cookie、请求头 `X-PickIt-Locale: zh | en | ja`，以及保存的界面语言。
 
 ### MCP（AI 助手）
 

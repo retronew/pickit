@@ -60,6 +60,7 @@ const REQUESTS: [string, string, Record<string, unknown>, Record<string, unknown
   ["PUT", "/api/items/1", { pinned: true }],
   ["PUT", "/api/items/1", { pinned: false }],
   ["PUT", "/api/items/1", { name: "x" }],
+  ["POST", "/api/items/1/translate", { save: true }],
   ["DELETE", "/api/items/1", {}],
   ...["restore", "purge", "summarize", "translate", "check", "reembed", "visit"].map(
     (sub) => ["POST", `/api/items/1/${sub}`, {}] as [string, string, Record<string, unknown>],

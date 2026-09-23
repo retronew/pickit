@@ -5,6 +5,8 @@ import { nearest } from "#vectors";
 import { getSettings } from "#settings";
 import { createProvider } from "#ai";
 import { tr } from "#i18n";
+import { aiLocale } from "#locale";
+import { chatSystem } from "#prompts";
 
 export const chatRoutes = new Hono<{ Bindings: Env }>();
 
@@ -71,11 +73,7 @@ chatRoutes.post("/", async (c) => {
 
   const result = streamText({
     model: provider.chat,
-    system:
-      "你是用户的技术收藏库助手。用户会描述需求，你基于提供的收藏条目推荐最合适的方案。" +
-      "回复要求：给出推荐的条目、选择理由，简洁实用；如收藏中没有合适方案，诚实说明并给出通用建议。" +
-      "提到某个收藏条目时，必须使用 [[id]] 格式引用它（例如 [[123]]），不要用其他方式写出条目名称或链接。\n\n" +
-      `用户收藏（相关条目）：\n${catalog}`,
+    system: chatSystem(await aiLocale(c.env.DB), catalog),
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   });
 

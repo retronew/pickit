@@ -5,7 +5,8 @@ import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { getSettings } from "#settings";
 import { createProvider, describeError } from "#ai";
 import { activeCategories, suggestOrganize } from "#organize";
-import { tr } from "#i18n";
+import { LocalizedError, renderMessage, requestLocale, tr } from "#i18n";
+import { aiLocale } from "#locale";
 
 export const bulkRoutes = new Hono<{ Bindings: Env }>();
 
@@ -181,8 +182,9 @@ bulkRoutes.post("/suggest", async (c) => {
   )
     .bind(...ids)
     .all<ItemRow>();
-  const categories = await activeCategories(c.env.DB);
-  const outcomes = await Promise.allSettled(rows.map((row) => suggestOrganize(chat, row, categories)));
+  const [categories, locale] = await Promise.all([activeCategories(c.env.DB), aiLocale(c.env.DB)]);
+  const outcomes = await Promise.allSettled(rows.map((row) => suggestOrganize(chat, row, categories, locale)));
+  const errorLocale = await requestLocale(c);
   const suggestions: SuggestionRow[] = rows.map((row, i) => {
     const o = outcomes[i];
     return {
@@ -191,7 +193,14 @@ bulkRoutes.post("/suggest", async (c) => {
       url: row.url,
       category: row.category,
       tags: JSON.parse(row.tags || "[]"),
-      ...(o.status === "fulfilled" ? { suggested: o.value } : { error: describeError(o.reason) }),
+      ...(o.status === "fulfilled"
+        ? { suggested: o.value }
+        : {
+            error:
+              o.reason instanceof LocalizedError
+                ? renderMessage(o.reason.ref, errorLocale)
+                : describeError(o.reason),
+          }),
     };
   });
   return c.json({ suggestions });
