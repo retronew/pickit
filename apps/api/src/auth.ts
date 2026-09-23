@@ -1,5 +1,9 @@
 import { betterAuth } from "better-auth";
 import type { Env } from "#types";
+import { safeAudit, requestMeta } from "#audit/index";
+
+const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitHub" };
+const providerName = (id?: string) => (id ? (PROVIDER_NAMES[id] ?? id) : "未知方式");
 
 // PickIt is single-user: sign-in goes through Google / GitHub via Better Auth,
 // and only emails listed in ALLOWED_EMAILS may get a session. Without the
@@ -97,8 +101,16 @@ export function createAuth(env: Env) {
     },
     user: {
       // Runs before creating a user, linking an account or signing in.
-      validateUserInfo: async ({ user }) => {
+      validateUserInfo: async ({ user, source }, ctx) => {
         if (!(await isAllowedEmail(env, user.email))) {
+          await safeAudit(env.DB, {
+            actor: user.email ?? "未知账号",
+            action: "auth.sign_in_denied",
+            summary: `拒绝登录：邮箱不在允许列表（${providerName(source.oauth?.providerId)}）`,
+            status: 403,
+            ...(ctx?.request ? requestMeta(ctx.request) : {}),
+            detail: { provider: source.oauth?.providerId, action: source.action },
+          });
           return {
             error: "email_not_allowed",
             errorDescription: "这个账号没有访问权限",
@@ -109,6 +121,27 @@ export function createAuth(env: Env) {
     account: {
       // Google and GitHub with the same email sign in as the same user.
       accountLinking: { enabled: true, trustedProviders: ["google", "github"] },
+    },
+    databaseHooks: {
+      session: {
+        create: {
+          after: async (session, ctx) => {
+            const user = await env.DB.prepare('SELECT email FROM "user" WHERE id = ?')
+              .bind(session.userId)
+              .first<{ email: string }>();
+            const provider = (ctx?.params as { id?: string } | undefined)?.id;
+            await safeAudit(env.DB, {
+              actor: user?.email ?? session.userId,
+              action: "auth.sign_in",
+              summary: `登录成功（${providerName(provider)}）`,
+              status: 200,
+              ip: session.ipAddress ?? "",
+              userAgent: session.userAgent ?? "",
+              detail: { provider },
+            });
+          },
+        },
+      },
     },
     session: {
       expiresIn: 60 * 60 * 24 * 30,

@@ -15,6 +15,7 @@ Cloudflare Workers + D1 だけで動く、セルフホスト型のシングル�
 - **クイック保存**：表示中のページを `/add?url=...` で開くブックマークレット
 - **ログイン**：[Better Auth](https://better-auth.com) による Google / GitHub ログイン。許可リストのメールアドレスに限定、リストは設定画面で編集可能（パスワードなし）
 - **テーマ**：デフォルトでシステムのライト / ダークに追従。ヘッダーのボタンで「システム → ライト → ダーク」を切り替え
+- **監査ログ**：すべての変更操作、エクスポート、ログイン / ログアウト、cron 実行を記録（操作者、アクション、対象、結果、IP、機密情報をマスクしたリクエスト詳細）し、180 日間保持。**監査**ページでカテゴリ、アクション、操作者、結果、日付、キーワードで絞り込み、リアルタイム更新と手動更新に対応
 - **API アクセス**：スクリプトや外部連携用の Bearer API トークン
 - **バッチジョブ**：埋め込みの再生成と AI 一括整理は小さなステップに分けて実行され、一時停止 / 再開、失敗項目の再試行、項目ごとのエラー詳細に対応。設定ページを開いている間はページが処理を進め、閉じた後は毎分の cron がバックグラウンドで続行します
 - **定期メンテナンス**：毎日 R2 への JSON バックアップとリンク切れチェック
@@ -30,10 +31,17 @@ Cloudflare Workers + D1 だけで動く、セルフホスト型のシングル�
 
 ```
 apps/
-  api/        Worker：API ルート、D1 マイグレーション、cron ジョブ（wrangler.jsonc）
-  web/        React SPA。apps/api/dist にビルドされ、Worker のアセットとして配信
+  api/                 Worker（wrangler.jsonc）、D1 マイグレーション
+    src/index.ts       アプリの組み立て：ミドルウェアの順序とルートのマウント
+    src/routes/        API 領域ごとに 1 モジュール。routes/items/ は責務ごとに分割
+    src/audit/         監査ログ：保存、リクエストの説明、マスク処理、ミドルウェア
+    src/scheduled.ts   cron のエントリ（ジョブ、バックアップ、リンク確認、監査ログ整理）
+  web/                 React SPA。apps/api/dist にビルドされ、Worker のアセットとして配信
+    src/pages/         ルートごとに 1 コンポーネント
+    src/components/    機能別フォルダ：items/、settings/、audit/。ui/ は基本部品
+    src/hooks/         ページが使うデータ・振る舞いの hook
 packages/
-  shared/     api と web で共有する型とヘルパー（URL 正規化、インポーター）
+  shared/              api と web で共有する型とヘルパー（ai/、インポーター、URL 正規化）
 scripts/
   import.mjs  Markdown のブックマーク表を D1 に一括インポート
 ```

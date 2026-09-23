@@ -21,27 +21,12 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from "#components/ui/combobox";
-import { TagsField } from "#components/TagsField";
+import { TagsField } from "#components/items/TagsField";
+import { PossibleDuplicates } from "#components/items/PossibleDuplicates";
+import { useUrlAnalyzer } from "#hooks/useUrlAnalyzer";
 import { SparklesIcon } from "lucide-react";
 import { Spinner } from "#components/ui/spinner";
 import { errorMessage, toastError } from "#lib/api";
-
-interface PossibleDuplicate {
-  id: number;
-  name: string;
-  url: string;
-  category: string;
-  score: number;
-}
-
-interface AnalyzeResult {
-  name: string;
-  note: string;
-  category: string;
-  tags: string[];
-  icon: string;
-  possibleDuplicates?: PossibleDuplicate[];
-}
 
 export interface ItemFormPayload {
   name: string;
@@ -82,44 +67,20 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
       category: item?.category ?? initial?.category ?? "",
       tags: item?.tags ?? initial?.tags ?? ([] as string[]),
     });
-    const [analyzing, setAnalyzing] = useState(false);
-    const [analyzeMsg, setAnalyzeMsg] = useState("");
-    const [possibleDuplicates, setPossibleDuplicates] = useState<PossibleDuplicate[]>([]);
+    const { analyzing, analyzeMsg, possibleDuplicates, analyze } = useUrlAnalyzer((data) =>
+      setForm((f) => ({
+        ...f,
+        name: data.name || f.name,
+        note: data.note || f.note,
+        category: data.category || f.category,
+        tags: data.tags?.length ? data.tags : f.tags,
+        icon: data.icon || f.icon,
+      })),
+    );
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
 
     const canAnalyze = /^https?:\/\/.+/.test(form.url.trim());
-
-    async function analyze() {
-      setAnalyzing(true);
-      setAnalyzeMsg("");
-      setPossibleDuplicates([]);
-      try {
-        const res = await fetch("/api/items/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: form.url.trim() }),
-        });
-        const data = (await res.json()) as AnalyzeResult & { error?: string };
-        if (!res.ok) {
-          setAnalyzeMsg(data.error ?? "识别失败，请重试");
-          return;
-        }
-        setForm((f) => ({
-          ...f,
-          name: data.name || f.name,
-          note: data.note || f.note,
-          category: data.category || f.category,
-          tags: data.tags?.length ? data.tags : f.tags,
-          icon: data.icon || f.icon,
-        }));
-        setPossibleDuplicates(data.possibleDuplicates ?? []);
-      } catch {
-        setAnalyzeMsg("网络出问题了，请重试");
-      } finally {
-        setAnalyzing(false);
-      }
-    }
 
     async function submit() {
       if (!form.name || saving) return;
@@ -179,7 +140,7 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
                     size="lg"
                     disabled={!canAnalyze || analyzing}
                     loading={analyzing}
-                    onClick={analyze}
+                    onClick={() => analyze(form.url.trim())}
                     className="shrink-0"
                   >
                     <SparklesIcon />
@@ -191,26 +152,7 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
                     {analyzeMsg}
                   </p>
                 )}
-                {possibleDuplicates.length > 0 && (
-                  <div className="bg-warning/4 space-y-1 rounded-md border border-warning/32 p-2 text-xs">
-                    <p className="text-warning-foreground font-medium">
-                      这个链接和你已收藏的内容很像，可能是同一个东西：
-                    </p>
-                    {possibleDuplicates.map((d) => (
-                      <a
-                        key={d.id}
-                        href={d.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-muted-foreground hover:text-foreground block truncate underline-offset-2 hover:underline"
-                      >
-                        {d.name}
-                        {d.category ? `（${d.category}）` : ""} · 相似度{" "}
-                        {Math.round(d.score * 100)}%
-                      </a>
-                    ))}
-                  </div>
-                )}
+                <PossibleDuplicates items={possibleDuplicates} />
               </Field>
               <Field>
                 <FieldLabel htmlFor="item-name">名称 *</FieldLabel>

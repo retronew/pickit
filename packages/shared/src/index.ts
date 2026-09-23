@@ -27,7 +27,7 @@ export function normalizeUrl(url: string): string {
     .replace(/\/+$/, "");
 }
 
-export * from "./ai";
+export * from "./ai/index";
 
 export interface SearchHit {
   id: number;

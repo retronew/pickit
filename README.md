@@ -15,6 +15,7 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page
 - **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist that can be edited in Settings (no passwords)
 - **Theme**: follows the system light / dark setting by default; the header button cycles System → Light → Dark
+- **Audit log**: every write, export, sign-in / sign-out and cron run is recorded (actor, action, target, result, IP, request details with secrets redacted) and kept for 180 days; the **Audit** page filters by category, action, actor, result, date and keyword, with live and manual refresh
 - **API access**: Bearer API token for scripts and integrations
 - **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The settings page drives them while open; a per-minute cron keeps them going in the background
 - **Maintenance cron**: daily JSON backup to R2 and dead-link checks
@@ -30,10 +31,17 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 
 ```
 apps/
-  api/        Worker: API routes, D1 migrations, cron jobs (wrangler.jsonc)
-  web/        React SPA, built into apps/api/dist and served as Worker assets
+  api/                 Worker (wrangler.jsonc), D1 migrations
+    src/index.ts       App wiring: middleware order and route mounting
+    src/routes/        One module per API area; routes/items/ is split by concern
+    src/audit/         Audit log: storage, request description, redaction, middleware
+    src/scheduled.ts   Cron entry (jobs, backups, link checks, audit pruning)
+  web/                 React SPA, built into apps/api/dist and served as Worker assets
+    src/pages/         One component per route
+    src/components/    items/, settings/, audit/ feature folders; ui/ primitives
+    src/hooks/         Data and behaviour hooks used by the pages
 packages/
-  shared/     Types and helpers shared by api and web (URL normalization, importers)
+  shared/              Types and helpers shared by api and web (ai/, importers, URL normalization)
 scripts/
   import.mjs  Bulk-import a Markdown bookmark table into D1
 ```

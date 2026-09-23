@@ -1,0 +1,134 @@
+// Maps an API request to an action name and a readable summary.
+
+export type Body = Record<string, any>;
+
+interface Described {
+  action: string;
+  target?: string;
+  summary: string;
+}
+
+const quote = (s: unknown) => (s ? `「${String(s)}」` : "");
+
+const BULK_VERBS: Record<string, string> = {
+  delete: "删除",
+  pin: "置顶",
+  unpin: "取消置顶",
+  category: "修改分类",
+  purge: "彻底删除",
+};
+
+/**
+ * Maps a request to an action name and a readable summary. `name` is the
+ * item's name looked up before the handler ran (for /api/items/:id routes),
+ * `res` the JSON response when useful (e.g. the id of a new item).
+ */
+export function describe(
+  method: string,
+  path: string,
+  body: Body,
+  name: string | undefined,
+  res: Body,
+): Described | null {
+  const p = path.replace(/^\/api/, "");
+  let m: RegExpMatchArray | null;
+
+  if ((m = p.match(/^\/items\/(\d+)(?:\/(\w+))?$/))) {
+    const [, id, sub] = m;
+    const target = `item:${id}`;
+    const label = quote(name ?? body.name) || `#${id}`;
+    if (!sub && method === "PUT") {
+      const keys = Object.keys(body);
+      if (keys.length === 1 && keys[0] === "pinned") {
+        return body.pinned
+          ? { action: "item.pin", target, summary: `置顶收藏${label}` }
+          : { action: "item.unpin", target, summary: `取消置顶${label}` };
+      }
+      return { action: "item.update", target, summary: `编辑收藏${label}` };
+    }
+    if (!sub && method === "DELETE") return { action: "item.delete", target, summary: `删除收藏${label}（移到回收站）` };
+    const subs: Record<string, [string, string]> = {
+      restore: ["item.restore", `从回收站恢复${label}`],
+      purge: ["item.purge", `彻底删除${label}`],
+      summarize: ["item.summarize", `生成 AI 摘要${label}`],
+      check: ["item.check", `检查链接${label}`],
+      reembed: ["item.reembed", `重建向量${label}`],
+      visit: ["item.visit", `打开收藏${label}`],
+    };
+    if (sub && subs[sub]) return { action: subs[sub][0], target, summary: subs[sub][1] };
+  }
+
+  const key = `${method} ${p}`;
+  switch (key) {
+    case "POST /items":
+      return {
+        action: "item.create",
+        target: res.id ? `item:${res.id}` : undefined,
+        summary: `添加收藏${quote(body.name)}${body.allowDuplicate ? "（重复链接仍保存）" : ""}`,
+      };
+    case "POST /items/analyze":
+      return { action: "item.analyze", summary: `AI 识别链接 ${body.url ?? ""}`.trim() };
+    case "POST /items/import":
+      return body.dryRun
+        ? { action: "item.import_preview", summary: `预览导入（${body.format ?? "未知格式"}）` }
+        : {
+            action: "item.import",
+            summary: `导入数据（${body.format ?? "未知格式"}）${
+              res.inserted != null ? `：新增 ${res.inserted} 条，跳过 ${res.skipped ?? 0} 条` : ""
+            }`,
+          };
+    case "GET /items/export":
+      return { action: "item.export", summary: "导出数据" };
+    case "POST /items/merge":
+      return {
+        action: "item.merge",
+        target: `item:${body.keepId}`,
+        summary: `合并重复收藏：保留 #${body.keepId}，移除 ${(body.removeIds ?? []).length} 项`,
+      };
+    case "POST /items/bulk": {
+      const n = (body.ids ?? []).length;
+      const verb = BULK_VERBS[body.action] ?? body.action;
+      const extra = body.action === "category" ? `到${quote(body.value || "未分类")}` : "";
+      return { action: `item.bulk_${body.action}`, summary: `批量${verb} ${n} 项${extra}` };
+    }
+    case "POST /tags/rename":
+      return { action: "tag.rename", target: `tag:${body.from}`, summary: `重命名标签${quote(body.from)}→${quote(body.to)}` };
+    case "POST /tags/delete":
+      return { action: "tag.delete", target: `tag:${body.tag}`, summary: `删除标签${quote(body.tag)}` };
+    case "POST /shares":
+      return {
+        action: "share.create",
+        target: res.slug ? `share:${res.slug}` : undefined,
+        summary: `创建分享链接${quote(body.title)}`,
+      };
+    case "POST /settings/ai":
+      return { action: "settings.ai_update", summary: "修改 AI 配置" };
+    case "POST /settings/ai/models":
+      return { action: "settings.ai_models", summary: `获取${body.target === "embedding" ? "向量" : "对话"}模型列表` };
+    case "POST /settings/ai/test":
+      return { action: "settings.ai_test", summary: `测试${body.target === "embedding" ? "向量" : "对话"}模型连接` };
+    case "POST /settings/api-token/reset":
+      return { action: "settings.token_reset", summary: "生成 / 重置 API Token" };
+    case "DELETE /settings/api-token":
+      return { action: "settings.token_delete", summary: "删除 API Token" };
+    case "PUT /settings/allowed-emails":
+      return {
+        action: "settings.allowed_emails",
+        summary: `修改允许登录的邮箱（${(body.emails ?? []).length} 个）`,
+      };
+    case "POST /chat":
+      return { action: "ai.chat", summary: "AI 问答" };
+    case "POST /auth/sign-out":
+      return { action: "auth.sign_out", summary: "退出登录" };
+  }
+
+  if ((m = p.match(/^\/shares\/([^/]+)$/)) && method === "DELETE") {
+    return { action: "share.revoke", target: `share:${m[1]}`, summary: `撤销分享 ${m[1]}` };
+  }
+  if ((m = p.match(/^\/jobs\/(\w+)\/(start|pause|resume|retry)$/))) {
+    const job = m[1] === "reembed" ? "向量索引重建" : "批量整理";
+    const verb = { start: "开始", pause: "暂停", resume: "继续", retry: "重试失败项" }[m[2]];
+    return { action: `job.${m[2]}`, target: `job:${m[1]}`, summary: `${verb}${job}${body.mode ? `（${body.mode}）` : ""}` };
+  }
+  return null;
+}

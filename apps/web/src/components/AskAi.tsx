@@ -1,87 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { SparkleIcon, ArrowUpIcon, XIcon } from "lucide-react";
-import type { Item } from "@pickit/shared";
 import { Card } from "#components/ui/card";
 import { Button } from "#components/ui/button";
 import { Favicon } from "#components/Favicon";
 import { cn } from "#lib/utils";
-
-interface ChatMsg {
-  role: "user" | "assistant";
-  content: string;
-}
-
-const STORAGE_KEY = "pickit-chat-messages";
-
-function loadStoredMessages(): ChatMsg[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ChatMsg[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function extractRefIds(content: string): number[] {
-  return [...content.matchAll(/\[\[(\d+)\]\]/g)].map((m) => Number(m[1]));
-}
-
-function renderableText(content: string, cache: Record<number, Item>): string {
-  return content.replace(/\[\[(\d+)\]\]/g, (_, id) => {
-    const item = cache[Number(id)];
-    return item ? `**${item.name}**` : "";
-  });
-}
+import { useChat, extractRefIds, renderableText } from "#hooks/useChat";
 
 export function AskAi() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>(loadStoredMessages);
   const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [itemCache, setItemCache] = useState<Record<number, Item>>({});
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const rafRef = useRef(0);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    } catch {
-      // storage unavailable (private mode, quota, etc.) — chat still works
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    const ids = messages.flatMap((m) =>
-      m.role === "assistant" ? extractRefIds(m.content) : [],
-    );
-    if (ids.length > 0) loadRefItems(ids);
-    // Only for the messages restored from localStorage on first mount —
-    // messages sent afterwards resolve their refs at the end of send().
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadRefItems(ids: number[]) {
-    const missing = [...new Set(ids)].filter((id) => !itemCache[id]);
-    if (missing.length === 0) return;
-    const fetched = await Promise.all(
-      missing.map((id) =>
-        fetch(`/api/items/${id}`)
-          .then((r) => (r.ok ? (r.json() as Promise<Item>) : null))
-          .catch(() => null),
-      ),
-    );
-    setItemCache((prev) => {
-      const next = { ...prev };
-      fetched.forEach((item, i) => {
-        if (item) next[missing[i]] = item;
-      });
-      return next;
-    });
-  }
 
   useEffect(() => {
     if (open) {
@@ -101,52 +34,16 @@ export function AskAi() {
     return () => clearTimeout(t);
   }, [open]);
 
-  async function send() {
+  const { messages, clear, streaming, itemCache, send: sendMessage } = useChat(() =>
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight }),
+  );
+
+  function send() {
     const text = input.trim();
     if (!text || streaming) return;
     setOpen(true);
     setInput("");
-    const history = [...messages, { role: "user" as const, content: text }];
-    setMessages((m) => [...m, { role: "user", content: text }]);
-    setStreaming(true);
-    setMessages((m) => [...m, { role: "assistant", content: "" }]);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = {
-            role: "assistant",
-            content: data.error ?? "请求失败，请稍后重试",
-          };
-          return copy;
-        });
-        return;
-      }
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let acc = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { role: "assistant", content: acc };
-          return copy;
-        });
-        listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-      }
-      await loadRefItems(extractRefIds(acc));
-    } finally {
-      setStreaming(false);
-    }
+    sendMessage(text);
   }
 
   return (
@@ -170,7 +67,7 @@ export function AskAi() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setMessages([])}
+                    onClick={clear}
                   >
                     新对话
                   </Button>

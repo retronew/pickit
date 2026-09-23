@@ -42,6 +42,7 @@ export function AppShell() {
     { to: "/tags", label: "标签" },
     { to: "/stats", label: "统计" },
     { to: "/trash", label: "回收站" },
+    { to: "/audit", label: "审计" },
     { to: "/settings", label: "设置" },
   ];
 

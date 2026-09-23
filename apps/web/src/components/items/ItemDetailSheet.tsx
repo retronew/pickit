@@ -1,10 +1,6 @@
-import { api, copyText, toastError, toastSuccess } from "#lib/api";
-import { useEffect, useState } from "react";
+import { useItemDetail } from "#hooks/useItemDetail";
 import { Streamdown, defaultRemarkPlugins } from "streamdown";
 import remarkBreaks from "remark-breaks";
-
-// Single newlines in a note render as line breaks, like they were typed.
-const NOTE_REMARK_PLUGINS = [...Object.values(defaultRemarkPlugins), remarkBreaks];
 import {
   PencilIcon,
   PinIcon,
@@ -26,6 +22,9 @@ import {
 import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
 import { Favicon } from "#components/Favicon";
+
+// Single newlines in a note render as line breaks, like they were typed.
+const NOTE_REMARK_PLUGINS = [...Object.values(defaultRemarkPlugins), remarkBreaks];
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleString("zh-CN", {
@@ -56,88 +55,18 @@ export function ItemDetailSheet({
   onChanged: () => void;
   onOpenRelated: (item: Item) => void;
 }) {
-  const [related, setRelated] = useState<Item[]>([]);
-  const [summary, setSummary] = useState("");
-  const [summarizing, setSummarizing] = useState(false);
-  const [linkStatus, setLinkStatus] = useState<{
-    httpStatus: number | null;
-    checkedAt: number | null;
-  } | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [shared, setShared] = useState(false);
-
-  useEffect(() => {
-    setSummary(item?.aiSummary ?? "");
-    setRelated([]);
-    setLinkStatus(
-      item ? { httpStatus: item.httpStatus, checkedAt: item.checkedAt } : null,
-    );
-    setShared(false);
-    if (item && open) {
-      fetch(`/api/items/${item.id}/related?limit=6`)
-        .then((r) => r.json())
-        .then(setRelated)
-        .catch(() => {});
-    }
-  }, [item, open]);
-
-  async function checkLinkNow() {
-    if (!item) return;
-    setChecking(true);
-    try {
-      const data = await api<{ httpStatus: number | null; checkedAt: number | null }>(
-        `/api/items/${item.id}/check`,
-        { method: "POST" },
-      );
-      setLinkStatus(data);
-      onChanged();
-      if (data.httpStatus != null && data.httpStatus < 400) {
-        toastSuccess("链接可以访问", { id: "check" });
-      } else {
-        const reason = data.httpStatus ? `HTTP ${data.httpStatus}` : "请求超时或被拒绝";
-        toastError("链接无法访问", new Error(reason), { id: "check" });
-      }
-    } catch (err) {
-      toastError("检查失败", err, { id: "check" });
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  async function summarize() {
-    if (!item) return;
-    setSummarizing(true);
-    try {
-      const data = await api<{ summary: string }>(`/api/items/${item.id}/summarize`, {
-        method: "POST",
-      });
-      setSummary(data.summary);
-      onChanged();
-    } catch (err) {
-      toastError("生成摘要失败", err, { id: "summarize" });
-    } finally {
-      setSummarizing(false);
-    }
-  }
-
-  async function share() {
-    if (!item) return;
-    setSharing(true);
-    try {
-      const data = await api<{ slug: string }>("/api/shares", {
-        json: { type: "item", value: String(item.id), title: item.name },
-      });
-      if (await copyText(`${window.location.origin}/s/${data.slug}`, "分享链接已复制")) {
-        setShared(true);
-        setTimeout(() => setShared(false), 2000);
-      }
-    } catch (err) {
-      toastError("分享失败", err, { id: "share" });
-    } finally {
-      setSharing(false);
-    }
-  }
+  const {
+    related,
+    summary,
+    summarizing,
+    linkStatus,
+    checking,
+    sharing,
+    shared,
+    checkLinkNow,
+    summarize,
+    share,
+  } = useItemDetail(item, open, onChanged);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

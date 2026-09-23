@@ -1,5 +1,5 @@
 import type { Item } from "@pickit/shared";
-import type { ItemFormPayload } from "#components/ItemFormDialog";
+import type { ItemFormPayload } from "#components/items/ItemFormDialog";
 import { Confirm } from "#components/Confirm";
 import { api, ApiError, toastSuccess } from "#lib/api";
 

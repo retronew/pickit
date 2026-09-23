@@ -14,7 +14,7 @@ import {
   SelectContent,
   SelectItem,
 } from "#components/ui/select";
-import { JobProgress, JobActions, useJob } from "#components/JobProgress";
+import { JobProgress, JobActions, useJob } from "#components/settings/JobProgress";
 
 type Mode = "missing" | "all";
 

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { type Env, type ItemRow, ITEM_COLUMNS, itemColumns } from "#types";
 import { nearest } from "#vectors";
-import { itemsByIds } from "#routes/items";
+import { itemsByIds } from "#routes/items/index";
 import { getSettings } from "#settings";
 import { createProvider } from "#ai";
 

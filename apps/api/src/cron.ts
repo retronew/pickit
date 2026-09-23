@@ -31,10 +31,12 @@ export async function runDeadLinkCheck(env: Env) {
     .all<ItemRow>();
 
   let idx = 0;
+  let broken = 0;
   async function worker() {
     while (idx < results.length) {
       const row = results[idx++];
       const status = await checkLink(row.url);
+      if (status == null || status >= 400) broken++;
       await env.DB.prepare(
         "UPDATE items SET http_status=?, checked_at=? WHERE id=?",
       )
@@ -45,10 +47,11 @@ export async function runDeadLinkCheck(env: Env) {
   await Promise.all(
     Array.from({ length: CHECK_CONCURRENCY }, () => worker()),
   );
+  return { checked: results.length, broken };
 }
 
 export async function runDailyBackup(env: Env) {
-  if (!env.BACKUPS) return;
+  if (!env.BACKUPS) return null;
   const { results } = await env.DB.prepare(
     `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL ORDER BY id`,
   ).all<ItemRow>();
@@ -64,13 +67,17 @@ export async function runDailyBackup(env: Env) {
     updatedAt: r.updated_at,
   }));
   const date = new Date().toISOString().slice(0, 10);
-  await env.BACKUPS.put(`backups/pickit-${date}.json`, JSON.stringify(items));
+  const key = `backups/pickit-${date}.json`;
+  await env.BACKUPS.put(key, JSON.stringify(items));
+  let removed = 0;
 
   const list = await env.BACKUPS.list({ prefix: "backups/" });
   const cutoff = Date.now() - THIRTY_DAYS_MS;
   for (const obj of list.objects) {
     if (obj.uploaded.getTime() < cutoff) {
       await env.BACKUPS.delete(obj.key);
+      removed++;
     }
   }
+  return { key, count: items.length, removed };
 }

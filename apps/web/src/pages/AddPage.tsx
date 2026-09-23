@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { uniq } from "es-toolkit";
 import type { Item } from "@pickit/shared";
-import { ItemFormDialog, type ItemFormPayload } from "#components/ItemFormDialog";
+import { ItemFormDialog, type ItemFormPayload } from "#components/items/ItemFormDialog";
 import { saveItem } from "#lib/items";
 import { Confirm } from "#components/Confirm";
 import { Spinner } from "#components/ui/spinner";

@@ -16,8 +16,10 @@ function read(relPath: string): string {
 }
 
 describe("soft-delete filtering", () => {
-  it("items.ts filters deleted_at on every active-item read path", () => {
-    const src = read("routes/items.ts");
+  it("item routes filter deleted_at on every active-item read path", () => {
+    const src = ["helpers", "collection", "io", "maintenance", "ai", "item"]
+      .map((f) => read(`routes/items/${f}.ts`))
+      .join("\n");
     const occurrences = src.match(/deleted_at IS NULL/g) ?? [];
     // GET /, GET /trash(inverted), /categories, /analyze categories,
     // findDuplicate, /:id/related fallback, /duplicates, /export — this is

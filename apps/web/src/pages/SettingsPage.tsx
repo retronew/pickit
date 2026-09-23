@@ -1,14 +1,14 @@
 import type { ComponentType } from "react";
 import { BotIcon, DatabaseIcon, ShieldCheckIcon, WandSparklesIcon } from "lucide-react";
-import { DataImportExportCard } from "#components/DataImportExportCard";
-import { BookmarkletCard } from "#components/BookmarkletCard";
-import { OrganizeCard } from "#components/OrganizeCard";
-import { DuplicatesCard } from "#components/DuplicatesCard";
-import { ApiTokenCard } from "#components/ApiTokenCard";
-import { AllowedEmailsCard } from "#components/AllowedEmailsCard";
-import { AiSettingsCard } from "#components/AiSettingsCard";
-import { SharesCard } from "#components/SharesCard";
-import { ReembedCard } from "#components/ReembedCard";
+import { DataImportExportCard } from "#components/settings/DataImportExportCard";
+import { BookmarkletCard } from "#components/settings/BookmarkletCard";
+import { OrganizeCard } from "#components/settings/OrganizeCard";
+import { DuplicatesCard } from "#components/settings/DuplicatesCard";
+import { ApiTokenCard } from "#components/settings/ApiTokenCard";
+import { AllowedEmailsCard } from "#components/settings/AllowedEmailsCard";
+import { AiSettingsCard } from "#components/settings/ai/AiSettingsCard";
+import { SharesCard } from "#components/settings/SharesCard";
+import { ReembedCard } from "#components/settings/ReembedCard";
 import { Confirm } from "#components/Confirm";
 import { Separator } from "#components/ui/separator";
 

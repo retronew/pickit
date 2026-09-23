@@ -8,7 +8,7 @@ import {
   resolveEmbeddingEndpoint,
   isChatConfigured,
   isEmbeddingConfigured,
-} from "./ai";
+} from "./index";
 
 describe("normalizeBaseUrl", () => {
   it("drops trailing slashes and pasted endpoint paths", () => {
