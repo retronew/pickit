@@ -1,6 +1,9 @@
 // Small presentational pieces of the AI settings card.
 
 import { type RequestUrl } from "@pickit/shared";
+import { CardContent, CardFooter } from "#components/ui/card";
+import { Skeleton } from "#components/ui/skeleton";
+import { FieldSkeleton, ButtonsSkeleton } from "#components/settings/skeletons";
 import type { TestState } from "./shared";
 
 export function PanelHeading({ title, configured }: { title: string; configured?: boolean }) {
@@ -48,5 +51,33 @@ export function TestResult({ state }: { state: TestState }) {
     >
       {state.text}
     </p>
+  );
+}
+
+function PanelSkeleton() {
+  return (
+    <section className="space-y-4">
+      <Skeleton className="h-5 w-24" />
+      <FieldSkeleton />
+      <FieldSkeleton />
+      <FieldSkeleton />
+      <FieldSkeleton />
+    </section>
+  );
+}
+
+/** Same shape as the loaded card: two endpoint panels and the action row. */
+export function AiSettingsSkeleton() {
+  return (
+    <>
+      <CardContent className="grid gap-8 lg:grid-cols-[1fr_auto_1fr]" aria-busy="true" aria-label="加载中">
+        <PanelSkeleton />
+        <div className="h-px bg-border lg:h-auto lg:w-px" />
+        <PanelSkeleton />
+      </CardContent>
+      <CardFooter>
+        <ButtonsSkeleton widths={["w-16", "w-28", "w-28"]} />
+      </CardFooter>
+    </>
   );
 }

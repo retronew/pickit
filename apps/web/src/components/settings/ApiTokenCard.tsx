@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TextSkeleton } from "#components/settings/skeletons";
 import { api, copyText, toastError, toastSuccess } from "#lib/api";
 import { CopyIcon, CheckIcon, RefreshCwIcon } from "lucide-react";
 import {
@@ -14,15 +15,15 @@ import { Confirm } from "#components/Confirm";
 
 export function ApiTokenCard() {
   const [masked, setMasked] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [newToken, setNewToken] = useState("");
   const [copied, setCopied] = useState(false);
 
   function refresh() {
-    return fetch("/api/settings/api-token")
-      .then((r) => r.json())
-      .then((d: { configured: boolean; masked: string | null }) =>
-        setMasked(d.masked),
-      );
+    return api<{ configured: boolean; masked: string | null }>("/api/settings/api-token")
+      .then((d) => setMasked(d.masked))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }
 
   useEffect(() => {
@@ -73,12 +74,14 @@ export function ApiTokenCard() {
               {copied ? <CheckIcon /> : <CopyIcon />}
             </Button>
           </div>
+        ) : !loaded ? (
+          <TextSkeleton className="my-0.5 w-48" />
         ) : masked ? (
-          <p className="text-muted-foreground text-sm">
+          <p className="animate-fade-in text-muted-foreground text-sm">
             当前：<code className="text-foreground">{masked}</code>
           </p>
         ) : (
-          <p className="text-muted-foreground text-sm">还没有生成</p>
+          <p className="animate-fade-in text-muted-foreground text-sm">还没有生成</p>
         )}
         {newToken && (
           <p className="text-muted-foreground text-xs">
@@ -87,7 +90,7 @@ export function ApiTokenCard() {
         )}
       </CardContent>
       <CardFooter>
-        <Button variant="outline" size="lg" onClick={reset}>
+        <Button variant="outline" size="lg" onClick={reset} disabled={!loaded}>
           <RefreshCwIcon />
           {masked ? "重置" : "生成"} Token
         </Button>

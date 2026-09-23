@@ -1,7 +1,7 @@
 // State and server calls behind the AI settings card.
 
 import { useEffect, useState } from "react";
-import { toastError, toastSuccess } from "#lib/api";
+import { toastError, toastSuccess, api, errorMessage } from "#lib/api";
 import {
   emptyAiSettings,
   normalizeBaseUrl,
@@ -23,16 +23,18 @@ export function useAiSettings() {
     embedding: { running: false },
   });
   const [saveMessage, setSaveMessage] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   const load = () =>
-    fetch("/api/settings/ai")
-      .then((r) => r.json())
-      .then((d: AiSettingsResponse) => {
+    api<AiSettingsResponse>("/api/settings/ai")
+      .then((d) => {
         setSaved(d);
+        setLoadError("");
         const { apiKeyMasked: _c, ...chat } = d.chat;
         const { apiKeyMasked: _e, ...embedding } = d.embedding;
         setForm({ version: 2, chat, embedding });
-      });
+      })
+      .catch((err) => setLoadError(errorMessage(err)));
 
   useEffect(() => {
     load();
@@ -133,6 +135,8 @@ export function useAiSettings() {
     models,
     tests,
     saveMessage,
+    loadError,
+    load,
     setModels,
     patchChat,
     patchEmbedding,

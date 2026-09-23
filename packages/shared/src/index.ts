@@ -40,3 +40,5 @@ export interface SearchHit {
 }
 
 export * from "./import";
+
+export * from "./audit";

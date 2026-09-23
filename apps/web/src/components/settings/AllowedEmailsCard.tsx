@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { toastSuccess } from "#lib/api";
+import { ListSkeleton } from "#components/settings/skeletons";
+import { api, errorMessage, toastSuccess } from "#lib/api";
 import { LockIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import {
   Card,
@@ -24,9 +25,9 @@ export function AllowedEmailsCard() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings/allowed-emails")
-      .then((r) => r.json())
-      .then(setData);
+    api<AllowedEmails>("/api/settings/allowed-emails")
+      .then(setData)
+      .catch((err) => setError(`加载失败：${errorMessage(err)}`));
   }, []);
 
   async function save(emails: string[]) {
@@ -81,8 +82,9 @@ export function AllowedEmailsCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {!data && !error && <ListSkeleton rows={2} />}
         {data && (
-          <div className="space-y-1">
+          <div className="animate-fade-in space-y-1">
             {data.owners.map((email) => (
               <div
                 key={email}

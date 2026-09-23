@@ -1,4 +1,5 @@
 import { api, copyText, toastError, toastSuccess } from "#lib/api";
+import { ListSkeleton } from "#components/settings/skeletons";
 import { useEffect, useState } from "react";
 import { CopyIcon, Trash2Icon } from "lucide-react";
 import {
@@ -19,12 +20,12 @@ interface Share {
 }
 
 export function SharesCard() {
-  const [shares, setShares] = useState<Share[]>([]);
+  const [shares, setShares] = useState<Share[] | null>(null);
 
   function refresh() {
-    return fetch("/api/shares")
-      .then((r) => r.json())
-      .then(setShares);
+    return api<Share[]>("/api/shares")
+      .then(setShares)
+      .catch(() => setShares((prev) => prev ?? []));
   }
 
   useEffect(() => {
@@ -54,10 +55,12 @@ export function SharesCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {shares.length === 0 ? (
-          <p className="text-muted-foreground text-sm">还没有分享过收藏。</p>
+        {shares === null ? (
+          <ListSkeleton rows={2} />
+        ) : shares.length === 0 ? (
+          <p className="animate-fade-in text-muted-foreground text-sm">还没有分享过收藏。</p>
         ) : (
-          <div className="space-y-1">
+          <div className="animate-fade-in space-y-1">
             {shares.map((s) => (
               <div
                 key={s.slug}

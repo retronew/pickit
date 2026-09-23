@@ -37,7 +37,7 @@ export function ReembedCard() {
         </CardDescription>
       </CardHeader>
       {job && job.status !== "idle" && (
-        <CardContent>
+        <CardContent className="animate-fade-in">
           <JobProgress job={job} />
         </CardContent>
       )}

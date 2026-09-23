@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DatabaseIcon } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#components/ui/select";
 import { Input } from "#components/ui/input";
+import { Skeleton } from "#components/ui/skeleton";
 import { Button } from "#components/ui/button";
 import { Confirm } from "#components/Confirm";
 import { api, toastError, toastSuccess } from "#lib/api";
@@ -75,14 +76,21 @@ export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
     }
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="flex items-center justify-between gap-4 rounded-xl border bg-muted/30 px-3 py-2.5">
+        <Skeleton className="h-4 w-72 max-w-full" />
+        <Skeleton className="h-8 w-40 rounded-lg" />
+      </div>
+    );
+  }
   const { stats } = data;
   const current = String(data.retentionDays);
   const selectValue = custom !== null ? "custom" : current in PRESETS ? current : "custom";
   const items = current in PRESETS ? PRESETS : { ...PRESETS, custom: `${data.retentionDays} 天` };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border bg-muted/30 px-3 py-2 text-sm">
+    <div className="flex animate-fade-in flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border bg-muted/30 px-3 py-2 text-sm">
       <span className="flex items-center gap-1.5 text-muted-foreground">
         <DatabaseIcon className="size-4" />
         共 <span className="font-medium text-foreground tabular-nums">{stats.count.toLocaleString()}</span> 条
