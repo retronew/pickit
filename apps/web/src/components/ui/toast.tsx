@@ -5,7 +5,7 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   InfoIcon,
-  LoaderCircleIcon,
+  LoaderIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 import type React from "react";
@@ -15,7 +15,7 @@ import { buttonVariants } from "#components/ui/button.tsx";
 const TOAST_ICONS = {
   error: CircleAlertIcon,
   info: InfoIcon,
-  loading: LoaderCircleIcon,
+  loading: LoaderIcon,
   success: CircleCheckIcon,
   warning: TriangleAlertIcon,
 } as const;
