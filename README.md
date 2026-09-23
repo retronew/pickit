@@ -83,6 +83,12 @@ pnpm import -- --file path/to/bookmarks.md
 | `pnpm db:migrate` / `pnpm db:migrate:remote` | Apply D1 migrations locally / remotely |
 | `pnpm deploy` | Build and deploy the Worker |
 
+### Tests
+
+- **API route tests** (`*.int.test.ts`) run the real Worker — routes, auth and audit middleware — against an in-memory SQLite database built from the real migrations (`apps/api/src/test/`, using Node's built-in `node:sqlite`, so Node 22.13+ is required). They cover items, trash, bulk actions, import / export, search, tags, shares, settings, authentication and the audit log.
+- **Unit tests** cover vectors, jobs, AI settings / URLs, importers, audit description and redaction, and the web app's API client, save flow, filters and formatting.
+- A test fails if any audit action the API records has no display label.
+
 ## Deploy to Cloudflare
 
 Workers and D1 both fit comfortably in the free tier for a personal library.

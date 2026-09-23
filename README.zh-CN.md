@@ -83,6 +83,12 @@ pnpm import -- --file path/to/bookmarks.md
 | `pnpm db:migrate` / `pnpm db:migrate:remote` | 在本地 / 远程执行 D1 迁移 |
 | `pnpm deploy` | 构建并部署 Worker |
 
+### 测试
+
+- **API 路由测试**（`*.int.test.ts`）运行真实的 Worker（路由、登录校验和审计中间件），数据库是用真实迁移文件建出来的内存 SQLite（`apps/api/src/test/`，使用 Node 内置的 `node:sqlite`，需要 Node 22.13 以上）。覆盖收藏、回收站、批量操作、导入导出、搜索、标签、分享、设置、登录鉴权和审计日志。
+- **单元测试**覆盖向量、批量任务、AI 配置与请求地址、导入解析、审计描述与脱敏，以及前端的请求封装、保存流程、筛选和格式化。
+- 如果 API 记录的某个审计动作没有显示名称，测试会失败。
+
 ## 部署到 Cloudflare
 
 个人书签库的量级，Workers 和 D1 的免费额度完全够用。

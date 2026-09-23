@@ -26,7 +26,7 @@ export const EMPTY_FILTERS: AuditFilters = {
 const PAGE_SIZE = 50;
 const LIVE_INTERVAL_MS = 5000;
 
-function toParams(f: AuditFilters, extra: Record<string, string | number> = {}) {
+export function toParams(f: AuditFilters, extra: Record<string, string | number> = {}) {
   const p = new URLSearchParams();
   for (const key of ["category", "action", "actor", "result", "q"] as const) {
     if (f[key]) p.set(key, f[key]);

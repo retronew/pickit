@@ -1,12 +1,19 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
-import { uniq, sortBy } from "es-toolkit";
+import { uniq } from "es-toolkit";
 import type { Item } from "#hooks/useItems";
 import type { CategoryOption } from "#components/items/CategoryFilter";
 import type { TagOption } from "#components/items/TagFilter";
 import { groupByCategory } from "#lib/groupItems";
+import {
+  categoryCounts,
+  matchesFilters,
+  sortItems,
+  tagCounts,
+  type SortKey,
+} from "#lib/itemFilters";
 
-export type SortKey = "pinned" | "created" | "updated" | "name";
+export type { SortKey };
 
 export const SORT_LABELS: Record<SortKey, string> = {
   pinned: "默认排序",
@@ -14,18 +21,6 @@ export const SORT_LABELS: Record<SortKey, string> = {
   updated: "最近更新",
   name: "按名称",
 };
-
-function inCategory(item: Item, category: string) {
-  return !category || item.category === category || item.category.startsWith(`${category}/`);
-}
-
-function countBy(values: Iterable<string>) {
-  const counts = new Map<string, number>();
-  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
-  return [...counts]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([value, count]) => ({ value, count }));
-}
 
 /**
  * Category / tag filters (tags live in the URL), sorting and grouping.
@@ -59,47 +54,16 @@ export function useItemFilters(items: Item[], hits: Item[] | null) {
     [items],
   );
 
-  // Counts include parent categories: "前端/React" also counts for "前端".
-  const categoryOptions = useMemo<CategoryOption[]>(
-    () =>
-      countBy(
-        items.flatMap((item) => {
-          if (!item.category) return [];
-          const parts = item.category.split("/");
-          return parts.map((_, depth) => parts.slice(0, depth + 1).join("/"));
-        }),
-      ),
-    [items],
-  );
-
-  const tagOptions = useMemo<TagOption[]>(
-    () => countBy(items.flatMap((item) => [...new Set(item.tags)])),
-    [items],
-  );
+  const categoryOptions = useMemo<CategoryOption[]>(() => categoryCounts(items), [items]);
+  const tagOptions = useMemo<TagOption[]>(() => tagCounts(items), [items]);
 
   const allTags = useMemo(() => tagOptions.map((option) => option.value), [tagOptions]);
 
-  const matches = (item: Item) =>
-    inCategory(item, category) && selectedTags.every((tag) => item.tags.includes(tag));
-
-  const sorted = useMemo(() => {
-    const filtered = items.filter(matches);
-    if (sortKey === "pinned") return filtered;
-    const byKey =
-      sortKey === "created"
-        ? (list: Item[]) => sortBy(list, [(i) => -i.createdAt])
-        : sortKey === "updated"
-          ? (list: Item[]) => sortBy(list, [(i) => -i.updatedAt])
-          : (list: Item[]) => sortBy(list, [(i) => i.name.toLowerCase()]);
-    return [...byKey(filtered.filter((i) => i.pinned)), ...byKey(filtered.filter((i) => !i.pinned))];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, category, selectedTags, sortKey]);
-
-  const visibleItems = useMemo(
-    () => (hits ? hits.filter(matches) : sorted),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hits, sorted, category, selectedTags],
-  );
+  // Search hits keep their relevance order and are only filtered.
+  const visibleItems = useMemo(() => {
+    const matches = (item: Item) => matchesFilters(item, category, selectedTags);
+    return hits ? hits.filter(matches) : sortItems(items.filter(matches), sortKey);
+  }, [items, hits, category, selectedTags, sortKey]);
 
   const grouped = useMemo(() => groupByCategory(visibleItems), [visibleItems]);
 
