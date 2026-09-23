@@ -1,4 +1,4 @@
-import type { Env, ItemRow } from "#types";
+import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -22,7 +22,7 @@ export async function checkLink(url: string): Promise<number | null> {
 export async function runDeadLinkCheck(env: Env) {
   const cutoff = Date.now() - SEVEN_DAYS_MS;
   const { results } = await env.DB.prepare(
-    `SELECT * FROM items WHERE deleted_at IS NULL AND url != ''
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL AND url != ''
      AND (checked_at IS NULL OR checked_at < ?)
      ORDER BY checked_at IS NOT NULL, checked_at ASC
      LIMIT ?`,
@@ -50,7 +50,7 @@ export async function runDeadLinkCheck(env: Env) {
 export async function runDailyBackup(env: Env) {
   if (!env.BACKUPS) return;
   const { results } = await env.DB.prepare(
-    "SELECT * FROM items WHERE deleted_at IS NULL ORDER BY id",
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL ORDER BY id`,
   ).all<ItemRow>();
   const items = results.map((r) => ({
     id: r.id,

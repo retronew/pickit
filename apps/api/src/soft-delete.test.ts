@@ -33,11 +33,16 @@ describe("soft-delete filtering", () => {
     expect((src.match(/deleted_at IS NULL/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
-  it("search.ts excludes deleted items from FTS, LIKE fallback, and semantic search", () => {
+  it("search.ts excludes deleted items from FTS and the LIKE fallback", () => {
     const src = read("routes/search.ts");
-    expect(src).toMatch(/deleted_at IS NULL/);
     const occurrences = src.match(/deleted_at IS NULL/g) ?? [];
-    expect(occurrences.length).toBeGreaterThanOrEqual(3);
+    expect(occurrences.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("vectors.ts excludes deleted items from semantic search and duplicate scans", () => {
+    const src = read("vectors.ts");
+    // nearest(), similarGroups()
+    expect((src.match(/deleted_at IS NULL/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
   it("chat.ts excludes deleted items from the retrieval context", () => {

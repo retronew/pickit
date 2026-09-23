@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { jwt } from "hono/jwt";
-import type { Env, ItemRow } from "#types";
+import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { authRoutes } from "#routes/auth";
 import { itemRoutes } from "#routes/items";
 import { searchRoutes } from "#routes/search";
@@ -10,6 +10,7 @@ import { tagRoutes } from "#routes/tags";
 import { shareRoutes } from "#routes/shares";
 import { jobRoutes } from "#routes/jobs";
 import { advanceRunningJobs } from "#job-runners";
+import { backfillCompactVectors } from "#vectors";
 import { getApiToken } from "#settings";
 import { runDailyBackup, runDeadLinkCheck } from "#cron";
 
@@ -73,7 +74,7 @@ app.get("/api/public/shares/:slug", async (c) => {
 
   if (share.type === "item") {
     const item = await c.env.DB.prepare(
-      "SELECT * FROM items WHERE id = ? AND deleted_at IS NULL",
+      `SELECT ${ITEM_COLUMNS} FROM items WHERE id = ? AND deleted_at IS NULL`,
     )
       .bind(Number(share.value))
       .first<ItemRow>();
@@ -99,6 +100,12 @@ export default {
     if (controller.cron === JOB_CRON) {
       // Keeps re-embedding / organizing jobs moving when no page drives them.
       ctx.waitUntil(advanceRunningJobs(env));
+      // Fills compact vectors for embeddings stored before they existed.
+      ctx.waitUntil(
+        (async () => {
+          for (let i = 0; i < 5 && (await backfillCompactVectors(env.DB)) > 0; i++);
+        })(),
+      );
       return;
     }
     ctx.waitUntil(runDailyBackup(env));

@@ -6,14 +6,26 @@ import {
   parseJsonItems,
   type ImportRow,
 } from "@pickit/shared";
-import type { Env, ItemRow } from "#types";
+import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
+import { nearest, similarGroups, vectorColumns, asFloat32 } from "#vectors";
 import type { AiSettings } from "#ai";
 import { getSettings } from "#settings";
 import { isChatConfigured, isEmbeddingConfigured } from "@pickit/shared";
-import { createProvider, embedText, embeddingInput, cosSim, type Provider } from "#ai";
+import { createProvider, embedText, embeddingInput, type Provider } from "#ai";
 import { checkLink } from "#cron";
 
 export const itemRoutes = new Hono<{ Bindings: Env }>();
+
+export async function itemsByIds(db: D1Database, ids: number[]): Promise<Map<number, ItemRow>> {
+  if (!ids.length) return new Map();
+  const { results } = await db
+    .prepare(
+      `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL AND id IN (${ids.map(() => "?").join(",")})`,
+    )
+    .bind(...ids)
+    .all<ItemRow>();
+  return new Map(results.map((r) => [r.id, r]));
+}
 
 function toItemJson(r: ItemRow) {
   return {
@@ -25,7 +37,7 @@ function toItemJson(r: ItemRow) {
     category: r.category,
     tags: JSON.parse(r.tags || "[]"),
     pinned: !!r.pinned,
-    hasEmbedding: !!r.embedding,
+    hasEmbedding: !!r.has_embedding,
     clickCount: r.click_count,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -38,7 +50,7 @@ function toItemJson(r: ItemRow) {
 
 itemRoutes.get("/", async (c) => {
   const { category } = c.req.query();
-  let sql = "SELECT * FROM items WHERE deleted_at IS NULL";
+  let sql = `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL`;
   const args: string[] = [];
   if (category) {
     sql += " AND category = ?";
@@ -95,7 +107,7 @@ itemRoutes.get("/stats", async (c) => {
 
 itemRoutes.get("/trash", async (c) => {
   const { results } = await c.env.DB.prepare(
-    "SELECT * FROM items WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC",
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
   ).all<ItemRow>();
   return c.json(results.map(toItemJson));
 });
@@ -186,7 +198,7 @@ itemRoutes.post("/import", async (c) => {
 itemRoutes.get("/export", async (c) => {
   const format = c.req.query("format") ?? "json";
   const { results } = await c.env.DB.prepare(
-    "SELECT * FROM items WHERE deleted_at IS NULL ORDER BY category, name",
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL ORDER BY category, name`,
   ).all<ItemRow>();
   const items = results.map(toItemJson);
   const ts = new Date().toISOString().slice(0, 10);
@@ -397,24 +409,12 @@ async function findSimilarItems(
 ) {
   const vec = await embedText(provider, embeddingInput(item));
   if (!vec) return [];
-  const qf = new Float32Array(vec);
-
-  const { results } = await db
-    .prepare(
-      "SELECT id, name, url, category, embedding FROM items WHERE embedding IS NOT NULL AND deleted_at IS NULL",
-    )
-    .all<{ id: number; name: string; url: string; category: string; embedding: ArrayBuffer }>();
-
-  return results
-    .map((r) => {
-      const vf = new Float32Array(r.embedding);
-      if (vf.length !== qf.length) return null;
-      const { embedding: _embedding, ...rest } = r;
-      return { ...rest, score: cosSim(qf, vf) };
-    })
-    .filter((r): r is NonNullable<typeof r> => r != null && r.score > 0.85)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+  const top = await nearest(db, vec, provider.embeddingModelId!, { limit: 3, minScore: 0.85 });
+  const rows = await itemsByIds(db, top.map((t) => t.id));
+  return top.flatMap((t) => {
+    const r = rows.get(t.id);
+    return r ? [{ id: r.id, name: r.name, url: r.url, category: r.category, score: t.score }] : [];
+  });
 }
 
 itemRoutes.put("/:id", async (c) => {
@@ -429,7 +429,7 @@ itemRoutes.put("/:id", async (c) => {
     pinned?: boolean;
     allowDuplicate?: boolean;
   }>();
-  const existing = await c.env.DB.prepare("SELECT * FROM items WHERE id = ?")
+  const existing = await c.env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`)
     .bind(id)
     .first<ItemRow>();
   if (!existing) return c.json({ error: "not found" }, 404);
@@ -475,28 +475,25 @@ itemRoutes.put("/:id", async (c) => {
 itemRoutes.get("/:id/related", async (c) => {
   const id = Number(c.req.param("id"));
   const limit = Math.min(Number(c.req.query("limit")) || 6, 20);
-  const row = await c.env.DB.prepare("SELECT * FROM items WHERE id = ?")
+  const row = await c.env.DB.prepare(
+    `SELECT ${ITEM_COLUMNS}, embedding FROM items WHERE id = ?`,
+  )
     .bind(id)
     .first<ItemRow>();
   if (!row) return c.json({ error: "not found" }, 404);
 
-  if (row.embedding) {
-    const qf = new Float32Array(row.embedding);
-    const { results } = await c.env.DB.prepare(
-      "SELECT * FROM items WHERE id != ? AND embedding IS NOT NULL AND deleted_at IS NULL",
-    )
-      .bind(id)
-      .all<ItemRow>();
-    const scored = results
-      .filter((r) => r.embedding && new Float32Array(r.embedding).length === qf.length)
-      .map((r) => ({ row: r, score: cosSim(qf, new Float32Array(r.embedding!)) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
-    if (scored.length > 0) return c.json(scored.map((s) => toItemJson(s.row)));
+  if (row.embedding && row.embedding_model) {
+    const top = await nearest(c.env.DB, asFloat32(row.embedding), row.embedding_model, {
+      limit,
+      excludeId: id,
+    });
+    const rows = await itemsByIds(c.env.DB, top.map((t) => t.id));
+    const related = top.flatMap((t) => (rows.has(t.id) ? [toItemJson(rows.get(t.id)!)] : []));
+    if (related.length > 0) return c.json(related);
   }
 
   const { results } = await c.env.DB.prepare(
-    "SELECT * FROM items WHERE id != ? AND category = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?",
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE id != ? AND category = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?`,
   )
     .bind(id, row.category, limit)
     .all<ItemRow>();
@@ -505,7 +502,7 @@ itemRoutes.get("/:id/related", async (c) => {
 
 itemRoutes.post("/:id/summarize", async (c) => {
   const id = Number(c.req.param("id"));
-  const row = await c.env.DB.prepare("SELECT * FROM items WHERE id = ?")
+  const row = await c.env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`)
     .bind(id)
     .first<ItemRow>();
   if (!row) return c.json({ error: "not found" }, 404);
@@ -530,7 +527,7 @@ itemRoutes.post("/:id/summarize", async (c) => {
 
 itemRoutes.post("/:id/check", async (c) => {
   const id = Number(c.req.param("id"));
-  const row = await c.env.DB.prepare("SELECT * FROM items WHERE id = ?")
+  const row = await c.env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`)
     .bind(id)
     .first<ItemRow>();
   if (!row) return c.json({ error: "not found" }, 404);
@@ -546,7 +543,7 @@ itemRoutes.post("/:id/check", async (c) => {
 
 itemRoutes.get("/duplicates", async (c) => {
   const { results } = await c.env.DB.prepare(
-    "SELECT * FROM items WHERE deleted_at IS NULL",
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL`,
   ).all<ItemRow>();
 
   const groups: ItemRow[][] = [];
@@ -565,27 +562,12 @@ itemRoutes.get("/duplicates", async (c) => {
     }
   }
 
-  const byCategory = new Map<string, ItemRow[]>();
-  for (const r of results) {
-    if (used.has(r.id) || !r.embedding) continue;
-    if (!byCategory.has(r.category)) byCategory.set(r.category, []);
-    byCategory.get(r.category)!.push(r);
-  }
-  for (const list of byCategory.values()) {
-    for (let i = 0; i < list.length; i++) {
-      if (used.has(list[i].id)) continue;
-      const group = [list[i]];
-      const vi = new Float32Array(list[i].embedding!);
-      for (let j = i + 1; j < list.length; j++) {
-        if (used.has(list[j].id)) continue;
-        const vj = new Float32Array(list[j].embedding!);
-        if (vj.length !== vi.length) continue;
-        if (cosSim(vi, vj) > 0.92) group.push(list[j]);
-      }
-      if (group.length > 1) {
-        groups.push(group);
-        group.forEach((r) => used.add(r.id));
-      }
+  const settings = await getSettings(c.env.DB);
+  const model = settings ? createProvider(settings)?.embeddingModelId : undefined;
+  if (model) {
+    const byId = new Map(results.map((r) => [r.id, r]));
+    for (const ids of await similarGroups(c.env.DB, model, used)) {
+      groups.push(ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : [])));
     }
   }
 
@@ -600,7 +582,7 @@ itemRoutes.post("/merge", async (c) => {
   if (!keepId || !Array.isArray(removeIds) || removeIds.length === 0) {
     return c.json({ error: "keepId and removeIds required" }, 400);
   }
-  const keep = await c.env.DB.prepare("SELECT * FROM items WHERE id = ?")
+  const keep = await c.env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`)
     .bind(keepId)
     .first<ItemRow>();
   if (!keep) return c.json({ error: "not found" }, 404);
@@ -721,7 +703,7 @@ itemRoutes.delete("/:id/purge", async (c) => {
 
 itemRoutes.post("/:id/reembed", async (c) => {
   const id = Number(c.req.param("id"));
-  const row = await c.env.DB.prepare("SELECT * FROM items WHERE id = ?")
+  const row = await c.env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`)
     .bind(id)
     .first<ItemRow>();
   if (!row) return c.json({ error: "not found" }, 404);
@@ -751,7 +733,7 @@ itemRoutes.post("/:id/reembed", async (c) => {
 itemRoutes.get("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const row = await c.env.DB.prepare(
-    "SELECT * FROM items WHERE id = ? AND deleted_at IS NULL",
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE id = ? AND deleted_at IS NULL`,
   )
     .bind(id)
     .first<ItemRow>();
@@ -769,15 +751,11 @@ export async function embedItem(
   if (!provider?.embedding) return;
   const vec = await embedText(provider, embeddingInput(item));
   if (!vec) return;
+  const cols = vectorColumns(vec);
   await env.DB.prepare(
-    "UPDATE items SET embedding=?, embedding_model=? WHERE id=?",
+    "UPDATE items SET embedding=?, vec=?, embedding_model=? WHERE id=?",
   )
-    .bind(
-      new Uint8Array(new Float32Array(vec).buffer),
-      provider.embeddingModelId,
-      id,
-    )
+    .bind(cols.embedding, cols.vec, provider.embeddingModelId, id)
     .run();
 }
 
-export { cosSim };

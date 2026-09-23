@@ -1,7 +1,9 @@
 import { Hono } from "hono";
-import type { Env, ItemRow } from "#types";
+import { type Env, type ItemRow, ITEM_COLUMNS, itemColumns } from "#types";
+import { nearest } from "#vectors";
+import { itemsByIds } from "#routes/items";
 import { getSettings } from "#settings";
-import { createProvider, cosSim } from "#ai";
+import { createProvider } from "#ai";
 
 export const searchRoutes = new Hono<{ Bindings: Env }>();
 
@@ -36,7 +38,7 @@ searchRoutes.get("/", async (c) => {
   // 1. FTS5 keyword search
   try {
     const { results } = await c.env.DB.prepare(
-      `SELECT i.* FROM items_fts f JOIN items i ON i.id = f.rowid
+      `SELECT ${itemColumns("i")} FROM items_fts f JOIN items i ON i.id = f.rowid
        WHERE items_fts MATCH ? AND i.deleted_at IS NULL ORDER BY rank LIMIT 30`,
     )
       .bind(ftsQuery(q))
@@ -47,7 +49,7 @@ searchRoutes.get("/", async (c) => {
   } catch {
     // fallback LIKE
     const { results } = await c.env.DB.prepare(
-      "SELECT * FROM items WHERE (name LIKE ? OR note LIKE ? OR category LIKE ?) AND deleted_at IS NULL LIMIT 30",
+      `SELECT ${ITEM_COLUMNS} FROM items WHERE (name LIKE ? OR note LIKE ? OR category LIKE ?) AND deleted_at IS NULL LIMIT 30`,
     )
       .bind(`%${q}%`, `%${q}%`, `%${q}%`)
       .all<ItemRow>();
@@ -62,19 +64,13 @@ searchRoutes.get("/", async (c) => {
       const { embedText } = await import("#ai");
       const qvec = await embedText(provider, q);
       if (qvec) {
-        const qf = new Float32Array(qvec);
-        const { results } = await c.env.DB.prepare(
-          "SELECT * FROM items WHERE embedding IS NOT NULL AND deleted_at IS NULL",
-        ).all<ItemRow>();
-        const scored: Hit[] = [];
-        for (const r of results) {
-          if (!r.embedding) continue;
-          const vec = new Float32Array(r.embedding);
-          if (vec.length !== qf.length) continue;
-          scored.push({ ...toHit(r), score: cosSim(qf, vec) });
-        }
-        scored.sort((a, b) => b.score - a.score);
-        for (const h of scored.slice(0, 20)) {
+        const top = await nearest(c.env.DB, qvec, provider.embeddingModelId!, { limit: 20 });
+        const rows = await itemsByIds(c.env.DB, top.map((t) => t.id));
+        const scored: Hit[] = top.flatMap((t) => {
+          const r = rows.get(t.id);
+          return r ? [{ ...toHit(r), score: t.score }] : [];
+        });
+        for (const h of scored) {
           const existing = hits.get(h.id);
           if (existing) existing.score += 0.5 * h.score; // RRF-ish fusion
           else hits.set(h.id, h);

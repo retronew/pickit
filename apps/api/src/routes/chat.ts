@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { streamText } from "ai";
-import type { Env, ItemRow } from "#types";
+import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
+import { nearest } from "#vectors";
 import { getSettings } from "#settings";
-import { createProvider, cosSim } from "#ai";
+import { createProvider } from "#ai";
 
 export const chatRoutes = new Hono<{ Bindings: Env }>();
 
@@ -43,24 +44,17 @@ chatRoutes.post("/", async (c) => {
   // retrieve relevant items: semantic if possible, otherwise dump categories/summary
   let context: ItemLite[] = [];
   const { results: allRows } = await c.env.DB.prepare(
-    "SELECT * FROM items WHERE deleted_at IS NULL",
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL`,
   ).all<ItemRow>();
 
-  if (provider.embedding && allRows.some((r) => r.embedding)) {
+  if (provider.embedding && allRows.some((r) => r.has_embedding)) {
     try {
       const { embedText } = await import("#ai");
       const qvec = await embedText(provider, lastUser.content);
       if (qvec) {
-        const qf = new Float32Array(qvec);
-        context = allRows
-          .filter((r) => r.embedding)
-          .map((r) => ({
-            item: toLite(r),
-            score: cosSim(qf, new Float32Array(r.embedding!)),
-          }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 8)
-          .map((x) => x.item);
+        const top = await nearest(c.env.DB, qvec, provider.embeddingModelId!, { limit: 8 });
+        const byId = new Map(allRows.map((r) => [r.id, r]));
+        context = top.flatMap((t) => (byId.has(t.id) ? [toLite(byId.get(t.id)!)] : []));
       }
     } catch {
       // fallthrough to keyword

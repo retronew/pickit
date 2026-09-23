@@ -1,4 +1,5 @@
-import type { Env, ItemRow } from "#types";
+import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
+import { vectorColumns } from "#vectors";
 import { getSettings } from "#settings";
 import { createProvider, embedText, embedTexts, describeError, embeddingInput } from "#ai";
 import { isChatConfigured, isEmbeddingConfigured, type AiSettings } from "@pickit/shared";
@@ -48,7 +49,7 @@ export async function selectJobIds(
 async function loadRows(env: Env, ids: number[]): Promise<ItemRow[]> {
   if (!ids.length) return [];
   const { results } = await env.DB.prepare(
-    `SELECT * FROM items WHERE deleted_at IS NULL AND id IN (${ids.map(() => "?").join(",")})`,
+    `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL AND id IN (${ids.map(() => "?").join(",")})`,
   )
     .bind(...ids)
     .all<ItemRow>();
@@ -96,13 +97,12 @@ async function reembedBatch(env: Env, settings: AiSettings, ids: number[]): Prom
     }
   }
 
-  const stmts = [...vectors].map(([id, v]) =>
-    env.DB.prepare("UPDATE items SET embedding=?, embedding_model=? WHERE id=?").bind(
-      new Uint8Array(new Float32Array(v).buffer),
-      provider.embeddingModelId,
-      id,
-    ),
-  );
+  const stmts = [...vectors].map(([id, v]) => {
+    const cols = vectorColumns(v);
+    return env.DB.prepare(
+      "UPDATE items SET embedding=?, vec=?, embedding_model=? WHERE id=?",
+    ).bind(cols.embedding, cols.vec, provider.embeddingModelId, id);
+  });
   if (stmts.length) await env.DB.batch(stmts);
   result.doneIds.push(...vectors.keys());
   assertNotAllFailed(rows, result);
