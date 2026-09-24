@@ -4,18 +4,20 @@ import { api, toastError, toastSuccess } from "#lib/api";
 import { CRON_TASK_LABELS } from "#lib/cron";
 import { m } from "#lib/i18n";
 
-/** Refreshed this often while the tab is open: next runs and new logs move on their own. */
-const POLL_MS = 30_000;
+/** Polled this often while live refresh is on. */
+const LIVE_INTERVAL_MS = 10_000;
 
-/** Scheduled tasks, their runs, and "Run now". */
-export function useCron() {
+/** Scheduled tasks, their runs and "Run now"; polls while `live` is on. */
+export function useCron(live: boolean) {
   const [overview, setOverview] = useState<CronOverview | null>(null);
   const [running, setRunning] = useState<CronTaskId | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       setOverview(await api<CronOverview>("/api/cron"));
+      setUpdatedAt(Date.now());
     } catch (err) {
       toastError(m.cron_load_failed(), err, { id: "cron" });
     }
@@ -30,9 +32,13 @@ export function useCron() {
 
   useEffect(() => {
     refresh();
-    const timer = setInterval(refresh, POLL_MS);
-    return () => clearInterval(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    if (!live) return;
+    const timer = setInterval(refresh, LIVE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [live, refresh]);
 
   async function runNow(task: CronTaskId) {
     setRunning(task);
@@ -48,5 +54,5 @@ export function useCron() {
     }
   }
 
-  return { overview, running, refreshing, reload, runNow };
+  return { overview, running, refreshing, updatedAt, reload, runNow };
 }

@@ -476,7 +476,6 @@
   "cron_next": "Next {when}",
   "cron_processed": "{count} processed",
   "cron_quiet_hint": "Per-minute tasks are logged only when they did something or failed",
-  "cron_refresh": "Refresh",
   "cron_run_done": "Ran: {task}",
   "cron_run_failed": "Run failed",
   "cron_run_now": "Run now",

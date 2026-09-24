@@ -476,7 +476,6 @@
   "cron_next": "下次 {when}",
   "cron_processed": "处理 {count} 条",
   "cron_quiet_hint": "每分钟的任务只在处理了内容或出错时记录",
-  "cron_refresh": "刷新",
   "cron_run_done": "已执行：{task}",
   "cron_run_failed": "执行失败",
   "cron_run_now": "立即执行",

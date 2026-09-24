@@ -12,8 +12,8 @@ const clock = new Intl.DateTimeFormat(intlLocale(), {
   hour12: false,
 });
 
-/** Live toggle, manual refresh and the last update time. */
-export function AuditToolbar({
+/** Live (auto) refresh toggle, a manual refresh and the last update time; shared by pages that poll. */
+export function LiveRefreshControls({
   live,
   onLiveChange,
   onRefresh,

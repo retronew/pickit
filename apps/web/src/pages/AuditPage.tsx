@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuditLog, EMPTY_FILTERS, type AuditFilters } from "#hooks/useAuditLog";
 import { AuditFiltersBar, type Facet } from "#components/audit/AuditFiltersBar";
 import { AuditEntryRow } from "#components/audit/AuditEntryRow";
-import { AuditToolbar } from "#components/audit/AuditToolbar";
+import { LiveRefreshControls } from "#components/LiveRefreshControls";
+import { usePersistentFlag } from "#hooks/usePersistentFlag";
 import { AuditRetention } from "#components/audit/AuditRetention";
 import { Confirm } from "#components/Confirm";
 import { PageLoading } from "#components/PageLoading";
@@ -12,33 +13,14 @@ import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui
 import { api } from "#lib/api";
 import { m } from "#lib/i18n";
 
-const LIVE_KEY = "pickit-audit-live";
-
-function readLive(): boolean {
-  try {
-    return localStorage.getItem(LIVE_KEY) !== "0";
-  } catch {
-    return true;
-  }
-}
-
 export function AuditPage() {
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
-  const [live, setLive] = useState(readLive);
+  const [live, changeLive] = usePersistentFlag("pickit-audit-live", true);
   const [facets, setFacets] = useState<{ actions: Facet[]; actors: Facet[] }>({
     actions: [],
     actors: [],
   });
   const log = useAuditLog(filters, live);
-
-  function changeLive(next: boolean) {
-    setLive(next);
-    try {
-      localStorage.setItem(LIVE_KEY, next ? "1" : "0");
-    } catch {
-      // Not remembered; still applies now.
-    }
-  }
 
   // Facet counts follow the list: reloaded whenever it refreshes.
   useEffect(() => {
@@ -58,7 +40,7 @@ export function AuditPage() {
             {m.audit_description()}
           </p>
         </div>
-        <AuditToolbar
+        <LiveRefreshControls
           live={live}
           onLiveChange={changeLive}
           onRefresh={log.reload}
