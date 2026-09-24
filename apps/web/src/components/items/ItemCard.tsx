@@ -116,7 +116,7 @@ export const ItemCard = memo(function ItemCard({
             </a>
           )}
           {!selectMode && isDeadLink(item) && (
-            <Badge variant="destructive" size="sm" className="shrink-0">
+            <Badge variant="destructive" size="sm" className="shrink-0 rounded-full px-1.5">
               {m.item_dead()}
             </Badge>
           )}

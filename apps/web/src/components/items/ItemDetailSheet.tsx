@@ -108,6 +108,7 @@ export function ItemDetailSheet({
                         : "destructive"
                     }
                     size="sm"
+                    className="rounded-full px-1.5"
                   >
                     {linkStatus.httpStatus != null && linkStatus.httpStatus < 400
                       ? m.link_ok()
