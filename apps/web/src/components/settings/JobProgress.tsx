@@ -3,7 +3,7 @@ import { Skeleton } from "#components/ui/skeleton";
 import { Button } from "#components/ui/button";
 import { m } from "#lib/i18n";
 
-export type JobKind = "reembed" | "organize";
+export type JobKind = "reembed" | "organize" | "summarize";
 
 export interface JobFailure {
   id: number;

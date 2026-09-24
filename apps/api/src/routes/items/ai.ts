@@ -10,7 +10,8 @@ import { getSettings } from "#settings";
 import { itemsByIds, toItemJson, findSimilarItems, embedItem } from "./helpers";
 import { tr } from "#i18n";
 import { aiLocale } from "#locale";
-import { analyzePrompt, parseJsonReply, summarizePrompt, translatePrompt } from "#prompts";
+import { analyzePrompt, parseJsonReply, translatePrompt } from "#prompts";
+import { summarizeItem } from "#summarize";
 import { isLocale } from "@pickit/shared/i18n";
 
 export const aiRoutes = new Hono<{ Bindings: Env }>();
@@ -114,15 +115,7 @@ aiRoutes.post("/:id/summarize", async (c) => {
   if (!provider?.chat) {
     return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
-  const { generateText } = await import("ai");
-  const { text } = await generateText({
-    model: provider.chat,
-    ...summarizePrompt(await aiLocale(c.env.DB), row),
-  });
-  const summary = text.trim();
-  await c.env.DB.prepare("UPDATE items SET ai_summary=? WHERE id=?")
-    .bind(summary, id)
-    .run();
+  const summary = await summarizeItem(c.env.DB, provider.chat, row, await aiLocale(c.env.DB));
   return c.json({ summary });
 });
 

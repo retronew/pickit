@@ -1,4 +1,4 @@
-// Resumable batch jobs (re-embedding, AI organizing).
+// Resumable batch jobs (re-embedding, AI organizing, AI summaries).
 //
 // Workers kill waitUntil() work shortly after the response, so a job must
 // never run as one long loop. Instead it is advanced in small steps: the
@@ -6,7 +6,7 @@
 // cron keeps stepping when nobody is watching. Each step claims a short lock
 // so two drivers never process the same batch.
 
-export type JobKind = "reembed" | "organize";
+export type JobKind = "reembed" | "organize" | "summarize";
 export type JobStatus = "idle" | "running" | "paused" | "done";
 
 export interface JobFailure {

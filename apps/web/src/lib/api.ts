@@ -61,6 +61,11 @@ export function toastSuccess(title: string, { description, id, action }: ToastOp
   });
 }
 
+/** A spinner toast for work in progress; update it by reusing the id. */
+export function toastLoading(title: string, { id }: Pick<ToastOptions, "id"> = {}) {
+  toastManager.add({ title, id, type: "loading", timeout: 0 });
+}
+
 export function toastError(title: string, err?: unknown, { id }: Pick<ToastOptions, "id"> = {}) {
   toastManager.add({
     title,

@@ -143,6 +143,7 @@ export function ItemsPage() {
           onDelete={selection.bulkDelete}
           onEditTags={selection.editTags}
           onAiOrganize={selection.aiOrganize}
+          onSummarize={selection.summarize}
           onCancel={selection.exitSelectMode}
         />
       )}

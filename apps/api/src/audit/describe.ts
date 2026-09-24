@@ -20,6 +20,8 @@ const msg = (key: string, params?: Params): MessageRef => ({ key: `audit_sum_${k
 const quote = (text: unknown): MessageRef | string =>
   text ? { key: "audit_quote", params: { text: String(text) } } : "";
 
+const JOB_KINDS = new Set(["reembed", "organize", "summarize"]);
+
 const BULK_ACTIONS = new Set([
   "delete",
   "pin",
@@ -221,7 +223,10 @@ export function describe(
     return { action: "share.revoke", target: `share:${m[1]}`, summary: msg("share_revoke", { slug: m[1] }) };
   }
   if ((m = p.match(/^\/jobs\/(\w+)\/(start|pause|resume|retry)$/))) {
-    const job: MessageRef = { key: m[1] === "reembed" ? "audit_job_reembed" : "audit_job_organize" };
+    // Known jobs get their label; anything else (a 404) shows the raw name.
+    const job: MessageRef = JOB_KINDS.has(m[1])
+      ? { key: `audit_job_${m[1]}` }
+      : { key: "audit_quote", params: { text: m[1] } };
     const mode = body.mode ? msg("mode", { mode: String(body.mode) }) : "";
     return { action: `job.${m[2]}`, target: `job:${m[1]}`, summary: msg(`job_${m[2]}`, { job, mode }) };
   }

@@ -9,6 +9,7 @@ import {
   PlusIcon,
   MinusIcon,
   SparklesIcon,
+  TextQuoteIcon,
 } from "lucide-react";
 import { Menu, MenuTrigger, MenuPopup, MenuItem } from "#components/ui/menu";
 import { Button } from "#components/ui/button";
@@ -30,6 +31,7 @@ export function BulkActionBar({
   onMoveCategory,
   onEditTags,
   onAiOrganize,
+  onSummarize,
   onCancel,
 }: {
   count: number;
@@ -40,6 +42,7 @@ export function BulkActionBar({
   onMoveCategory: (category: string) => void;
   onEditTags: (mode: "add" | "remove") => void;
   onAiOrganize: () => void;
+  onSummarize: () => void;
   onCancel: () => void;
 }) {
   const [resetKey, setResetKey] = useState(0);
@@ -93,6 +96,10 @@ export function BulkActionBar({
             </MenuItem>
           </MenuPopup>
         </Menu>
+        <Button variant="outline" size="sm" onClick={onSummarize}>
+          <TextQuoteIcon />
+          <span className="max-sm:sr-only">{m.bulk_summarize()}</span>
+        </Button>
         <Button variant="outline" size="sm" onClick={onAiOrganize}>
           <SparklesIcon />
           <span className="max-sm:sr-only">{m.bulk_ai_organize()}</span>

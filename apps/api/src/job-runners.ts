@@ -4,16 +4,19 @@ import { getSettings } from "#settings";
 import { createProvider, embedText, embedTexts, describeError, embeddingInput } from "#ai";
 import { isChatConfigured, isEmbeddingConfigured, type AiSettings } from "@pickit/shared";
 import { stepJob, type JobKind, type JobState, type StepResult } from "#jobs";
+import type { LanguageModel } from "ai";
 import { activeCategories, suggestOrganize } from "#organize";
+import { summarizeItem } from "#summarize";
 import { errorText, LocalizedError, renderMessage } from "#i18n";
 import { aiLocale, uiLocale } from "#locale";
 
 /** How many items one step handles. Kept small so a step stays well under Worker limits. */
-const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4 };
+const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4, summarize: 4 };
 
 export const JOB_MODES: Record<JobKind, string[]> = {
   reembed: ["missing", "all"],
   organize: ["missing", "all"],
+  summarize: ["missing", "all"],
 };
 
 /** Why a job can't run with the current settings (a message key), or null when it can. */
@@ -40,6 +43,9 @@ export async function selectJobIds(
   }
   if (kind === "organize" && mode === "missing") {
     sql += " AND (category = '' OR tags = '[]')";
+  }
+  if (kind === "summarize" && mode === "missing") {
+    sql += " AND ai_summary = ''";
   }
   const { results } = await env.DB.prepare(`${sql} ORDER BY id`)
     .bind(...binds)
@@ -110,21 +116,21 @@ async function reembedBatch(env: Env, settings: AiSettings, ids: number[]): Prom
   return result;
 }
 
-async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
+/**
+ * Runs `work` for each item of the batch in parallel (one chat call each),
+ * collecting per-item failures with a readable error.
+ */
+async function chatBatch(
+  env: Env,
+  settings: AiSettings,
+  ids: number[],
+  work: (chat: LanguageModel, row: ItemRow) => Promise<unknown>,
+): Promise<StepResult> {
   const chat = createProvider(settings)?.chat;
   if (!chat) throw new Error(await errorText(env, "api_chat_unavailable"));
   const rows = await loadRows(env, ids);
   const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
-  const [categories, locale] = await Promise.all([activeCategories(env.DB), aiLocale(env.DB)]);
-
-  const outcomes = await Promise.allSettled(
-    rows.map(async (row) => {
-      const { category, tags } = await suggestOrganize(chat, row, categories, locale);
-      await env.DB.prepare("UPDATE items SET category=?, tags=?, updated_at=? WHERE id=?")
-        .bind(category, JSON.stringify(tags), Date.now(), row.id)
-        .run();
-    }),
-  );
+  const outcomes = await Promise.allSettled(rows.map((row) => work(chat, row)));
   const errorLocale = await uiLocale(env.DB);
   outcomes.forEach((o, i) => {
     const row = rows[i];
@@ -139,22 +145,41 @@ async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Pro
   return result;
 }
 
+async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
+  const [categories, locale] = await Promise.all([activeCategories(env.DB), aiLocale(env.DB)]);
+  return chatBatch(env, settings, ids, async (chat, row) => {
+    const { category, tags } = await suggestOrganize(chat, row, categories, locale);
+    await env.DB.prepare("UPDATE items SET category=?, tags=?, updated_at=? WHERE id=?")
+      .bind(category, JSON.stringify(tags), Date.now(), row.id)
+      .run();
+  });
+}
+
+async function summarizeBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
+  const locale = await aiLocale(env.DB);
+  return chatBatch(env, settings, ids, (chat, row) => summarizeItem(env.DB, chat, row, locale));
+}
+
+const RUNNERS: Record<JobKind, (env: Env, settings: AiSettings, ids: number[]) => Promise<StepResult>> = {
+  reembed: reembedBatch,
+  organize: organizeBatch,
+  summarize: summarizeBatch,
+};
+
 /** Advances a job by one batch. Safe to call from several drivers at once. */
 export async function runJobStep(env: Env, kind: JobKind): Promise<JobState> {
   return stepJob(env.DB, kind, BATCH_SIZE[kind], async (ids) => {
     const settings = await getSettings(env.DB);
     const configError = jobConfigError(kind, settings);
     if (configError) throw new Error(await errorText(env, configError));
-    return kind === "reembed"
-      ? reembedBatch(env, settings!, ids)
-      : organizeBatch(env, settings!, ids);
+    return RUNNERS[kind](env, settings!, ids);
   });
 }
 
 /** Cron driver: keeps running jobs moving while no page is stepping them. */
 export async function advanceRunningJobs(env: Env, budgetMs = 25_000) {
   const deadline = Date.now() + budgetMs;
-  for (const kind of ["reembed", "organize"] as JobKind[]) {
+  for (const kind of Object.keys(RUNNERS) as JobKind[]) {
     while (Date.now() < deadline) {
       const job = await runJobStep(env, kind);
       // Stop when finished/paused, or when another driver holds the lock.

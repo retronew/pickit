@@ -107,6 +107,7 @@ const REQUESTS: [string, string, Record<string, unknown>, Record<string, unknown
     (verb) => ["POST", `/api/jobs/reembed/${verb}`, { mode: "all" }] as [string, string, Record<string, unknown>],
   ),
   ["POST", "/api/jobs/organize/start", {}],
+  ["POST", "/api/jobs/summarize/start", { mode: "missing" }],
   ...["search_bookmarks", "add_bookmark", "get_bookmark", "list_tags"].map(
     (name) =>
       ["POST", "/api/mcp", { method: "tools/call", params: { name, arguments: { query: "q", url: "u", id: 1 } } }] as [

@@ -4,6 +4,7 @@ import { BotIcon, DatabaseIcon, ShieldCheckIcon, WandSparklesIcon } from "lucide
 import { DataImportExportCard } from "#components/settings/DataImportExportCard";
 import { BookmarkletCard } from "#components/settings/BookmarkletCard";
 import { OrganizeCard } from "#components/settings/OrganizeCard";
+import { SummarizeCard } from "#components/settings/SummarizeCard";
 import { DuplicatesCard } from "#components/settings/DuplicatesCard";
 import { ApiTokenCard } from "#components/settings/ApiTokenCard";
 import { AllowedEmailsCard } from "#components/settings/AllowedEmailsCard";
@@ -51,6 +52,7 @@ const TABS: SettingsTab[] = [
     content: (
       <div className={TWO_COLUMNS}>
         <OrganizeCard />
+        <SummarizeCard />
         <DuplicatesCard />
       </div>
     ),

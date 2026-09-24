@@ -3,7 +3,7 @@ import type { Item } from "@pickit/shared";
 import { Confirm } from "#components/Confirm";
 import { TagsEditDialog } from "#components/items/TagsEditDialog";
 import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
-import { api, toastError, toastSuccess } from "#lib/api";
+import { api, toastError, toastLoading, toastSuccess } from "#lib/api";
 import { m } from "#lib/i18n";
 
 export type BulkAction = "delete" | "pin" | "unpin" | "category";
@@ -77,6 +77,40 @@ export function useBulkSelection(refresh: () => void, items: Item[], allTags: st
     refresh();
   }
 
+  /** AI summaries for the selection, two at a time, with a progress toast. */
+  async function summarize() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    exitSelectMode();
+    let done = 0;
+    let failed = 0;
+    let lastError: unknown;
+    toastLoading(m.bulk_summarize_progress({ done, total: ids.length }), { id: "item-summarize" });
+    let next = 0;
+    async function worker() {
+      while (next < ids.length) {
+        const id = ids[next++];
+        try {
+          await api(`/api/items/${id}/summarize`, { method: "POST" });
+        } catch (err) {
+          failed++;
+          lastError = err;
+        }
+        done++;
+        toastLoading(m.bulk_summarize_progress({ done, total: ids.length }), { id: "item-summarize" });
+      }
+    }
+    await Promise.all([worker(), worker()]);
+    const ok = ids.length - failed;
+    if (ok === 0) toastError(m.summarize_failed(), lastError, { id: "item-summarize" });
+    else
+      toastSuccess(m.bulk_summarize_done({ count: ok }), {
+        description: failed ? m.bulk_summarize_failed({ count: failed }) : undefined,
+        id: "item-summarize",
+      });
+    refresh();
+  }
+
   async function bulkDelete() {
     const ok = await Confirm.call({
       title: m.bulk_delete_title({ count: selectedIds.size }),
@@ -97,5 +131,6 @@ export function useBulkSelection(refresh: () => void, items: Item[], allTags: st
     bulkDelete,
     editTags,
     aiOrganize,
+    summarize,
   };
 }
