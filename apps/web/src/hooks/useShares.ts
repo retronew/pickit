@@ -3,6 +3,7 @@ import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
 import { ShareDialog } from "#components/shares/ShareDialog";
 import { ShareAccessDialog } from "#components/shares/ShareAccessDialog";
+import { CollectionOrderDialog } from "#components/shares/CollectionOrderDialog";
 import { api, toastError, toastSuccess } from "#lib/api";
 import type { Share } from "#lib/shares";
 import { m } from "#lib/i18n";
@@ -43,6 +44,10 @@ export function useShares() {
     }
   }
 
+  async function reorderCollection(s: Share) {
+    if (await CollectionOrderDialog.call({ share: s })) refresh();
+  }
+
   async function editAccess(s: Share) {
     if (await ShareAccessDialog.call({ share: s })) refresh();
   }
@@ -64,5 +69,5 @@ export function useShares() {
     refresh();
   }
 
-  return { shares, refresh, create, rename, editAccess, remove };
+  return { shares, refresh, create, rename, editAccess, reorderCollection, remove };
 }

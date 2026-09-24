@@ -9,11 +9,12 @@ import { ShareDialog } from "#components/shares/ShareDialog";
 import { ShareRow } from "#components/shares/ShareRow";
 import { ShareStatsDialog } from "#components/shares/ShareStatsDialog";
 import { ShareAccessDialog } from "#components/shares/ShareAccessDialog";
+import { CollectionOrderDialog } from "#components/shares/CollectionOrderDialog";
 import { useShares } from "#hooks/useShares";
 import { m } from "#lib/i18n";
 
 export function SharesPage() {
-  const { shares, create, rename, editAccess, remove } = useShares();
+  const { shares, create, rename, editAccess, reorderCollection, remove } = useShares();
   const totalViews = shares?.reduce((sum, s) => sum + s.viewCount, 0) ?? 0;
 
   return (
@@ -50,6 +51,7 @@ export function SharesPage() {
               onStats={() => ShareStatsDialog.call({ slug: s.slug, title: s.title || s.value })}
               onRename={() => rename(s)}
               onAccess={() => editAccess(s)}
+              onReorder={() => reorderCollection(s)}
               onRevoke={() => remove(s)}
             />
           ))}
@@ -59,6 +61,7 @@ export function SharesPage() {
       <ShareDialog />
       <ShareStatsDialog />
       <ShareAccessDialog />
+      <CollectionOrderDialog />
       <Prompt />
       <Confirm />
     </div>

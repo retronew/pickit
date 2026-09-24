@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Item } from "#hooks/useItems";
 import { ItemCard } from "#components/items/ItemCard";
 import { ItemActionsMenu, type ItemActionsTarget } from "#components/items/ItemActionsMenu";
+import { SortableCard, SortableItems } from "#components/items/SortableItems";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { WindowVirtualList, type WindowVirtualListHandle } from "#components/WindowVirtualList";
 import { toItemRows } from "#lib/item-rows";
@@ -23,6 +24,8 @@ interface Props {
   onDelete: (item: Item) => void;
   onTogglePin: (item: Item) => void;
   onOpenDetail: (item: Item) => void;
+  /** Manual sort: cards can be dragged within their group; omitted = off. */
+  onReorder?: (ids: number[]) => void;
 }
 
 /**
@@ -30,12 +33,14 @@ interface Props {
  * window scroll: only rows near the viewport are mounted, since a library of
  * 600+ cards made the page slow to mount and scroll.
  */
-export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds, focusedId, ...handlers }: Props) {
+export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds, focusedId, onReorder, ...handlers }: Props) {
   const [actionsTarget, setActionsTarget] = useState<ItemActionsTarget | null>(null);
   // Stable so the memoized cards don't re-render when the menu opens.
   const openActions = useCallback((item: Item, anchor: HTMLElement) => setActionsTarget({ item, anchor }), []);
   const rows = useMemo(() => toItemRows(grouped, COLUMNS), [grouped]);
   const listRef = useRef<WindowVirtualListHandle>(null);
+  const groupIds = useMemo(() => grouped.map(([, list]) => list.map((i) => i.id)), [grouped]);
+  const sortable = !!onReorder && !selectMode;
 
   // Keyboard navigation can move to a card that isn't mounted yet.
   useEffect(() => {
@@ -60,6 +65,7 @@ export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds,
   }
   return (
     <div className={cn("animate-fade-in transition-opacity", dimmed && "opacity-60")}>
+      <SortableItems groups={groupIds} onReorder={sortable ? onReorder : undefined}>
       <WindowVirtualList
         handleRef={listRef}
         rows={rows}
@@ -78,20 +84,22 @@ export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds,
           ) : (
             <div className="grid grid-cols-2 gap-2 pb-2">
               {row.items.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  selectMode={selectMode}
-                  selected={selectedIds.has(item.id)}
-                  focused={item.id === focusedId}
-                  onOpenActions={openActions}
-                  {...handlers}
-                />
+                <SortableCard key={item.id} id={item.id} enabled={sortable}>
+                  <ItemCard
+                    item={item}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(item.id)}
+                    focused={item.id === focusedId}
+                    onOpenActions={openActions}
+                    {...handlers}
+                  />
+                </SortableCard>
               ))}
             </div>
           )
         }
       />
+      </SortableItems>
       <ItemActionsMenu
         target={actionsTarget}
         onClose={() => setActionsTarget(null)}

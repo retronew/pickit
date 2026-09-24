@@ -1,11 +1,22 @@
-import { CornerDownRightIcon, FolderIcon, GitMergeIcon, MoreHorizontalIcon, PencilIcon, Share2Icon, Trash2Icon } from "lucide-react";
+import {
+  CornerDownRightIcon,
+  FolderIcon,
+  GitMergeIcon,
+  GripVerticalIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  Share2Icon,
+  Trash2Icon,
+} from "lucide-react";
 import { Badge } from "#components/ui/badge";
 import { Button } from "#components/ui/button";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "#components/ui/menu";
 import { Hint } from "#components/Hint";
 import { MarqueeText } from "#components/MarqueeText";
+import { useCategoryDrag } from "#components/categories/CategoryDnd";
 import type { CategoryNode } from "#lib/categories";
 import { m } from "#lib/i18n";
+import { cn } from "#lib/utils";
 
 interface Props {
   node: CategoryNode;
@@ -17,15 +28,33 @@ interface Props {
   onDelete: () => void;
 }
 
-/** One category in the tree: indented name, bookmark count, share and a menu of edits. */
+/**
+ * One category in the tree: drag handle, indented name, bookmark count, share
+ * and a menu of edits. Dropping another category on the row moves it inside.
+ */
 export function CategoryRow({ node, onOpen, onShare, onRename, onMove, onMerge, onDelete }: Props) {
   const nested = node.total !== node.count;
+  const drag = useCategoryDrag(node);
 
   return (
     <div
-      className="flex items-center gap-2 rounded-lg py-1.5 pe-1 hover:bg-accent/50"
-      style={{ paddingInlineStart: `${0.5 + node.depth * 1.25}rem` }}
+      ref={drag.dropRef}
+      className={cn(
+        "flex items-center gap-2 rounded-lg py-1.5 pe-1 transition-colors hover:bg-accent/50",
+        drag.isDragging && "opacity-40",
+        drag.blocked && "opacity-50",
+        drag.isOver && "bg-accent ring-2 ring-primary/40",
+      )}
+      style={{ paddingInlineStart: `${0.25 + node.depth * 1.25}rem` }}
     >
+      <button
+        type="button"
+        aria-label={m.category_drag({ category: node.name })}
+        className="shrink-0 cursor-grab touch-none text-muted-foreground/60 hover:text-muted-foreground active:cursor-grabbing"
+        {...drag.handle}
+      >
+        <GripVerticalIcon className="size-4" />
+      </button>
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm">
         <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
         <MarqueeText className="font-medium">{node.name}</MarqueeText>

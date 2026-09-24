@@ -42,7 +42,7 @@ function useDetailSheet(items: Item[]) {
 }
 
 export function ItemsPage() {
-  const { items, loading, refresh } = useItems();
+  const { items, loading, refresh, reorder } = useItems();
   const search = useItemSearch();
   const filters = useItemFilters(items, search.hits);
   const detail = useDetailSheet(items);
@@ -131,7 +131,13 @@ export function ItemsPage() {
       />
 
       {!loading && (
-        <p className="text-xs text-muted-foreground">{m.items_total({ count: filters.visibleItems.length })}</p>
+        <p className="text-xs text-muted-foreground">
+          {m.items_total({ count: filters.visibleItems.length })}
+          {/* Manual order has no other visible cue, so say how it works (and when it can't). */}
+          {filters.sortKey === "manual" && !selection.selectMode && (
+            <> · {search.query ? m.manual_sort_search_hint() : m.manual_sort_hint()}</>
+          )}
+        </p>
       )}
 
       {selection.selectMode && selection.selectedIds.size > 0 && (
@@ -165,6 +171,8 @@ export function ItemsPage() {
           onDelete={actions.deleteItem}
           onTogglePin={actions.togglePin}
           onOpenDetail={detail.openDetail}
+          // Dragging only makes sense for the full list in manual order, not search results.
+          onReorder={filters.sortKey === "manual" && !search.query ? reorder : undefined}
         />
       )}
 

@@ -2,7 +2,7 @@ import { sortBy } from "es-toolkit";
 import { compareText } from "#lib/collate";
 import type { Item } from "@pickit/shared";
 
-export type SortKey = "pinned" | "created" | "updated" | "name";
+export type SortKey = "pinned" | "created" | "updated" | "name" | "manual";
 
 export interface FacetCount {
   value: string;
@@ -41,9 +41,22 @@ export function tagCounts(items: Item[]): FacetCount[] {
   return countBy(items.flatMap((item) => [...new Set(item.tags)]));
 }
 
-/** Pinned items stay first; "pinned" keeps the server order. */
+/**
+ * Manual order: never-reordered items first (newest first, so new bookmarks
+ * land on top), then by the position the user dragged them to.
+ */
+export function compareManual(a: Item, b: Item): number {
+  if (a.position === null || b.position === null) {
+    if (a.position !== b.position) return a.position === null ? -1 : 1;
+    return b.createdAt - a.createdAt;
+  }
+  return a.position - b.position;
+}
+
+/** Pinned items stay first (except in manual order); "pinned" keeps the server order. */
 export function sortItems(items: Item[], key: SortKey): Item[] {
   if (key === "pinned") return items;
+  if (key === "manual") return [...items].sort(compareManual);
   const byKey =
     key === "created"
       ? (list: Item[]) => sortBy(list, [(i) => -i.createdAt])

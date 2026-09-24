@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Item } from "@pickit/shared";
-import { categoryCounts, inCategory, matchesFilters, sortItems, tagCounts } from "./itemFilters";
+import { categoryCounts, compareManual, inCategory, matchesFilters, sortItems, tagCounts } from "./itemFilters";
 
 let nextId = 1;
 function item(patch: Partial<Item>): Item {
@@ -23,6 +23,7 @@ function item(patch: Partial<Item>): Item {
     checkedAt: null,
     image: "",
     archiveUrl: "",
+    position: null,
     ...patch,
   };
 }
@@ -87,5 +88,27 @@ describe("sortItems", () => {
     expect(names(sortItems(items, "created"))).toEqual(["delta", "Alpha", "gamma", "beta"]);
     expect(names(sortItems(items, "updated"))).toEqual(["Alpha", "delta", "beta", "gamma"]);
     expect(names(sortItems(items, "name"))).toEqual(["Alpha", "delta", "beta", "gamma"]);
+  });
+});
+
+describe("manual order", () => {
+  it("puts never-reordered items first (newest first), then by position", () => {
+    const placed = item({ name: "placed-1", position: 1 });
+    const first = item({ name: "placed-0", position: 0 });
+    const fresh = item({ name: "fresh", createdAt: 5 });
+    const older = item({ name: "older", createdAt: 1 });
+    expect(sortItems([placed, older, first, fresh], "manual").map((i) => i.name)).toEqual([
+      "fresh",
+      "older",
+      "placed-0",
+      "placed-1",
+    ]);
+    expect(compareManual(first, placed)).toBeLessThan(0);
+  });
+
+  it("ignores pinning", () => {
+    const pinned = item({ name: "pinned", pinned: true, position: 1 });
+    const plain = item({ name: "plain", position: 0 });
+    expect(sortItems([pinned, plain], "manual").map((i) => i.name)).toEqual(["plain", "pinned"]);
   });
 });

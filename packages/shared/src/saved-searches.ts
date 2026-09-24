@@ -1,7 +1,7 @@
 // Saved searches: a named query + filters + sort, stored server-side so they
 // follow the user across devices.
 
-export const SAVED_SEARCH_SORTS = ["pinned", "created", "updated", "name"] as const;
+export const SAVED_SEARCH_SORTS = ["pinned", "created", "updated", "name", "manual"] as const;
 export type SavedSearchSort = (typeof SAVED_SEARCH_SORTS)[number];
 
 export interface SavedSearch {

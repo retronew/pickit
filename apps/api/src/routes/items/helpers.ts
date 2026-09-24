@@ -37,6 +37,7 @@ export function toItemJson(r: ItemRow) {
     checkedAt: r.checked_at,
     image: r.image,
     archiveUrl: r.archive_url,
+    position: r.position,
   };
 }
 

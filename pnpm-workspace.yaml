@@ -10,5 +10,5 @@ minimumReleaseAgeExclude:
   - '@cloudflare/workers-types@5.20260922.1'
   - ai@7.0.109
   - miniflare@5.20260921.0-alpha
-  - wrangler@4.136.1
+  - wrangler@4.136.1 || 4.137.0
   - '@ai-sdk/openai@4.0.72'

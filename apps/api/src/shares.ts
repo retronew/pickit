@@ -125,7 +125,7 @@ export async function sharedItem(db: D1Database, id: string): Promise<ItemRow | 
 }
 
 /** Active items of a collection, in the order they were picked. */
-async function sharedCollection(db: D1Database, ids: number[]): Promise<ItemRow[]> {
+export async function sharedCollection(db: D1Database, ids: number[]): Promise<ItemRow[]> {
   if (ids.length === 0) return [];
   const { results } = await db
     .prepare(

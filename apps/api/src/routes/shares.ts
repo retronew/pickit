@@ -7,6 +7,7 @@ import {
   mixTitle,
   normalizeIds,
   normalizeMix,
+  sharedCollection,
   sharedItem,
   type ShareRow,
 } from "#shares";
@@ -165,6 +166,14 @@ shareRoutes.patch("/:slug", async (c) => {
   await applyAccess(c.env.DB, slug, access);
   const updated = await c.env.DB.prepare("SELECT * FROM shares WHERE slug = ?").bind(slug).first<ShareRow>();
   return c.json(await view(updated!, c.env.BETTER_AUTH_SECRET));
+});
+
+/** A collection's bookmarks in their current order, for reordering them. */
+shareRoutes.get("/:slug/items", async (c) => {
+  const share = await c.env.DB.prepare("SELECT * FROM shares WHERE slug = ?").bind(c.req.param("slug")).first<ShareRow>();
+  if (!share || share.type !== "collection") return c.json({ error: "not found" }, 404);
+  const rows = await sharedCollection(c.env.DB, collectionIds(share.value));
+  return c.json(rows.map((r) => ({ id: r.id, name: r.name, url: r.url })));
 });
 
 shareRoutes.get("/:slug/stats", async (c) => {

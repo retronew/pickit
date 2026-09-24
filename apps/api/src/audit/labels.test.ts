@@ -81,6 +81,7 @@ const REQUESTS: [string, string, Record<string, unknown>, Record<string, unknown
   ["POST", "/api/tags/rename", { from: "a", to: "b" }],
   ["POST", "/api/tags/delete", { tag: "a" }],
   ["POST", "/api/categories/rename", { from: "a", to: "b" }],
+  ["POST", "/api/items/reorder", { ids: [2, 1] }],
   ["POST", "/api/categories/delete", { category: "a" }],
   ["POST", "/api/shares", { type: "category", value: "x" }],
   ["POST", "/api/shares", { type: "tag", value: "x" }],

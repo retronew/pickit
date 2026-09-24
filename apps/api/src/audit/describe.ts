@@ -164,6 +164,8 @@ export function describe(
       };
     case "POST /items/suggest":
       return { action: "item.suggest", summary: msg("suggest", { count: (body.ids ?? []).length }) };
+    case "POST /items/reorder":
+      return { action: "item.reorder", summary: msg("reorder", { count: (body.ids ?? []).length }) };
     case "POST /items/bulk":
       return describeBulk(body);
     case "POST /tags/rename":

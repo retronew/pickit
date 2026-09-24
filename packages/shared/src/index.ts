@@ -19,6 +19,8 @@ export interface Item {
   image: string;
   /** Wayback Machine snapshot, looked up once the link is found dead. */
   archiveUrl: string;
+  /** Manual order within the category; null = never reordered (newest first). */
+  position: number | null;
 }
 
 // Kept intentionally simple and in sync with the SQL approximation used to

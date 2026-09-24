@@ -22,6 +22,7 @@ export const SORT_LABELS: Record<SortKey, string> = {
   created: m.sort_created(),
   updated: m.sort_updated(),
   name: m.sort_name(),
+  manual: m.sort_manual(),
 };
 
 /**

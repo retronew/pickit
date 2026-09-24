@@ -154,6 +154,18 @@ describe("merge", () => {
   });
 });
 
+describe("manual order", () => {
+  it("stores a group's new order; untouched items keep a null position", async () => {
+    const a = await create({ name: "A", url: "https://a.dev" });
+    const b = await create({ name: "B", url: "https://b.dev" });
+    const c = await create({ name: "C", url: "https://c.dev" });
+    expect(await t.json("/api/items/reorder", { json: { ids: [c, a] } })).toEqual({ ok: true, count: 2 });
+    const byId = new Map((await t.json("/api/items")).map((i: { id: number; position: number | null }) => [i.id, i.position]));
+    expect([byId.get(c), byId.get(a), byId.get(b)]).toEqual([0, 1, null]);
+    await t.json("/api/items/reorder", { json: { ids: [] } }, 400);
+  });
+});
+
 describe("categories, stats and duplicates", () => {
   it("summarizes active items only", async () => {
     await create({ name: "A", url: "https://a.dev", category: "前端/React" });

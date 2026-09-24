@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import { Card } from "#components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "#components/ui/empty";
+import { CategoryDnd } from "#components/categories/CategoryDnd";
 import { CategoryPickerDialog } from "#components/categories/CategoryPickerDialog";
 import { CategoryRow } from "#components/categories/CategoryRow";
 import { Confirm } from "#components/Confirm";
@@ -11,7 +12,7 @@ import { useCategories } from "#hooks/useCategories";
 import { m } from "#lib/i18n";
 
 export function CategoriesPage() {
-  const { nodes, rename, moveTo, mergeInto, remove } = useCategories();
+  const { nodes, rename, moveTo, moveUnder, canMoveUnder, mergeInto, remove } = useCategories();
   const navigate = useNavigate();
 
   return (
@@ -28,6 +29,7 @@ export function CategoriesPage() {
           </EmptyHeader>
         </Empty>
       ) : (
+        <CategoryDnd nodes={nodes} canMoveUnder={canMoveUnder} onMove={moveUnder}>
         <Card className="animate-fade-in gap-0 p-2">
           {nodes.map((node) => (
             <CategoryRow
@@ -42,6 +44,7 @@ export function CategoriesPage() {
             />
           ))}
         </Card>
+        </CategoryDnd>
       )}
 
       <CategoryPickerDialog />

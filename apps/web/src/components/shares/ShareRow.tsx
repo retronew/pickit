@@ -1,4 +1,4 @@
-import { BarChart3Icon, LockIcon, PencilIcon, RssIcon, ShieldIcon, Trash2Icon } from "lucide-react";
+import { BarChart3Icon, ListOrderedIcon, LockIcon, PencilIcon, RssIcon, ShieldIcon, Trash2Icon } from "lucide-react";
 import { Badge } from "#components/ui/badge";
 import { Button } from "#components/ui/button";
 import { CopyButton } from "#components/CopyButton";
@@ -12,11 +12,12 @@ interface Props {
   onStats: () => void;
   onRename: () => void;
   onAccess: () => void;
+  onReorder: () => void;
   onRevoke: () => void;
 }
 
 /** One share link on the shares page: what it is, how often it's opened, actions. */
-export function ShareRow({ share: s, onStats, onRename, onAccess, onRevoke }: Props) {
+export function ShareRow({ share: s, onStats, onRename, onAccess, onReorder, onRevoke }: Props) {
   const subject = shareSubject(s);
   const expired = isExpired(s);
   const meta = [
@@ -67,6 +68,13 @@ export function ShareRow({ share: s, onStats, onRename, onAccess, onRevoke }: Pr
             {m.shares_views({ count: s.viewCount })}
           </Button>
         </Hint>
+        {s.type === "collection" && (
+          <Hint content={m.collection_order_title()}>
+            <Button variant="ghost" size="icon-xs" aria-label={m.collection_order_title()} onClick={onReorder}>
+              <ListOrderedIcon />
+            </Button>
+          </Hint>
+        )}
         <Hint content={m.share_access_title()}>
           <Button variant="ghost" size="icon-xs" aria-label={m.share_access_title()} onClick={onAccess}>
             <ShieldIcon />

@@ -36,6 +36,7 @@ export const AUDIT_ACTIONS = [
   "item.bulk_remove_tags",
   "item.bulk_apply",
   "item.suggest",
+  "item.reorder",
   "category.rename",
   "category.delete",
   "tag.rename",

@@ -58,20 +58,28 @@ export function useCategories() {
     await move(node.category, to, m.category_renamed(), m.category_rename_failed());
   }
 
-  /** Puts the category (keeping its name) under another parent, or at the top level. */
+  /** Whether `node` may move under `parent` ("" = top level): not into itself, not where it is. */
+  const canMoveUnder = (node: CategoryNode, parent: string) =>
+    !isWithinCategory(parent, node.category) && parent !== parentCategory(node.category);
+
+  /** Puts the category (keeping its name) under `parent`; used by the picker and by dragging. */
+  async function moveUnder(node: CategoryNode, parent: string) {
+    if (!canMoveUnder(node, parent)) return;
+    const to = joinCategory(parent, node.name);
+    await move(node.category, to, exists(to) ? m.category_merged() : m.category_moved(), m.category_rename_failed());
+  }
+
+  /** Picks a new parent for the category (keeping its name), or the top level. */
   async function moveTo(node: CategoryNode) {
     const parent = await CategoryPickerDialog.call({
       title: m.category_move_title({ category: node.name }),
       description: m.category_move_hint(),
       nodes: nodes ?? [],
       allowTop: true,
-      // Not into itself, and not where it already is.
-      disabled: (c) => isWithinCategory(c, node.category) || c === parentCategory(node.category),
+      disabled: (c) => !canMoveUnder(node, c),
       confirmLabel: m.category_move(),
     });
-    if (parent === null) return;
-    const to = joinCategory(parent, node.name);
-    await move(node.category, to, exists(to) ? m.category_merged() : m.category_moved(), m.category_rename_failed());
+    if (parent !== null) await moveUnder(node, parent);
   }
 
   /** Folds the category, with its sub-categories, into another one. */
@@ -111,5 +119,5 @@ export function useCategories() {
     refresh();
   }
 
-  return { nodes, rename, moveTo, mergeInto, remove };
+  return { nodes, rename, moveTo, moveUnder, canMoveUnder, mergeInto, remove };
 }

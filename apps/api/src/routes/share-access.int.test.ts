@@ -65,3 +65,20 @@ describe("share password", () => {
     expect(logs).not.toContain("hunter2-secret");
   });
 });
+
+describe("collection order", () => {
+  it("lists a collection's items in order and saves a new order", async () => {
+    const a = (await t.json("/api/items", { json: { name: "A", url: "https://a.dev" } }, 201)).id;
+    const b = (await t.json("/api/items", { json: { name: "B", url: "https://b.dev" } }, 201)).id;
+    const { slug } = await t.json("/api/shares", { json: { type: "collection", ids: [a, b] } });
+    expect((await t.json(`/api/shares/${slug}/items`)).map((i: { name: string }) => i.name)).toEqual(["A", "B"]);
+
+    await t.json(`/api/shares/${slug}`, { method: "PATCH", json: { ids: [b, a] } });
+    expect((await t.json(`/api/shares/${slug}/items`)).map((i: { name: string }) => i.name)).toEqual(["B", "A"]);
+    const shared = await t.json(`/api/public/shares/${slug}`, { auth: false });
+    expect(shared.items.map((i: { name: string }) => i.name)).toEqual(["B", "A"]);
+
+    const other = await t.json("/api/shares", { json: { type: "item", value: String(a) } });
+    await t.json(`/api/shares/${other.slug}/items`, {}, 404);
+  });
+});

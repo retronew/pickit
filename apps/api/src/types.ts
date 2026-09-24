@@ -35,6 +35,8 @@ export interface ItemRow {
   image: string;
   preview_checked_at: number | null;
   archive_url: string;
+  /** Manual order within the category; null = never reordered. */
+  position: number | null;
   /** Only present when selected explicitly; ITEM_COLUMNS leaves the blobs out. */
   embedding?: ArrayBuffer | null;
   embedding_model: string | null;
@@ -54,7 +56,7 @@ export function itemColumns(alias = ""): string {
     "id", "name", "url", "icon", "note", "category", "tags", "embedding_model",
     "created_at", "updated_at", "pinned", "deleted_at", "click_count",
     "last_visited_at", "url_norm", "ai_summary", "http_status", "checked_at",
-    "image", "preview_checked_at", "archive_url",
+    "image", "preview_checked_at", "archive_url", "position",
   ]
     .map((c) => p + c)
     .concat(`(${p}embedding IS NOT NULL) AS has_embedding`)
