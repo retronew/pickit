@@ -47,8 +47,6 @@ apps/
     src/hooks/         ページが使うデータ・振る舞いの hook
 packages/
   shared/              api と web で共有する型とヘルパー（ai/、インポーター、URL 正規化）
-scripts/
-  import.mjs  Markdown のブックマーク表を D1 に一括インポート
 ```
 
 ## ローカル開発
@@ -76,11 +74,7 @@ pnpm db:migrate   # ローカルの D1 データベースにマイグレーシ�
 pnpm dev          # Web は http://localhost:5173、API は :8787
 ```
 
-既存の Markdown 形式のブックマーク表をインポートする場合：
-
-```bash
-pnpm import -- --file path/to/bookmarks.md
-```
+既存のブックマークをインポートするには、「設定 → インポート / エクスポート」で Markdown の表、JSON ファイル、またはブラウザーのブックマーク HTML ファイルをアップロードし、プレビューを確認してからインポートします。
 
 | コマンド | 説明 |
 | --- | --- |

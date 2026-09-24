@@ -47,8 +47,6 @@ apps/
     src/hooks/         页面使用的数据和交互 hook
 packages/
   shared/              api 和 web 共用的类型与工具函数（ai/、导入解析、URL 规范化）
-scripts/
-  import.mjs  把 Markdown 书签表格批量导入 D1
 ```
 
 ## 本地开发
@@ -76,11 +74,7 @@ pnpm db:migrate   # 在本地 D1 数据库执行迁移
 pnpm dev          # 前端 http://localhost:5173，API 在 :8787
 ```
 
-如果已有 Markdown 表格格式的书签，可以批量导入：
-
-```bash
-pnpm import -- --file path/to/bookmarks.md
-```
+如需导入已有书签，请在「设置 → 导入 / 导出」上传 Markdown 表格、JSON 文件或浏览器书签 HTML 文件，预览后再确认导入。
 
 | 命令 | 说明 |
 | --- | --- |

@@ -47,8 +47,6 @@ apps/
     src/hooks/         Data and behaviour hooks used by the pages
 packages/
   shared/              Types and helpers shared by api and web (ai/, importers, URL normalization)
-scripts/
-  import.mjs  Bulk-import a Markdown bookmark table into D1
 ```
 
 ## Local development
@@ -76,11 +74,7 @@ pnpm db:migrate   # apply migrations to the local D1 database
 pnpm dev          # web on http://localhost:5173, API on :8787
 ```
 
-Optionally import an existing Markdown table of bookmarks:
-
-```bash
-pnpm import -- --file path/to/bookmarks.md
-```
+To import existing bookmarks, open Settings → Import / Export and upload a Markdown table, JSON file or browser bookmarks HTML file. Preview the results before importing.
 
 | Script | Description |
 | --- | --- |

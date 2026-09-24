@@ -7,7 +7,6 @@
     "dev:web": "pnpm --filter @pickit/web dev",
     "dev:api": "pnpm --filter @pickit/api dev",
     "build": "pnpm --filter @pickit/web build",
-    "import": "node scripts/import.mjs",
     "deploy": "pnpm run build && pnpm --filter @pickit/api deploy",
     "db:migrate": "pnpm --filter @pickit/api db:migrate",
     "db:migrate:remote": "pnpm --filter @pickit/api db:migrate:remote",

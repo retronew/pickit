@@ -8,7 +8,7 @@ export interface ImportRow {
 }
 
 // Notion-style Markdown tables, headed by a heading/plain-text line that
-// names the category. Matches the historical scripts/import.mjs format.
+// names the category.
 export function parseMarkdownTables(md: string): ImportRow[] {
   const rows: ImportRow[] = [];
   let category = "";
