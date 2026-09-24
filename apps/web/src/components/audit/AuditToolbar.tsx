@@ -27,7 +27,7 @@ export function AuditToolbar({
   updatedAt: number | null;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex shrink-0 items-center gap-2 sm:gap-3">
       {updatedAt && (
         <span className="hidden text-muted-foreground text-xs sm:inline">
           {m.audit_updated_at({ time: clock.format(updatedAt) })}
@@ -43,9 +43,9 @@ export function AuditToolbar({
           </span>
         )}
       </Label>
-      <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
+      <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing} aria-label={m.audit_refresh()} className="max-sm:size-8 max-sm:px-0">
         <RefreshCwIcon className={cn(refreshing && "animate-spin")} />
-        {m.audit_refresh()}
+        <span className="max-sm:sr-only">{m.audit_refresh()}</span>
       </Button>
     </div>
   );

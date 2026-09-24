@@ -2,10 +2,7 @@ import { api, toastError, toastSuccess } from "#lib/api";
 import { shareAndCopy } from "#lib/shares";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { PencilIcon, Trash2Icon, Share2Icon } from "lucide-react";
-import { Card } from "#components/ui/card";
-import { Button } from "#components/ui/button";
-import { Badge } from "#components/ui/badge";
+import { TagCard } from "#components/tags/TagCard";
 import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
@@ -80,51 +77,17 @@ export function TagsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="grid animate-fade-in gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid animate-fade-in grid-cols-2 gap-2 lg:grid-cols-3">
           {tags.map(({ tag, count }) => (
-            <Card
+            <TagCard
               key={tag}
-              className="flex items-center justify-between gap-2 p-3 shadow-none before:shadow-none dark:before:shadow-none"
-            >
-              <button
-                type="button"
-                onClick={() => navigate(`/?tag=${encodeURIComponent(tag)}`)}
-                className="flex min-w-0 items-center gap-2 text-left"
-              >
-                <span className="truncate font-medium">#{tag}</span>
-                <Badge variant="secondary" size="sm">
-                  {count}
-                </Badge>
-              </button>
-              <div className="flex shrink-0 items-center gap-0.5">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={m.tag_share()}
-                  title={m.tag_share_hint()}
-                  onClick={() => shareAndCopy("tag", tag)}
-                >
-                  <Share2Icon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={m.action_rename()}
-                  onClick={() => rename(tag)}
-                >
-                  <PencilIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={m.action_delete()}
-                  onClick={() => remove(tag)}
-                  className="text-muted-foreground hover:text-destructive-foreground"
-                >
-                  <Trash2Icon />
-                </Button>
-              </div>
-            </Card>
+              tag={tag}
+              count={count}
+              onOpen={() => navigate(`/?tag=${encodeURIComponent(tag)}`)}
+              onShare={() => shareAndCopy("tag", tag)}
+              onRename={() => rename(tag)}
+              onDelete={() => remove(tag)}
+            />
           ))}
         </div>
       )}

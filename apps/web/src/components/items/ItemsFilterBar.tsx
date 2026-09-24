@@ -33,20 +33,20 @@ export function ItemsFilterBar(p: Props) {
   const share = shareTarget(p.category, p.selectedTags);
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 sm:flex-wrap">
         {p.categoryOptions.length > 0 && (
           <CategoryFilter options={p.categoryOptions} category={p.category} onChange={p.onCategoryChange} />
         )}
         {p.tagOptions.length > 0 && (
           <TagFilter options={p.tagOptions} selected={p.selectedTags} onChange={p.onTagsChange} />
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <Select
             value={p.sortKey}
             onValueChange={(v) => p.onSortChange(v as SortKey)}
             items={SORT_LABELS}
           >
-            <SelectTrigger size="sm" className="w-auto min-w-0 bg-background">
+            <SelectTrigger size="sm" aria-label={m.sort_label()} className="w-auto min-w-0 bg-background max-sm:[&_[data-slot=select-value]]:sr-only max-sm:[&_[data-slot=select-icon]]:hidden">
               <ArrowUpDownIcon className="size-3.5 opacity-60" />
               <SelectValue />
             </SelectTrigger>
@@ -64,7 +64,7 @@ export function ItemsFilterBar(p: Props) {
             onClick={p.onToggleSelectMode}
           >
             <CheckSquareIcon />
-            {m.action_select()}
+            <span className="max-sm:sr-only">{m.action_select()}</span>
           </Button>
         </div>
       </div>

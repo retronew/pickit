@@ -34,7 +34,7 @@ export function ItemSearchBar({
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={m.search_placeholder()}
           aria-busy={searching}
-          className="pl-7 pr-14"
+          className="pl-7 pr-9 sm:pr-14"
         />
         {query ? (
           <Button
@@ -47,7 +47,7 @@ export function ItemSearchBar({
             <XIcon />
           </Button>
         ) : (
-          <Kbd className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
+          <Kbd className="pointer-events-none absolute max-sm:hidden top-1/2 right-3 -translate-y-1/2">
             ⌘K
           </Kbd>
         )}
@@ -55,7 +55,7 @@ export function ItemSearchBar({
       <div className="flex">
         <Button size="lg" onClick={onAdd} className="rounded-e-none">
           <PlusIcon />
-          {m.action_add()}
+          <span className="max-sm:sr-only">{m.action_add()}</span>
         </Button>
         <Menu>
           <MenuTrigger

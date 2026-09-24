@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Outlet, Link, NavLink, useNavigate } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, Link, NavLink, useLocation, useNavigate } from "react-router";
 import { LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "#hooks/useTheme";
 import { Button } from "#components/ui/button";
@@ -27,8 +27,10 @@ function loginUrl() {
 
 export function AppShell() {
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const navRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
-  const { mode, theme, nextMode, cycle } = useTheme();
+  const { pathname } = useLocation();
+  const { mode, nextMode, cycle } = useTheme();
   const ModeIcon = MODE_ICON[mode];
 
   useEffect(() => {
@@ -42,6 +44,13 @@ export function AppShell() {
       .catch(() => navigate(loginUrl()));
   }, [navigate]);
 
+  // On narrow screens the nav scrolls sideways; keep the current page in view.
+  useEffect(() => {
+    navRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [pathname, authed]);
+
   // Render nothing until the session is confirmed, so pages never fetch unauthenticated.
   if (authed !== true) return null;
 
@@ -54,33 +63,39 @@ export function AppShell() {
     { to: "/settings", label: m.nav_settings() },
   ];
 
+  const renderNavLinks = () =>
+    navItems.map((item) => (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={"end" in item}
+        className={({ isActive }) =>
+          cn(
+            "shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors",
+            isActive
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          )
+        }
+      >
+        {item.label}
+      </NavLink>
+    ));
+
   return (
     <div className="flex min-h-svh flex-col">
       <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4">
-          <Link to="/" className="font-heading font-bold tracking-tight">
+        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 md:gap-6">
+          <Link to="/" className="shrink-0 font-heading font-bold tracking-tight">
             PickIt
           </Link>
-          <nav className="flex gap-1">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={"end" in item}
-                className={({ isActive }) =>
-                  cn(
-                    "rounded-lg px-3 py-1.5 text-sm transition-colors",
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                  )
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+          <nav
+            ref={navRef}
+            className="-my-2 flex min-w-0 flex-1 gap-1 overflow-x-auto py-2 [scrollbar-width:none] max-md:mask-r-from-[calc(100%-1.5rem)] md:flex-none [&::-webkit-scrollbar]:hidden"
+          >
+            {renderNavLinks()}
           </nav>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <LanguageMenu />
             <Tooltip>
               <TooltipTrigger
@@ -95,13 +110,7 @@ export function AppShell() {
               >
                 <ModeIcon />
               </TooltipTrigger>
-              <TooltipPopup side="bottom">
-                {m.theme_current({ mode: MODE_LABEL[mode] })}
-                {mode === "system" && m.theme_resolved({ theme: MODE_LABEL[theme] })}
-                <span className="text-muted-foreground">
-                  {" · "}{m.theme_next({ next: MODE_LABEL[nextMode] })}
-                </span>
-              </TooltipPopup>
+              <TooltipPopup side="bottom">{m.theme_current({ mode: MODE_LABEL[mode] })}</TooltipPopup>
             </Tooltip>
             <Button
               variant="ghost"
@@ -112,7 +121,7 @@ export function AppShell() {
               }}
             >
               <LogOutIcon />
-              {m.nav_sign_out()}
+              <span className="max-sm:sr-only">{m.nav_sign_out()}</span>
             </Button>
           </div>
         </div>

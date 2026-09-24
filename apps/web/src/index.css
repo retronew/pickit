@@ -15,6 +15,7 @@
   --z-index-toast: 60;
   --animate-skeleton: skeleton 2s -1s infinite linear;
   --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-marquee: marquee var(--marquee-duration) ease-in-out infinite alternate;
   --animate-caret-blink: 1s ease-out infinite caret-blink;
   --animate-toast-success-odd: toast-success-odd 0.32s cubic-bezier(0.5, 1, 0.89, 1);
   --animate-toast-success-even: toast-success-even 0.32s cubic-bezier(0.5, 1, 0.89, 1);
@@ -74,6 +75,15 @@
   @keyframes skeleton {
   to {
     background-position: -200% 0;
+    }
+  }
+  /* Ping-pong scroll for overflowing text; distance set by MarqueeText. */
+  @keyframes marquee {
+  0%, 20% {
+    translate: 0 0;
+    }
+  80%, to {
+    translate: var(--marquee-distance) 0;
     }
   }
   @keyframes fade-in {

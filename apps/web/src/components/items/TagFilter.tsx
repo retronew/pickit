@@ -28,7 +28,7 @@ export function TagFilter({
   const counts = new Map(options.map((option) => [option.value, option.count]));
 
   return (
-    <div className="w-26">
+    <div className="min-w-0 max-sm:flex-1 sm:w-26">
       <Combobox
         items={values}
         multiple

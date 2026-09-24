@@ -50,11 +50,11 @@ export function BulkActionBar({
       <div className="ml-auto flex flex-wrap items-center gap-1.5">
         <Button variant="outline" size="sm" onClick={onPin}>
           <PinIcon />
-          {m.action_pin()}
+          <span className="max-sm:sr-only">{m.action_pin()}</span>
         </Button>
         <Button variant="outline" size="sm" onClick={onUnpin}>
           <PinOffIcon />
-          {m.action_unpin()}
+          <span className="max-sm:sr-only">{m.action_unpin()}</span>
         </Button>
         {categories.length > 0 && (
           <Select
@@ -80,7 +80,7 @@ export function BulkActionBar({
         <Menu>
           <MenuTrigger render={<Button variant="outline" size="sm" />}>
             <TagsIcon />
-            {m.bulk_tags()}
+            <span className="max-sm:sr-only">{m.bulk_tags()}</span>
           </MenuTrigger>
           <MenuPopup align="end">
             <MenuItem onClick={() => onEditTags("add")}>
@@ -95,11 +95,11 @@ export function BulkActionBar({
         </Menu>
         <Button variant="outline" size="sm" onClick={onAiOrganize}>
           <SparklesIcon />
-          {m.bulk_ai_organize()}
+          <span className="max-sm:sr-only">{m.bulk_ai_organize()}</span>
         </Button>
         <Button variant="destructive" size="sm" onClick={onDelete}>
           <Trash2Icon />
-          {m.action_delete()}
+          <span className="max-sm:sr-only">{m.action_delete()}</span>
         </Button>
         <Button
           variant="ghost"

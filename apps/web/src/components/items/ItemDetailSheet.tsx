@@ -217,7 +217,7 @@ export function ItemDetailSheet({
                 </div>
               )}
             </SheetPanel>
-            <SheetFooter>
+            <SheetFooter className="max-sm:grid max-sm:grid-cols-4 max-sm:px-4 max-sm:py-3 max-sm:[&>button]:h-auto max-sm:[&>button]:flex-col max-sm:[&>button]:gap-1 max-sm:[&>button]:px-1 max-sm:[&>button]:py-2 max-sm:[&>button]:text-xs">
               <Button variant="outline" onClick={share} loading={sharing}>
                 <Share2Icon />
                 {shared ? m.detail_link_copied() : m.action_share()}

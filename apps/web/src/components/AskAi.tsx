@@ -67,8 +67,9 @@ export function AskAi() {
                 {messages.length > 0 && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="xs"
                     onClick={clear}
+                    className="text-muted-foreground"
                   >
                     {m.chat_new()}
                   </Button>

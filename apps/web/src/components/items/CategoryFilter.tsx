@@ -33,7 +33,7 @@ export function CategoryFilter({
   const selected = items.find((item) => item.value === category) ?? items[0];
 
   return (
-    <div className="w-30">
+    <div className="min-w-0 max-sm:flex-1 sm:w-30">
       <Combobox
         items={items}
         value={selected}

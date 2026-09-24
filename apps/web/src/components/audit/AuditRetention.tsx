@@ -91,15 +91,17 @@ export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
   const items = current in PRESETS ? PRESETS : { ...PRESETS, custom: m.retention_days({ days: data.retentionDays }) };
 
   return (
-    <div className="flex animate-fade-in flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border bg-muted/30 px-3 py-2 text-sm">
-      <span className="flex items-center gap-1.5 text-muted-foreground">
-        <DatabaseIcon className="size-4" />
+    <div className="flex animate-fade-in items-center gap-x-4 gap-y-2 rounded-xl sm:flex-wrap border bg-muted/30 px-3 py-2 text-sm">
+      <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+        <DatabaseIcon className="size-4 shrink-0" />
+        <span className="truncate">
         {m.audit_usage({ count: stats.count.toLocaleString(intlLocale()), size: formatBytes(stats.bytes) })}
         {stats.databaseBytes != null && ` ${m.audit_usage_database({ size: formatBytes(stats.databaseBytes) })}`}
         {stats.oldest != null && ` · ${m.audit_usage_oldest({ date: formatDate(stats.oldest) })}`}
+        </span>
       </span>
-      <span className="flex items-center gap-2 sm:ml-auto">
-        <span className="text-muted-foreground">{m.retention_label()}</span>
+      <span className="ml-auto flex shrink-0 items-center gap-2">
+        <span className="text-muted-foreground max-sm:sr-only">{m.retention_label()}</span>
         <Select
           value={selectValue}
           items={items}
