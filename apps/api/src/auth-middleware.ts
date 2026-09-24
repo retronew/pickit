@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import type { Env } from "#types";
-import { getAuth, isAllowedEmail } from "#auth";
+import { DEV_USER, getAuth, isAllowedEmail, isDevBypass } from "#auth";
 import { getApiToken } from "#settings";
 import { setActor } from "#audit/index";
 
@@ -22,6 +22,11 @@ export async function requireAuth(c: Context<{ Bindings: Env }>, next: Next) {
       await next();
       return;
     }
+  }
+  if (isDevBypass(c.env)) {
+    setActor(c, DEV_USER.email);
+    await next();
+    return;
   }
   const session = await getAuth(c.env)
     .api.getSession({ headers: c.req.raw.headers })

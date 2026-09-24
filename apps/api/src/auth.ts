@@ -73,6 +73,24 @@ export async function isAllowedEmail(env: Env, email: string | null | undefined)
   return !!email && (await allowedEmails(env)).has(email.toLowerCase());
 }
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+export const DEV_USER = { name: "Local dev", email: "dev@localhost", image: null };
+
+/**
+ * DEV_AUTH_BYPASS=1 in .dev.vars lets local dev run without OAuth apps. It
+ * also requires a localhost BETTER_AUTH_URL, so a stray production var can't
+ * open the API. (The request URL can't tell: `wrangler dev` rewrites it to the
+ * custom-domain route.)
+ */
+export function isDevBypass(env: Env): boolean {
+  if (env.DEV_AUTH_BYPASS !== "1" || !env.BETTER_AUTH_URL) return false;
+  try {
+    return LOCAL_HOSTS.has(new URL(env.BETTER_AUTH_URL).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** Providers whose client id and secret are both configured. */
 export function enabledProviders(env: Env): SocialProvider[] {
   const out: SocialProvider[] = [];

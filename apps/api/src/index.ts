@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "#types";
-import { getAuth } from "#auth";
+import { DEV_USER, getAuth, isDevBypass } from "#auth";
 import { auditMiddleware } from "#audit/index";
 import { requireAuth } from "#auth-middleware";
 import { scheduled } from "#scheduled";
@@ -36,6 +36,7 @@ app.use("/api/*", requireAuth);
 
 // Behind the auth middleware: 200 with the signed-in user, 401 otherwise.
 app.get("/api/me", async (c) => {
+  if (isDevBypass(c.env)) return c.json({ user: DEV_USER });
   const session = await getAuth(c.env).api.getSession({ headers: c.req.raw.headers });
   const user = session?.user;
   return c.json({ user: user ? { name: user.name, email: user.email, image: user.image } : null });

@@ -12,6 +12,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  /** Local dev only: "1" skips sign-in. Ignored unless BETTER_AUTH_URL is localhost. */
+  DEV_AUTH_BYPASS?: string;
 }
 
 export interface ItemRow {
