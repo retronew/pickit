@@ -8,6 +8,7 @@ import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
 import { cn } from "#lib/utils";
 import { m } from "#lib/i18n";
+import { MarqueeText } from "#components/MarqueeText";
 
 function isDeadLink(item: Item): boolean {
   return item.checkedAt != null && (item.httpStatus == null || item.httpStatus >= 400);
@@ -105,7 +106,7 @@ export const ItemCard = memo(function ItemCard({
               recreating the <img> (and re-decoding it) for every card. */}
           <Favicon url={item.url} name={item.name} />
           {selectMode ? (
-            <span className="truncate">{item.name}</span>
+            <MarqueeText>{item.name}</MarqueeText>
           ) : (
             <a
               href={item.url}
@@ -115,9 +116,9 @@ export const ItemCard = memo(function ItemCard({
                 e.stopPropagation();
                 navigator.sendBeacon(`/api/items/${item.id}/visit`);
               }}
-              className="truncate hover:underline"
+              className="min-w-0 hover:underline"
             >
-              {item.name}
+              <MarqueeText>{item.name}</MarqueeText>
             </a>
           )}
           {!selectMode && isDeadLink(item) && (
