@@ -1,6 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, type TestApp } from "../test/app";
 import { scheduled } from "../scheduled";
+import { stubLinksReachable } from "../test/network";
+
+afterEach(() => vi.unstubAllGlobals());
 
 let t: TestApp;
 const DAY = 86_400_000;
@@ -170,6 +173,8 @@ describe("daily cron", () => {
   });
 
   it("writes a backup to R2 and audits it", async () => {
+    // The same cron checks links; keep it off the network.
+    stubLinksReachable();
     const put: string[] = [];
     const app = await createTestApp({
       BACKUPS: {

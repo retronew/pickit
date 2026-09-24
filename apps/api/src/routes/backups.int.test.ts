@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, type TestApp } from "../test/app";
 import { createMemoryR2 } from "../test/r2";
 import { scheduled } from "../scheduled";
+import { stubLinksReachable } from "../test/network";
+
+afterEach(() => vi.unstubAllGlobals());
 
 let t: TestApp;
 let r2: ReturnType<typeof createMemoryR2>;
@@ -100,6 +103,8 @@ describe("backups", () => {
     await t.json("/api/backups", { method: "POST" }, 201);
     const [old] = [...r2.objects.keys()];
     r2.age(old, 31 * 86_400_000);
+    // The same cron checks links; keep it off the network.
+    stubLinksReachable();
 
     const pending: Promise<unknown>[] = [];
     await scheduled(
