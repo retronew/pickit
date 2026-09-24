@@ -6,6 +6,7 @@ import { backfillPreviews } from "#previews";
 import { writeBackup, pruneBackups } from "#backups";
 import { safeAudit, pruneAudit } from "#audit/index";
 import { backfillContent } from "#item-content";
+import { backfillActivity } from "#activity";
 
 /** Must match the per-minute entry in wrangler.jsonc `triggers.crons`. */
 const JOB_CRON = "* * * * *";
@@ -59,6 +60,8 @@ export async function scheduled(controller: ScheduledController, env: Env, ctx: 
     ctx.waitUntil(backfillPreviews(env.DB).catch(() => {}));
     // Captures page text for older items, a few at a time (needs R2).
     ctx.waitUntil(backfillContent(env).catch(() => {}));
+    // Checks GitHub / npm activity: new projects first, then weekly.
+    ctx.waitUntil(backfillActivity(env).catch(() => {}));
     return;
   }
   ctx.waitUntil(backupWithAudit(env));

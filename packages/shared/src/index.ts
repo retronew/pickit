@@ -1,3 +1,4 @@
+import type { ProjectActivity } from "./activity";
 export interface Item {
   id: number;
   name: string;
@@ -25,6 +26,8 @@ export interface Item {
   contentStatus: "" | "ok" | "empty" | "failed";
   contentAt: number | null;
   contentSize: number | null;
+  /** GitHub / npm bookmarks: how active the project is; null otherwise or before the first check. */
+  activity: ProjectActivity | null;
 }
 
 // Kept intentionally simple and in sync with the SQL approximation used to
@@ -54,3 +57,4 @@ export * from "./import";
 export * from "./audit";
 export * from "./saved-searches";
 export * from "./share-stats";
+export * from "./activity";

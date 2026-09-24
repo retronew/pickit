@@ -83,6 +83,8 @@ const REQUESTS: [string, string, Record<string, unknown>, Record<string, unknown
   ["POST", "/api/categories/rename", { from: "a", to: "b" }],
   ["POST", "/api/items/reorder", { ids: [2, 1] }],
   ["POST", "/api/webhooks", { url: "https://example.com/hook" }],
+  ["PUT", "/api/settings/github-token", { token: "x" }],
+  ["DELETE", "/api/settings/github-token", {}],
   ["PATCH", "/api/webhooks/1", { enabled: false }],
   ["DELETE", "/api/webhooks/1", {}],
   ["POST", "/api/webhooks/1/test", {}],

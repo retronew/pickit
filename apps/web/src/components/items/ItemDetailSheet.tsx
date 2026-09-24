@@ -30,6 +30,7 @@ import { PreviewImage } from "#components/items/PreviewImage";
 import { TranslatePanel } from "#components/items/TranslatePanel";
 import { ContentSnapshot } from "#components/items/ContentSnapshot";
 import { intlLocale, m } from "#lib/i18n";
+import { ProjectActivityPanel } from "#components/items/ProjectActivityPanel";
 
 // Single newlines in a note render as line breaks, like they were typed.
 const NOTE_REMARK_PLUGINS = [...Object.values(defaultRemarkPlugins), remarkBreaks];
@@ -160,6 +161,8 @@ export function ItemDetailSheet({
                   ))}
                 </div>
               )}
+
+              <ProjectActivityPanel item={item} onChanged={onChanged} />
 
               <ContentSnapshot item={item} open={open} />
 

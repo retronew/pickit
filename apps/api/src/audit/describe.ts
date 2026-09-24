@@ -198,6 +198,10 @@ export function describe(
       return { action: "settings.ai_test", summary: msg(body.target === "embedding" ? "ai_test_embedding" : "ai_test_chat") };
     case "POST /settings/api-token/reset":
       return { action: "settings.token_reset", summary: msg("token_reset") };
+    case "PUT /settings/github-token":
+      return { action: "settings.github_token", summary: msg("github_token_set") };
+    case "DELETE /settings/github-token":
+      return { action: "settings.github_token", summary: msg("github_token_remove") };
     case "DELETE /settings/api-token":
       return { action: "settings.token_delete", summary: msg("token_delete") };
     case "PUT /settings/allowed-emails":

@@ -12,6 +12,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  /** Optional: raises the GitHub API limit for project activity checks. */
+  GITHUB_TOKEN?: string;
   /** Local dev only: "1" skips sign-in. Ignored unless BETTER_AUTH_URL is localhost. */
   DEV_AUTH_BYPASS?: string;
 }
@@ -41,6 +43,9 @@ export interface ItemRow {
   content_status: string;
   content_at: number | null;
   content_size: number | null;
+  /** JSON ProjectActivity of a GitHub / npm bookmark; "" = none. */
+  activity: string;
+  activity_at: number | null;
   /** Only present when selected explicitly; ITEM_COLUMNS leaves the blobs out. */
   embedding?: ArrayBuffer | null;
   embedding_model: string | null;
@@ -61,7 +66,7 @@ export function itemColumns(alias = ""): string {
     "created_at", "updated_at", "pinned", "deleted_at", "click_count",
     "last_visited_at", "url_norm", "ai_summary", "http_status", "checked_at",
     "image", "preview_checked_at", "archive_url", "position",
-    "content_status", "content_at", "content_size",
+    "content_status", "content_at", "content_size", "activity", "activity_at",
   ]
     .map((c) => p + c)
     .concat(`(${p}embedding IS NOT NULL) AS has_embedding`)

@@ -27,6 +27,7 @@ function item(patch: Partial<Item>): Item {
     contentStatus: "",
     contentAt: null,
     contentSize: null,
+    activity: null,
     ...patch,
   };
 }

@@ -14,7 +14,8 @@ import {
   sanitizeSavedSearches,
 } from "@pickit/shared";
 import type { Env } from "#types";
-import { getRawSettings, saveSettings, getApiToken, setApiToken } from "#settings";
+import { getRawSettings, saveSettings, getApiToken, setApiToken, getGithubToken, setGithubToken } from "#settings";
+import { githubRateLimit } from "#activity";
 import { createChatModel, createEmbeddingModel, describeError } from "#ai";
 import { listModels, ModelListError, type ModelFamily } from "#ai-models";
 import { ownerEmails, getExtraEmails, setExtraEmails, parseEmails, isValidEmail } from "#auth";
@@ -164,6 +165,29 @@ settingsRoutes.post("/api-token/reset", async (c) => {
 
 settingsRoutes.delete("/api-token", async (c) => {
   await c.env.DB.prepare("DELETE FROM settings WHERE key = 'api_token'").run();
+  return c.json({ ok: true });
+});
+
+// GitHub token for project activity checks: masked when read, verified with
+// GitHub before it is saved. `fromSecret`: a GITHUB_TOKEN secret is set instead.
+settingsRoutes.get("/github-token", async (c) => {
+  const token = await getGithubToken(c.env.DB);
+  return c.json({ masked: token ? maskKey(token) : null, fromSecret: !token && !!c.env.GITHUB_TOKEN });
+});
+
+settingsRoutes.put("/github-token", async (c) => {
+  const { token } = await c.req.json<{ token?: unknown }>().catch(() => ({ token: undefined }));
+  if (typeof token !== "string" || !token.trim() || token.length > 300) {
+    return c.json({ error: await tr(c, "api_github_token_invalid") }, 400);
+  }
+  const limit = await githubRateLimit(token.trim()).catch(() => null);
+  if (!limit) return c.json({ error: await tr(c, "api_github_token_rejected") }, 400);
+  await setGithubToken(c.env.DB, token.trim());
+  return c.json({ masked: maskKey(token.trim()), ...limit });
+});
+
+settingsRoutes.delete("/github-token", async (c) => {
+  await setGithubToken(c.env.DB, null);
   return c.json({ ok: true });
 });
 

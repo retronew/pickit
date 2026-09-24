@@ -41,6 +41,25 @@ export async function getApiToken(db: D1Database): Promise<string | null> {
   return row?.value ?? null;
 }
 
+/** GitHub token for project activity checks, set on the settings page. */
+export async function getGithubToken(db: D1Database): Promise<string | null> {
+  const row = await db.prepare("SELECT value FROM settings WHERE key = 'github_token'").first<{ value: string }>();
+  return row?.value || null;
+}
+
+export async function setGithubToken(db: D1Database, token: string | null) {
+  if (!token) {
+    await db.prepare("DELETE FROM settings WHERE key = 'github_token'").run();
+    return;
+  }
+  await db
+    .prepare(
+      "INSERT INTO settings (key, value) VALUES ('github_token', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+    )
+    .bind(token)
+    .run();
+}
+
 export async function setApiToken(db: D1Database, token: string) {
   await db
     .prepare(

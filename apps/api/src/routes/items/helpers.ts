@@ -7,6 +7,7 @@ import { normalizeUrl } from "@pickit/shared";
 import { getSettings } from "#settings";
 import { emitEvent } from "#webhooks";
 import { captureContent } from "#item-content";
+import { parseActivity, refreshActivity } from "#activity";
 
 export async function itemsByIds(db: D1Database, ids: number[]): Promise<Map<number, ItemRow>> {
   if (!ids.length) return new Map();
@@ -43,6 +44,7 @@ export function toItemJson(r: ItemRow) {
     contentStatus: r.content_status,
     contentAt: r.content_at,
     contentSize: r.content_size,
+    activity: parseActivity(r.activity),
   };
 }
 
@@ -148,6 +150,7 @@ export async function createItem(
   const settings = await getSettings(env.DB);
   if (settings) opts.waitUntil(embedItem(env, id, item, settings).catch(() => {}));
   if (item.url) opts.waitUntil(captureContent(env, id, item.url).catch(() => {}));
+  if (item.url) opts.waitUntil(refreshActivity(env, id, item.url).catch(() => {}));
   emitEvent(env, opts.waitUntil, "item.created", {
     id,
     name: item.name,

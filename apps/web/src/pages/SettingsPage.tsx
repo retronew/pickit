@@ -19,6 +19,7 @@ import { Confirm } from "#components/Confirm";
 import { ScrollFade } from "#components/ScrollFade";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
 import { m } from "#lib/i18n";
+import { GithubTokenCard } from "#components/settings/GithubTokenCard";
 
 interface SettingsTab {
   id: string;
@@ -81,6 +82,7 @@ const TABS: SettingsTab[] = [
       <div className={TWO_COLUMNS}>
         <AllowedEmailsCard />
         <ApiTokenCard />
+        <GithubTokenCard />
         <McpCard />
         <WebhooksCard />
       </div>

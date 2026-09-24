@@ -9,6 +9,9 @@ import { Badge } from "#components/ui/badge";
 import { cn } from "#lib/utils";
 import { m } from "#lib/i18n";
 import { MarqueeText } from "#components/MarqueeText";
+import { activityLevel } from "@pickit/shared";
+import { ActivityBadge } from "#components/items/ActivityBadge";
+import { isUnmaintained } from "#lib/activity";
 
 function isDeadLink(item: Item): boolean {
   return item.checkedAt != null && (item.httpStatus == null || item.httpStatus >= 400);
@@ -80,6 +83,7 @@ export const ItemCard = memo(function ItemCard({
   focused?: boolean;
   onToggleSelect?: (id: number) => void;
 }) {
+  const level = activityLevel(item.activity);
   return (
     <Card
       onClick={() =>
@@ -126,6 +130,8 @@ export const ItemCard = memo(function ItemCard({
               {m.item_dead()}
             </Badge>
           )}
+          {/* Only a warning here: a GitHub / npm project that looks unmaintained. */}
+          {!selectMode && level && isUnmaintained(level) && <ActivityBadge level={level} />}
         </div>
         {/* Phones: no room for three buttons; a pinned mark plus a shared actions menu. */}
         {!selectMode && (
