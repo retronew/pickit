@@ -165,7 +165,7 @@ export function AskAi() {
             onFocus={() => messages.length > 0 && setOpen(true)}
             placeholder={m.chat_placeholder()}
             disabled={streaming}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/72 disabled:opacity-50"
+            className="flex-1 bg-transparent text-base outline-none sm:text-sm placeholder:text-muted-foreground/72 disabled:opacity-50"
           />
           <Button
             type="submit"

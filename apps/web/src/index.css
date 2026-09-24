@@ -331,13 +331,14 @@ button:disabled {
 
 /*
  * Denser controls on phones for form-heavy pages (settings). coss ui makes
- * buttons, inputs and selects larger below `sm` for touch; their invisible
+ * buttons and selects larger below `sm` for touch; their invisible
  * pointer-coarse hit areas stay, so we can use the desktop type and icon
- * size. Unlayered so it beats the component utilities.
+ * size. Text inputs keep 16px: anything smaller makes iOS zoom on focus.
+ * Unlayered so it beats the component utilities.
  */
 @media (width < 40rem) {
   .compact-controls
-    :is([data-slot="button"], [data-slot="select-trigger"], [data-slot="input-control"], [data-slot="textarea-control"]) {
+    :is([data-slot="button"], [data-slot="select-trigger"]) {
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
   }
