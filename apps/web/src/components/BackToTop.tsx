@@ -3,7 +3,6 @@ import { throttle } from "es-toolkit";
 import { ArrowUpIcon } from "lucide-react";
 import { Button } from "#components/ui/button";
 import { cn } from "#lib/utils";
-import { smoothScrollToTop } from "#lib/scroll";
 import { m } from "#lib/i18n";
 
 export function BackToTop() {
@@ -15,6 +14,17 @@ export function BackToTop() {
     () => throttle(() => setShow(window.scrollY > 480), 100),
     [],
   );
+
+  // Throttled so repeated clicks don't restart the native smooth scroll.
+  const scrollToTop = useMemo(
+    () =>
+      throttle(() => window.scrollTo({ top: 0, behavior: "smooth" }), 300, {
+        edges: ["leading"],
+      }),
+    [],
+  );
+
+  useEffect(() => () => scrollToTop.cancel(), [scrollToTop]);
 
   useEffect(() => {
     onScroll();
@@ -42,17 +52,17 @@ export function BackToTop() {
 
   return (
     <Button
-      variant="secondary"
+      variant="outline"
       size="icon"
       aria-label={m.back_to_top()}
-      onClick={() => smoothScrollToTop()}
+      onClick={scrollToTop}
       className={cn(
         // Cleared above AskAi's fixed input bar (~pb-4/6 + pill height) so
         // the two floating controls never overlap.
-        "z-fab fixed right-4 bottom-24 rounded-full shadow-lg/10 transition-[opacity,transform] ease-[var(--ease-smooth-out)] sm:right-6 sm:bottom-28",
+        "z-fab fixed right-4 bottom-24 rounded-full shadow-lg/5 backdrop-blur-sm transition-[opacity,translate,scale] [&_svg]:transition-transform hover:[&_svg]:-translate-y-0.5 ease-[var(--ease-smooth-out)] sm:right-6 sm:bottom-28",
         visible
-          ? "scale-100 opacity-100 duration-[var(--duration-fast)]"
-          : "pointer-events-none scale-[var(--scale-large)] opacity-0 duration-[var(--duration-quick)]",
+          ? "translate-y-0 scale-100 opacity-100 duration-[var(--duration-fast)]"
+          : "pointer-events-none translate-y-2 scale-95 opacity-0 duration-[var(--duration-quick)]",
       )}
     >
       <ArrowUpIcon />

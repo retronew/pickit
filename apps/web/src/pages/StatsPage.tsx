@@ -104,11 +104,15 @@ export function StatsPage() {
           label={m.stats_embedding_coverage()}
           value={`${Math.round(stats.embeddingCoverage * 100)}%`}
         />
-        <StatTile label={m.stats_dead_links()} value={String(stats.deadLinks)} />
+        <StatTile
+          label={m.stats_dead_links()}
+          value={String(stats.deadLinks)}
+        />
         <StatTile label={m.nav_trash()} value={String(stats.trash)} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        {/* Left: tall category list; right: month + clicks stacked */}
         <Card>
           <CardHeader>
             <CardTitle>{m.stats_by_category()}</CardTitle>
@@ -158,82 +162,91 @@ export function StatsPage() {
           )}
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{m.stats_by_month()}</CardTitle>
-            <CardDescription>{m.stats_by_month_hint()}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.byMonth.length === 0 ? (
-              <ChartEmpty />
-            ) : (
-              <ChartContainer config={monthChartConfig}>
-                <BarChart
-                  accessibilityLayer
-                  data={stats.byMonth}
-                  margin={{ top: 20 }}
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{m.stats_by_month()}</CardTitle>
+              <CardDescription>{m.stats_by_month_hint()}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stats.byMonth.length === 0 ? (
+                <ChartEmpty />
+              ) : (
+                <ChartContainer
+                  config={monthChartConfig}
+                  className="aspect-auto h-[200px] w-full"
                 >
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent hideLabel />}
-                  />
-                  <Bar dataKey="count" fill="var(--color-count)" radius={8} />
-                </BarChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  <BarChart
+                    accessibilityLayer
+                    data={stats.byMonth}
+                    maxBarSize={40}
+                    margin={{ top: 8 }}
+                  >
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                    />
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent hideLabel />}
+                    />
+                    <Bar dataKey="count" fill="var(--color-count)" radius={8} />
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
 
-      {clickData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{m.stats_top_clicked()}</CardTitle>
-            <CardDescription>{m.stats_top_clicked_hint()}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={clickChartConfig}
-              className="w-full"
-              style={{ aspectRatio: "auto", height: clickData.length * 26 + 8 }}
-            >
-              <BarChart
-                accessibilityLayer
-                data={clickData}
-                layout="vertical"
-                barSize={12}
-                margin={{ left: -8 }}
-              >
-                <XAxis type="number" dataKey="clickCount" hide />
-                <YAxis
-                  dataKey="label"
-                  type="category"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  width={108}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Bar
-                  dataKey="clickCount"
-                  fill="var(--color-clickCount)"
-                  radius={5}
-                />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
+          {clickData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{m.stats_top_clicked()}</CardTitle>
+                <CardDescription>{m.stats_top_clicked_hint()}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={clickChartConfig}
+                  className="w-full"
+                  style={{
+                    aspectRatio: "auto",
+                    height: clickData.length * 26 + 8,
+                  }}
+                >
+                  <BarChart
+                    accessibilityLayer
+                    data={clickData}
+                    layout="vertical"
+                    barSize={12}
+                    margin={{ left: -8 }}
+                  >
+                    <XAxis type="number" dataKey="clickCount" hide />
+                    <YAxis
+                      dataKey="label"
+                      type="category"
+                      tickLine={false}
+                      tickMargin={10}
+                      axisLine={false}
+                      width={108}
+                    />
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent hideLabel />}
+                    />
+                    <Bar
+                      dataKey="clickCount"
+                      fill="var(--color-clickCount)"
+                      radius={5}
+                    />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

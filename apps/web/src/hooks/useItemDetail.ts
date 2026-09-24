@@ -11,6 +11,7 @@ interface LinkStatus {
 /** Related items, AI summary, link check and sharing for the detail sheet. */
 export function useItemDetail(item: Item | null, open: boolean, onChanged: () => void) {
   const [related, setRelated] = useState<Item[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
   const [summary, setSummary] = useState("");
   const [summarizing, setSummarizing] = useState(false);
   const [linkStatus, setLinkStatus] = useState<LinkStatus | null>(null);
@@ -25,12 +26,24 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
       item ? { httpStatus: item.httpStatus, checkedAt: item.checkedAt } : null,
     );
     setShared(false);
-    if (item && open) {
-      fetch(`/api/items/${item.id}/related?limit=6`)
-        .then((r) => r.json())
-        .then(setRelated)
-        .catch(() => {});
+    if (!item || !open) {
+      setRelatedLoading(false);
+      return;
     }
+    let cancelled = false;
+    setRelatedLoading(true);
+    fetch(`/api/items/${item.id}/related?limit=6`)
+      .then((r) => r.json())
+      .then((data: Item[]) => {
+        if (!cancelled) setRelated(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setRelatedLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [item, open]);
 
   async function checkLinkNow() {
@@ -92,6 +105,7 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
 
   return {
     related,
+    relatedLoading,
     summary,
     summarizing,
     linkStatus,

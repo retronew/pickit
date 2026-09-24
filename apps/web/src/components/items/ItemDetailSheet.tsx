@@ -21,6 +21,8 @@ import {
 } from "#components/ui/sheet";
 import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
+import { Skeleton } from "#components/ui/skeleton";
+import { Table, TableBody, TableCell, TableRow } from "#components/ui/table";
 import { Favicon } from "#components/Favicon";
 import { TranslatePanel } from "#components/items/TranslatePanel";
 import { intlLocale, m } from "#lib/i18n";
@@ -59,6 +61,7 @@ export function ItemDetailSheet({
 }) {
   const {
     related,
+    relatedLoading,
     summary,
     summarizing,
     linkStatus,
@@ -135,16 +138,25 @@ export function ItemDetailSheet({
                 </div>
               )}
 
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                <dt className="text-muted-foreground">{m.field_category()}</dt>
-                <dd>{item.category || m.uncategorized()}</dd>
-                <dt className="text-muted-foreground">{m.detail_clicks()}</dt>
-                <dd>{item.clickCount}</dd>
-                <dt className="text-muted-foreground">{m.detail_created()}</dt>
-                <dd>{formatDate(item.createdAt)}</dd>
-                <dt className="text-muted-foreground">{m.detail_updated()}</dt>
-                <dd>{formatDate(item.updatedAt)}</dd>
-              </dl>
+              <div className="overflow-hidden rounded-lg border">
+                <Table>
+                  <TableBody>
+                    {[
+                      [m.field_category(), item.category || m.uncategorized()],
+                      [m.detail_clicks(), item.clickCount],
+                      [m.detail_created(), formatDate(item.createdAt)],
+                      [m.detail_updated(), formatDate(item.updatedAt)],
+                    ].map(([label, value]) => (
+                      <TableRow key={String(label)} className="hover:bg-transparent">
+                        <TableCell className="w-28 bg-muted/40 text-muted-foreground">
+                          {label}
+                        </TableCell>
+                        <TableCell className="tabular-nums">{value}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -159,15 +171,32 @@ export function ItemDetailSheet({
                     {summary ? m.detail_regenerate() : m.detail_generate()}
                   </Button>
                 </div>
-                {summary && (
-                  <p className="rounded-lg bg-muted/60 p-3 text-muted-foreground text-sm leading-relaxed">
+                {summary ? (
+                  <p className="animate-fade-in rounded-lg bg-muted/60 p-3 text-muted-foreground text-sm leading-relaxed">
                     {summary}
+                  </p>
+                ) : (
+                  <p className="rounded-lg border border-dashed p-3 text-center text-muted-foreground text-sm">
+                    {m.detail_summary_empty()}
                   </p>
                 )}
               </div>
 
-              {related.length > 0 && (
+              {relatedLoading ? (
                 <div className="space-y-2">
+                  <h3 className="font-medium text-sm">{m.detail_related()}</h3>
+                  <div className="space-y-1" aria-busy="true" aria-label={m.common_loading()}>
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+                        <Skeleton className="size-4 shrink-0 rounded-sm" />
+                        <Skeleton className="h-4" style={{ width: `${56 - i * 12}%` }} />
+                        <Skeleton className="ml-auto h-3 w-12" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : related.length > 0 && (
+                <div className="animate-fade-in space-y-2">
                   <h3 className="font-medium text-sm">{m.detail_related()}</h3>
                   <div className="space-y-1">
                     {related.map((r) => (

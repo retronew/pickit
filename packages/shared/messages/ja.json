@@ -350,6 +350,7 @@
   "detail_regenerate": "再生成",
   "detail_related": "類似のブックマーク",
   "detail_summary": "AI 要約",
+  "detail_summary_empty": "要約はまだありません。「要約を生成」をクリックして作成します",
   "detail_updated": "更新日時",
   "dup_message": "「{name}」は既に保存されています。もう 1 件保存しますか？",
   "dup_save_anyway": "それでも保存",

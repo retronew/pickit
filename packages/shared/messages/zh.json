@@ -350,6 +350,7 @@
   "detail_regenerate": "重新生成",
   "detail_related": "相似收藏",
   "detail_summary": "AI 摘要",
+  "detail_summary_empty": "暂无摘要，点击「生成摘要」创建",
   "detail_updated": "更新时间",
   "dup_message": "「{name}」已经在你收藏里了，还要再存一条吗？",
   "dup_save_anyway": "继续保存",

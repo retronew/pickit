@@ -350,6 +350,7 @@
   "detail_regenerate": "Regenerate",
   "detail_related": "Similar bookmarks",
   "detail_summary": "AI summary",
+  "detail_summary_empty": "No summary yet. Click Summarize to create one.",
   "detail_updated": "Updated",
   "dup_message": "“{name}” is already saved. Save another copy?",
   "dup_save_anyway": "Save anyway",
