@@ -4,6 +4,7 @@
 
 import type { MessageRef } from "@pickit/shared/i18n";
 import { mixTitle, normalizeMix } from "#shares";
+import { CRON_TASKS } from "@pickit/shared";
 
 export type Body = Record<string, any>;
 
@@ -257,6 +258,13 @@ export function describe(
       target: `share:${m[1]}`,
       summary: msg("share_update", { slug: m[1], title: quote(body.title) }),
     };
+  }
+  if ((m = p.match(/^\/cron\/(\w+)\/run$/)) && method === "POST") {
+    // Known tasks get their label; anything else (a 404) shows the raw name.
+    const task: MessageRef = (CRON_TASKS as readonly string[]).includes(m[1])
+      ? { key: `cron_task_${m[1]}` }
+      : { key: "audit_quote", params: { text: m[1] } };
+    return { action: "settings.cron_run", target: `cron:${m[1]}`, summary: msg("cron_run", { task }) };
   }
   if ((m = p.match(/^\/webhooks\/(\d+)(\/test)?$/))) {
     const target = `webhook:${m[1]}`;

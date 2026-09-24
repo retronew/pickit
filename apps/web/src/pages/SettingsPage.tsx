@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { useSearchParams } from "react-router";
-import { BotIcon, DatabaseIcon, ShieldCheckIcon, WandSparklesIcon } from "lucide-react";
+import { BotIcon, ClockIcon, DatabaseIcon, ShieldCheckIcon, WandSparklesIcon } from "lucide-react";
 import { DataImportExportCard } from "#components/settings/DataImportExportCard";
 import { BookmarkletCard } from "#components/settings/BookmarkletCard";
 import { OrganizeCard } from "#components/settings/OrganizeCard";
@@ -22,6 +22,7 @@ import { m } from "#lib/i18n";
 import { GithubTokenCard } from "#components/settings/GithubTokenCard";
 import { ActivityCheckCard } from "#components/settings/ActivityCheckCard";
 import { CardColumns } from "#components/settings/CardColumns";
+import { CronTasksCard } from "#components/settings/cron/CronTasksCard";
 
 interface SettingsTab {
   id: string;
@@ -101,6 +102,13 @@ const TABS: SettingsTab[] = [
         }
       />
     ),
+  },
+  {
+    id: "cron",
+    label: m.settings_tab_cron(),
+    icon: ClockIcon,
+    description: m.settings_tab_cron_description(),
+    content: <CronTasksCard />,
   },
 ];
 

@@ -54,6 +54,7 @@ export const AUDIT_ACTIONS = [
   "settings.locale",
   "settings.saved_searches",
   "settings.github_token",
+  "settings.cron_run",
   "settings.webhook_create",
   "settings.webhook_update",
   "settings.webhook_delete",

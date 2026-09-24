@@ -231,14 +231,17 @@ export async function runJobStep(env: Env, kind: JobKind): Promise<JobState> {
   return job;
 }
 
-/** Cron driver: keeps running jobs moving while no page is stepping them. */
-export async function advanceRunningJobs(env: Env, budgetMs = 25_000) {
+/** Cron driver: keeps running jobs moving while no page is stepping them. Returns the steps run. */
+export async function advanceRunningJobs(env: Env, budgetMs = 25_000): Promise<number> {
   const deadline = Date.now() + budgetMs;
+  let steps = 0;
   for (const kind of Object.keys(RUNNERS) as JobKind[]) {
     while (Date.now() < deadline) {
       const job = await runJobStep(env, kind);
       // Stop when finished/paused, or when another driver holds the lock.
       if (job.status !== "running" || job.lockedUntil) break;
+      steps++;
     }
   }
+  return steps;
 }
