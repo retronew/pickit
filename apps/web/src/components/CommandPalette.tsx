@@ -50,8 +50,10 @@ export function CommandPalette() {
           items={items ?? []}
           itemToStringValue={(i: unknown) => (i as Item).name}
         >
+          {/* The input sits above the panel: inside it, the list would be sized to
+              the whole panel and pushed down by the input, clipping its end. */}
+          <CommandInput placeholder={m.palette_placeholder()} />
           <CommandPanel>
-            <CommandInput placeholder={m.palette_placeholder()} />
             <CommandList>
               <CommandEmpty>
                 {items === null ? m.common_loading() : m.palette_empty()}
