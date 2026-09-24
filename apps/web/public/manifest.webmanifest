@@ -1,7 +1,7 @@
 {
   "name": "PickIt",
   "short_name": "PickIt",
-  "description": "PickIt — a personal library of tech bookmarks",
+  "description": "PickIt — bookmarks you'll actually use",
   "id": "/",
   "start_url": "/",
   "scope": "/",

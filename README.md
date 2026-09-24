@@ -2,7 +2,7 @@
 
 **English** | [简体中文](./README.zh-CN.md) | [日本語](./README.ja.md)
 
-A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Workers + D1. Save links, organize them with categories and tags, search them with full-text or semantic search, and let an AI model help you tidy things up.
+**Bookmarks you'll actually use.** A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Workers + D1. Save links, organize them with categories and tags, search them with full-text or semantic search, and let an AI model help you tidy things up.
 
 ## Features
 

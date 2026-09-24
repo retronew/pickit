@@ -2,6 +2,7 @@ import {
   getLocale,
   setLocale,
   isLocale,
+  m,
   INTL_LOCALE,
   type Locale,
 } from "@pickit/shared/i18n";
@@ -19,6 +20,7 @@ export function intlLocale(): string {
  */
 export function applyDocumentLocale() {
   document.documentElement.lang = intlLocale();
+  document.title = `PickIt — ${m.app_tagline()}`;
   document.cookie = `pickit_locale=${getLocale()}; path=/; max-age=31536000; SameSite=Lax`;
 }
 

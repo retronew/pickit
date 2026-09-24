@@ -95,6 +95,7 @@
   "api_restore_mode": "mode は merge または replace にしてください",
   "api_share_invalid": "type（item / category / tag）と value は必須です",
   "api_translate_empty": "このブックマークには翻訳するメモや要約がありません",
+  "app_tagline": "眠らせないブックマーク",
   "audit_action_ai_chat": "AI チャット",
   "audit_action_auth_sign_in": "ログイン",
   "audit_action_auth_sign_in_denied": "ログイン拒否",

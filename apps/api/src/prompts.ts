@@ -15,12 +15,12 @@ export function analyzePrompt(
 ) {
   return {
     system:
-      "You organize a personal library of technical bookmarks. Reply with JSON only, no other text: " +
+      "You organize a personal bookmark library. Reply with JSON only, no other text: " +
       '{"name": string, "note": string, "category": string, "tags": string[]}. ' +
       `name: a short name (the product's own name is fine). note: one sentence describing it, in ${lang(locale)}. ` +
       "category: reuse one of the existing categories exactly as written whenever one fits; only if none fits, " +
       `create a short new one in ${lang(locale)} (two levels like "A/B" are allowed). ` +
-      `tags: 2-5 short tags; technical names stay as they are, other tags in ${lang(locale)}.`,
+      `tags: 2-5 short tags; product and technical names stay as they are, other tags in ${lang(locale)}.`,
     prompt:
       `Existing categories: ${input.categories.join(", ") || none}\n` +
       `URL: ${input.url}\nPage title: ${input.title || none}\nPage description: ${input.description || none}`,
@@ -34,11 +34,11 @@ export function organizePrompt(
 ) {
   return {
     system:
-      "You organize a personal library of technical bookmarks. Reply with JSON only, no other text: " +
+      "You organize a personal bookmark library. Reply with JSON only, no other text: " +
       '{"category": string, "tags": string[]}. ' +
       "category: reuse one of the existing categories exactly as written whenever one fits; only if none fits, " +
       `create a short new one in ${lang(locale)}. ` +
-      `tags: 2-5 short tags; technical names stay as they are, other tags in ${lang(locale)}.`,
+      `tags: 2-5 short tags; product and technical names stay as they are, other tags in ${lang(locale)}.`,
     prompt:
       `Existing categories: ${input.categories.join(", ") || none}\n` +
       `Name: ${input.name}\nURL: ${input.url}\nNote: ${input.note || none}\n` +
@@ -53,7 +53,7 @@ export function summarizePrompt(
 ) {
   return {
     system:
-      `You summarize bookmarks in a technical library. In ${lang(locale)}, write 2-3 concise sentences on ` +
+      `You summarize bookmarks in a personal library. In ${lang(locale)}, write 2-3 concise sentences on ` +
       "what it is for, what stands out and when to use it. Output only the summary.",
     prompt: `Name: ${input.name}\nURL: ${input.url}\nNote: ${input.note || none}\nCategory: ${input.category || none}`,
   };
@@ -62,7 +62,7 @@ export function summarizePrompt(
 /** Recommends items from the library; cites them as [[id]]. */
 export function chatSystem(locale: Locale, catalog: string) {
   return (
-    "You are the assistant for the user's personal library of technical bookmarks. The user describes " +
+    "You are the assistant for the user's personal bookmark library. The user describes " +
     "a need; recommend the best matching bookmarks with a short reason for each, concise and practical. " +
     "If nothing in the library fits, say so honestly and give general advice. " +
     "Whenever you mention a bookmark, cite it as [[id]] (e.g. [[123]]) instead of writing its name or link. " +

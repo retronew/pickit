@@ -95,6 +95,7 @@
   "api_restore_mode": "mode must be merge or replace",
   "api_share_invalid": "type (item / category / tag) and value are required",
   "api_translate_empty": "This bookmark has no note or summary to translate",
+  "app_tagline": "Bookmarks you'll actually use",
   "audit_action_ai_chat": "AI chat",
   "audit_action_auth_sign_in": "Sign in",
   "audit_action_auth_sign_in_denied": "Sign-in denied",

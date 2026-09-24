@@ -95,6 +95,7 @@
   "api_restore_mode": "mode 必须是 merge 或 replace",
   "api_share_invalid": "type（item / category / tag）和 value 必填",
   "api_translate_empty": "这条收藏没有备注或摘要可以翻译",
+  "app_tagline": "收藏，不再吃灰",
   "audit_action_ai_chat": "AI 问答",
   "audit_action_auth_sign_in": "登录",
   "audit_action_auth_sign_in_denied": "拒绝登录",
