@@ -7,6 +7,7 @@ import { ItemsPage } from "#pages/ItemsPage";
 import { AddPage } from "#pages/AddPage";
 import { TrashPage } from "#pages/TrashPage";
 import { TagsPage } from "#pages/TagsPage";
+import { CategoriesPage } from "#pages/CategoriesPage";
 import { StatsPage } from "#pages/StatsPage";
 import { SettingsPage } from "#pages/SettingsPage";
 import { SharesPage } from "#pages/SharesPage";
@@ -31,6 +32,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/" element={<ItemsPage />} />
           <Route path="/add" element={<AddPage />} />
           <Route path="/trash" element={<TrashPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/tags" element={<TagsPage />} />
           <Route path="/shares" element={<SharesPage />} />
           <Route path="/stats" element={<StatsPage />} />

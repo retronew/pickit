@@ -80,6 +80,8 @@ const REQUESTS: [string, string, Record<string, unknown>, Record<string, unknown
   ["POST", "/api/items/bulk", { ids: [1], action: "remove_tags", tags: ["a"] }],
   ["POST", "/api/tags/rename", { from: "a", to: "b" }],
   ["POST", "/api/tags/delete", { tag: "a" }],
+  ["POST", "/api/categories/rename", { from: "a", to: "b" }],
+  ["POST", "/api/categories/delete", { category: "a" }],
   ["POST", "/api/shares", { type: "category", value: "x" }],
   ["POST", "/api/shares", { type: "tag", value: "x" }],
   ["POST", "/api/shares", { type: "item", value: "1", title: "t" }],

@@ -5,7 +5,7 @@
 
 import { m, type Locale } from "./i18n";
 
-export const AUDIT_CATEGORIES = ["item", "tag", "share", "settings", "job", "ai", "auth", "backup", "mcp", "system", "other"] as const;
+export const AUDIT_CATEGORIES = ["item", "category", "tag", "share", "settings", "job", "ai", "auth", "backup", "mcp", "system", "other"] as const;
 export type AuditCategory = (typeof AUDIT_CATEGORIES)[number];
 
 export const AUDIT_ACTIONS = [
@@ -36,6 +36,8 @@ export const AUDIT_ACTIONS = [
   "item.bulk_remove_tags",
   "item.bulk_apply",
   "item.suggest",
+  "category.rename",
+  "category.delete",
   "tag.rename",
   "tag.delete",
   "share.create",

@@ -174,6 +174,18 @@ export function describe(
       };
     case "POST /tags/delete":
       return { action: "tag.delete", target: `tag:${body.tag}`, summary: msg("tag_delete", { tag: quote(body.tag) }) };
+    case "POST /categories/rename":
+      return {
+        action: "category.rename",
+        target: `category:${body.from}`,
+        summary: msg("category_rename", { from: quote(body.from), to: quote(body.to) }),
+      };
+    case "POST /categories/delete":
+      return {
+        action: "category.delete",
+        target: `category:${body.category}`,
+        summary: msg("category_delete", { category: quote(body.category) }),
+      };
     case "POST /shares":
       return { action: "share.create", target: res.slug ? `share:${res.slug}` : undefined, summary: describeShare(body) };
     case "POST /settings/ai":

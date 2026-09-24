@@ -56,6 +56,7 @@ export function AppShell() {
 
   const navItems = [
     { to: "/", label: m.nav_items(), end: true },
+    { to: "/categories", label: m.nav_categories() },
     { to: "/tags", label: m.nav_tags() },
     { to: "/shares", label: m.nav_shares() },
     { to: "/stats", label: m.nav_stats() },

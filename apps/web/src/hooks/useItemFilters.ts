@@ -25,14 +25,27 @@ export const SORT_LABELS: Record<SortKey, string> = {
 };
 
 /**
- * Category / tag filters (tags live in the URL), sorting and grouping.
+ * Category / tag filters (both live in the URL), sorting and grouping.
  * With search hits, hits keep their relevance order and only get filtered.
  */
 export function useItemFilters(items: Item[], hits: Item[] | null) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [category, setCategory] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("pinned");
   const selectedTags = useMemo(() => uniq(searchParams.getAll("tag")), [searchParams]);
+  // The category lives in the URL too, so other pages can link to a filtered list.
+  const category = searchParams.get("category") ?? "";
+
+  function setCategory(next: string) {
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        if (next) params.set("category", next);
+        else params.delete("category");
+        return params;
+      },
+      { replace: true },
+    );
+  }
 
   function setTagFilter(next: string[]) {
     setSearchParams(
