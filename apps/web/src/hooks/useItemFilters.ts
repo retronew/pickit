@@ -9,6 +9,7 @@ import { groupByCategory } from "#lib/groupItems";
 import {
   categoryCounts,
   matchesFilters,
+  resolveHits,
   sortItems,
   tagCounts,
   type SortKey,
@@ -75,10 +76,11 @@ export function useItemFilters(items: Item[], hits: Item[] | null) {
 
   const allTags = useMemo(() => tagOptions.map((option) => option.value), [tagOptions]);
 
-  // Search hits keep their relevance order and are only filtered.
+  // Search hits keep their relevance order and are only filtered; their data
+  // comes from `items`, so deleting or editing a hit updates the results.
   const visibleItems = useMemo(() => {
     const matches = (item: Item) => matchesFilters(item, category, selectedTags);
-    return hits ? hits.filter(matches) : sortItems(items.filter(matches), sortKey);
+    return hits ? resolveHits(hits, items).filter(matches) : sortItems(items.filter(matches), sortKey);
   }, [items, hits, category, selectedTags, sortKey]);
 
   const grouped = useMemo(() => groupByCategory(visibleItems), [visibleItems]);

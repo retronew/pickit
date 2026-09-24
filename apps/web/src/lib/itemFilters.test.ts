@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Item } from "@pickit/shared";
-import { categoryCounts, compareManual, inCategory, matchesFilters, sortItems, tagCounts } from "./itemFilters";
+import { categoryCounts, compareManual, inCategory, matchesFilters, resolveHits, sortItems, tagCounts } from "./itemFilters";
 
 let nextId = 1;
 function item(patch: Partial<Item>): Item {
@@ -114,5 +114,17 @@ describe("manual order", () => {
     const pinned = item({ name: "pinned", pinned: true, position: 1 });
     const plain = item({ name: "plain", position: 0 });
     expect(sortItems([pinned, plain], "manual").map((i) => i.name)).toEqual(["plain", "pinned"]);
+  });
+});
+
+describe("resolveHits", () => {
+  it("keeps the search order but drops deleted items and uses current data", () => {
+    const a = item({ name: "a" });
+    const b = item({ name: "b" });
+    const c = item({ name: "c" });
+    const hits = [c, a, b];
+    // b was deleted, a was renamed after the search ran.
+    const items = [{ ...a, name: "a (edited)" }, c];
+    expect(resolveHits(hits, items).map((i) => i.name)).toEqual(["c", "a (edited)"]);
   });
 });

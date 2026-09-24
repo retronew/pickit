@@ -42,6 +42,16 @@ export function tagCounts(items: Item[]): FacetCount[] {
 }
 
 /**
+ * Search hits in relevance order, but with each item's current data from the
+ * library: a hit deleted since the search disappears, and edits or pinning
+ * show up without searching again.
+ */
+export function resolveHits(hits: Item[], items: Item[]): Item[] {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  return hits.flatMap((hit) => byId.get(hit.id) ?? []);
+}
+
+/**
  * Manual order: never-reordered items first (newest first, so new bookmarks
  * land on top), then by the position the user dragged them to.
  */
