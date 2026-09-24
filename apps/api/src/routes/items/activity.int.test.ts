@@ -4,7 +4,7 @@ import { backfillActivity } from "#activity";
 
 let t: TestApp;
 /** Fake API answers by URL; anything else is offline. */
-let api: Record<string, { status?: number; body: unknown }>;
+let api: Record<string, { status?: number; body: unknown; headers?: Record<string, string> }>;
 let calls: { url: string; auth: string | null }[];
 
 beforeEach(async () => {
@@ -18,7 +18,7 @@ beforeEach(async () => {
       calls.push({ url, auth: new Headers(init?.headers).get("authorization") });
       const hit = api[url];
       if (!hit) throw new Error("offline");
-      return new Response(JSON.stringify(hit.body), { status: hit.status ?? 200 });
+      return new Response(JSON.stringify(hit.body), { status: hit.status ?? 200, headers: hit.headers });
     }),
   );
 });
@@ -87,7 +87,10 @@ describe("project activity", () => {
 
 describe("GitHub token on the settings page", () => {
   it("is verified with GitHub, shown masked, and used before the secret", async () => {
-    api["https://api.github.com/rate_limit"] = { body: { resources: { core: { limit: 5000, remaining: 4999 } } } };
+    api["https://api.github.com/rate_limit"] = {
+      body: { resources: { core: { limit: 5000, remaining: 4999, reset: 1790000000 } } },
+      headers: { "github-authentication-token-expiration": "2026-12-01 00:00:00 UTC" },
+    };
     const saved = await t.json("/api/settings/github-token", { method: "PUT", json: { token: "ghp_settings_token_123456" } });
     expect(saved).toMatchObject({ limit: 5000 });
     expect(saved.masked).not.toContain("settings_token");
@@ -97,13 +100,24 @@ describe("GitHub token on the settings page", () => {
     await create("https://github.com/a/b");
     expect(calls.find((c) => c.url === "https://api.github.com/repos/a/b")?.auth).toBe("Bearer ghp_settings_token_123456");
 
+    // Live status: quota, and expiry from GitHub's response header.
+    expect(await t.json("/api/settings/github-token/status")).toMatchObject({
+      configured: true,
+      valid: true,
+      limit: 5000,
+      remaining: 4999,
+      expiresAt: Date.parse("2026-12-01T00:00:00Z"),
+    });
+
     // Removing it falls back to the GITHUB_TOKEN secret.
     await t.json("/api/settings/github-token", { method: "DELETE" });
     expect(await t.json("/api/settings/github-token")).toEqual({ masked: null, fromSecret: true });
   });
 
-  it("rejects a token GitHub doesn't accept", async () => {
+  it("rejects a token GitHub doesn't accept, and reports a revoked one as invalid", async () => {
     api["https://api.github.com/rate_limit"] = { status: 401, body: {} };
+    // The GITHUB_TOKEN secret from createTestApp is in use and GitHub now rejects it.
+    expect(await t.json("/api/settings/github-token/status")).toEqual({ configured: true, reachable: true, valid: false });
     await t.json("/api/settings/github-token", { method: "PUT", json: { token: "bad" } }, 400);
     await t.json("/api/settings/github-token", { method: "PUT", json: { token: "" } }, 400);
   });

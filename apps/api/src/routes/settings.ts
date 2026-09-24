@@ -15,7 +15,7 @@ import {
 } from "@pickit/shared";
 import type { Env } from "#types";
 import { getRawSettings, saveSettings, getApiToken, setApiToken, getGithubToken, setGithubToken } from "#settings";
-import { githubRateLimit } from "#activity";
+import { githubToken, githubTokenStatus } from "#activity";
 import { createChatModel, createEmbeddingModel, describeError } from "#ai";
 import { listModels, ModelListError, type ModelFamily } from "#ai-models";
 import { ownerEmails, getExtraEmails, setExtraEmails, parseEmails, isValidEmail } from "#auth";
@@ -170,6 +170,7 @@ settingsRoutes.delete("/api-token", async (c) => {
 
 // GitHub token for project activity checks: masked when read, verified with
 // GitHub before it is saved. `fromSecret`: a GITHUB_TOKEN secret is set instead.
+// /status asks GitHub live (quota, expiry) about whichever token is in use.
 settingsRoutes.get("/github-token", async (c) => {
   const token = await getGithubToken(c.env.DB);
   return c.json({ masked: token ? maskKey(token) : null, fromSecret: !token && !!c.env.GITHUB_TOKEN });
@@ -180,10 +181,19 @@ settingsRoutes.put("/github-token", async (c) => {
   if (typeof token !== "string" || !token.trim() || token.length > 300) {
     return c.json({ error: await tr(c, "api_github_token_invalid") }, 400);
   }
-  const limit = await githubRateLimit(token.trim()).catch(() => null);
-  if (!limit) return c.json({ error: await tr(c, "api_github_token_rejected") }, 400);
+  const status = await githubTokenStatus(token.trim()).catch(() => null);
+  if (!status) return c.json({ error: await tr(c, "api_github_token_rejected") }, 400);
   await setGithubToken(c.env.DB, token.trim());
-  return c.json({ masked: maskKey(token.trim()), ...limit });
+  return c.json({ masked: maskKey(token.trim()), ...status });
+});
+
+settingsRoutes.get("/github-token/status", async (c) => {
+  const token = await githubToken(c.env);
+  if (!token) return c.json({ configured: false });
+  const status = await githubTokenStatus(token).catch(() => undefined);
+  // undefined: GitHub unreachable; null: it rejected the token (revoked or expired).
+  if (status === undefined) return c.json({ configured: true, reachable: false });
+  return c.json({ configured: true, reachable: true, valid: !!status, ...status });
 });
 
 settingsRoutes.delete("/github-token", async (c) => {

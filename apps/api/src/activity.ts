@@ -109,15 +109,39 @@ export async function refreshActivity(env: Env, id: number, url: string): Promis
   return activity;
 }
 
-/** GitHub's hourly API limit for a token (null when GitHub rejects it). */
-export async function githubRateLimit(token: string): Promise<{ limit: number; remaining: number } | null> {
+export interface GithubTokenStatus {
+  limit: number;
+  remaining: number;
+  /** When the hourly quota resets. */
+  resetAt: number;
+  /** When the token itself expires; null for tokens without an expiry. */
+  expiresAt: number | null;
+}
+
+/**
+ * Asks GitHub about a token: its hourly quota and, from the response header
+ * GitHub adds for personal access tokens, when it expires. The rate_limit
+ * endpoint doesn't count against the quota. Null when GitHub rejects it.
+ */
+export async function githubTokenStatus(token: string): Promise<GithubTokenStatus | null> {
   const res = await fetch("https://api.github.com/rate_limit", {
     headers: { Accept: "application/vnd.github+json", "User-Agent": "PickIt", Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) return null;
-  const { resources } = (await res.json()) as { resources?: { core?: { limit: number; remaining: number } } };
-  return resources?.core ?? null;
+  const { resources } = (await res.json()) as {
+    resources?: { core?: { limit: number; remaining: number; reset: number } };
+  };
+  if (!resources?.core) return null;
+  // e.g. "2026-12-01 00:00:00 UTC"; absent when the token never expires.
+  const expiry = res.headers.get("github-authentication-token-expiration");
+  const expiresAt = expiry ? Date.parse(expiry.replace(" UTC", "Z").replace(" ", "T")) : NaN;
+  return {
+    limit: resources.core.limit,
+    remaining: resources.core.remaining,
+    resetAt: resources.core.reset * 1000,
+    expiresAt: Number.isNaN(expiresAt) ? null : expiresAt,
+  };
 }
 
 /** Checks a few project bookmarks never checked, or not in the last week. */

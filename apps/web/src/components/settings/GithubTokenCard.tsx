@@ -1,55 +1,22 @@
-import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "#components/ui/card";
+import { useState } from "react";
+import { ExternalLinkIcon, RefreshCwIcon } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "#components/ui/card";
 import { Button } from "#components/ui/button";
+import { Field, FieldLabel } from "#components/ui/field";
 import { Input } from "#components/ui/input";
 import { TextSkeleton } from "#components/settings/skeletons";
-import { api, toastError, toastSuccess } from "#lib/api";
+import { GithubTokenStatus } from "#components/settings/GithubTokenStatus";
+import { useGithubToken } from "#hooks/useGithubToken";
 import { m } from "#lib/i18n";
 
-interface TokenState {
-  masked: string | null;
-  /** No token saved here, but the GITHUB_TOKEN secret is set. */
-  fromSecret: boolean;
-}
+/** Fine-grained token with only public, read-only repository access. */
+const CREATE_URL = "https://github.com/settings/personal-access-tokens/new";
 
 /** GitHub token for project activity checks (raises GitHub's API limit). */
 export function GithubTokenCard() {
-  const [state, setState] = useState<TokenState | null>(null);
+  const { info, status, checking, saving, check, save, remove } = useGithubToken();
   const [token, setToken] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const refresh = () =>
-    api<TokenState>("/api/settings/github-token")
-      .then(setState)
-      .catch(() => setState({ masked: null, fromSecret: false }));
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  async function save() {
-    if (!token.trim() || saving) return;
-    setSaving(true);
-    try {
-      const res = await api<{ limit: number }>("/api/settings/github-token", { method: "PUT", json: { token } });
-      toastSuccess(m.github_token_saved({ limit: res.limit }), { id: "github-token" });
-      setToken("");
-      refresh();
-    } catch (err) {
-      toastError(m.github_token_save_failed(), err, { id: "github-token" });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function remove() {
-    try {
-      await api("/api/settings/github-token", { method: "DELETE" });
-      refresh();
-    } catch (err) {
-      toastError(m.github_token_save_failed(), err, { id: "github-token" });
-    }
-  }
+  const hasToken = !!info?.masked;
 
   return (
     <Card>
@@ -57,51 +24,71 @@ export function GithubTokenCard() {
         <CardTitle>GitHub Token</CardTitle>
         <CardDescription>{m.github_token_description()}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {state === null ? (
+      <CardContent className="space-y-4">
+        {info === null ? (
           <TextSkeleton className="my-0.5 w-48" />
         ) : (
-          <p className="animate-fade-in text-muted-foreground text-sm">
-            {state.masked ? (
-              <>
-                {m.token_current()}
-                <code className="text-foreground">{state.masked}</code>
-              </>
-            ) : state.fromSecret ? (
-              m.github_token_from_secret()
-            ) : (
-              m.github_token_none()
-            )}
-          </p>
+          <div className="animate-fade-in space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 text-sm">
+                {hasToken ? (
+                  <>
+                    <span className="text-muted-foreground">{m.token_current()}</span>
+                    <code>{info.masked}</code>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {info.fromSecret ? m.github_token_from_secret() : m.github_token_none()}
+                  </span>
+                )}
+              </p>
+              {(hasToken || info.fromSecret) && (
+                <Button variant="outline" size="sm" onClick={check} loading={checking}>
+                  <RefreshCwIcon />
+                  {m.github_token_check()}
+                </Button>
+              )}
+              {hasToken && (
+                <Button variant="ghost" size="sm" onClick={remove} className="text-muted-foreground">
+                  {m.github_token_remove()}
+                </Button>
+              )}
+            </div>
+            {status && <GithubTokenStatus status={status} />}
+          </div>
         )}
+
         <form
-          className="flex gap-2"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            save();
+            if (token.trim() && (await save(token.trim()))) setToken("");
           }}
         >
-          <Input
-            type="password"
-            autoComplete="off"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="ghp_… / github_pat_…"
-            aria-label="GitHub Token"
-          />
-          <Button type="submit" disabled={!token.trim()} loading={saving}>
-            {m.common_save()}
-          </Button>
+          <Field>
+            <FieldLabel htmlFor="github-token">{hasToken ? m.github_token_replace() : m.github_token_add()}</FieldLabel>
+            <div className="flex w-full gap-2">
+              <Input
+                id="github-token"
+                type="password"
+                autoComplete="off"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="github_pat_… / ghp_…"
+              />
+              <Button type="submit" disabled={!token.trim()} loading={saving}>
+                {m.common_save()}
+              </Button>
+            </div>
+          </Field>
         </form>
-        <p className="text-muted-foreground text-xs">{m.github_token_hint()}</p>
+        <p className="text-muted-foreground text-xs">
+          {m.github_token_hint()}{" "}
+          <a href={CREATE_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 underline">
+            {m.github_token_create()}
+            <ExternalLinkIcon className="size-3" />
+          </a>
+        </p>
       </CardContent>
-      {state?.masked && (
-        <CardFooter>
-          <Button variant="outline" size="lg" onClick={remove}>
-            {m.github_token_remove()}
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   );
 }

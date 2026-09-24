@@ -79,12 +79,18 @@ const TABS: SettingsTab[] = [
     icon: ShieldCheckIcon,
     description: m.settings_tab_access_description(),
     content: (
+      // Two independent stacks: a grid would align each row to its tallest card
+      // and leave gaps under the short ones.
       <div className={TWO_COLUMNS}>
-        <AllowedEmailsCard />
-        <ApiTokenCard />
-        <GithubTokenCard />
-        <McpCard />
-        <WebhooksCard />
+        <div className="space-y-6">
+          <AllowedEmailsCard />
+          <ApiTokenCard />
+          <GithubTokenCard />
+        </div>
+        <div className="space-y-6">
+          <McpCard />
+          <WebhooksCard />
+        </div>
       </div>
     ),
   },
