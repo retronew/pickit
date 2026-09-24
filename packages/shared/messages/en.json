@@ -501,7 +501,6 @@
   "cron_task_vectors_hint": "Adds the compact version used for fast search to older vectors",
   "cron_tick": "Last fired {when}",
   "cron_tick_never": "Not fired yet; runs once deployed",
-  "cron_timezone_note": "Times in {tz}",
   "cron_trigger_manual": "Manual",
   "date_clear": "Clear dates",
   "date_last_days": "Last {days} days",

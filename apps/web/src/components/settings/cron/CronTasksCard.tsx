@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "#comp
 import { ListSkeleton } from "#components/settings/skeletons";
 import { CronTaskRow } from "#components/settings/cron/CronTaskRow";
 import { useCron } from "#hooks/useCron";
-import { scheduleLabel, timeZoneLabel } from "#lib/cron";
+import { scheduleLabel } from "#lib/cron";
 import { formatDateTime, formatRelative } from "#lib/format";
 import { m } from "#lib/i18n";
 import { Hint } from "#components/Hint";
@@ -16,8 +16,7 @@ export function CronTasksCard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-muted-foreground text-sm">{m.cron_timezone_note({ tz: timeZoneLabel() })}</p>
+      <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={reload} loading={refreshing}>
           <RefreshCwIcon />
           {m.cron_refresh()}

@@ -12,14 +12,6 @@ export const CRON_TASK_LABELS: Record<CronTaskId, { name: () => string; hint: ()
   audit_prune: { name: m.cron_task_audit_prune, hint: m.cron_task_audit_prune_hint },
 };
 
-/** The viewer's UTC offset, e.g. "GMT+8" (the zone name when the offset is unknown). */
-export function timeZoneLabel(): string {
-  const offset = new Intl.DateTimeFormat("en-US", { timeZoneName: "shortOffset" })
-    .formatToParts(new Date())
-    .find((p) => p.type === "timeZoneName")?.value;
-  return offset ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
 /** "Every minute" / "Daily at 02:00" in the viewer's time zone (from the next run). */
 export function scheduleLabel(cron: string, nextAt: number | null): string {
   if (cron === "* * * * *") return m.cron_group_minute();

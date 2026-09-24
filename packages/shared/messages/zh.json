@@ -501,7 +501,6 @@
   "cron_task_vectors_hint": "为旧的向量补上用于快速检索的压缩版本",
   "cron_tick": "上次触发 {when}",
   "cron_tick_never": "还没有触发过，部署后才会运行",
-  "cron_timezone_note": "时间按 {tz} 显示",
   "cron_trigger_manual": "手动",
   "date_clear": "清除日期",
   "date_last_days": "近 {days} 天",

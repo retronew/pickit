@@ -501,7 +501,6 @@
   "cron_task_vectors_hint": "古いベクトルに高速検索用の圧縮版を追加します",
   "cron_tick": "最終起動 {when}",
   "cron_tick_never": "まだ起動していません。デプロイ後に動きます",
-  "cron_timezone_note": "時刻は {tz} で表示",
   "cron_trigger_manual": "手動",
   "date_clear": "日付をクリア",
   "date_last_days": "過去 {days} 日",
