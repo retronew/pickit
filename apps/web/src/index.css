@@ -16,6 +16,7 @@
   --animate-skeleton: skeleton 2s -1s infinite linear;
   --animate-fade-in: fade-in 0.25s ease-out;
   --animate-marquee: marquee var(--marquee-duration) ease-in-out infinite alternate;
+  --animate-marquee-fade: marquee-fade var(--marquee-duration) ease-in-out infinite alternate;
   --animate-slide-from-right: slide-from-right 0.25s var(--ease-smooth-out);
   --animate-slide-from-left: slide-from-left 0.25s var(--ease-smooth-out);
   --animate-caret-blink: 1s ease-out infinite caret-blink;
@@ -99,6 +100,21 @@
     }
   80%, to {
     translate: var(--marquee-distance) 0;
+    }
+  }
+  /* Runs in step with marquee: an edge fades only while text is hidden past it. */
+  @keyframes marquee-fade {
+  0%, 20% {
+    --marquee-fade-l: 0rem;
+    --marquee-fade-r: 0.75rem;
+    }
+  30%, 70% {
+    --marquee-fade-l: 0.75rem;
+    --marquee-fade-r: 0.75rem;
+    }
+  80%, to {
+    --marquee-fade-l: 0.75rem;
+    --marquee-fade-r: 0rem;
     }
   }
   @keyframes fade-in {
@@ -361,4 +377,25 @@ button:disabled {
     width: 1rem;
     height: 1rem;
   }
+}
+
+/* Edge fades of MarqueeText; registered so the mask can animate between lengths. */
+@property --marquee-fade-l {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0rem;
+}
+@property --marquee-fade-r {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0.75rem;
+}
+@utility marquee-mask {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--marquee-fade-l),
+    #000 calc(100% - var(--marquee-fade-r)),
+    transparent
+  );
 }

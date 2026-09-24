@@ -6,8 +6,9 @@ import { cn } from "#lib/utils";
 const SPEED = 30;
 
 /**
- * Single-line text that scrolls back and forth when it doesn't fit, and
- * truncates with an ellipsis when motion is reduced. Fits → plain text.
+ * Single-line text that scrolls back and forth when it doesn't fit, fading
+ * whichever edge still hides text (each fade eases out as the text reaches
+ * that end). Truncates with an ellipsis when motion is reduced. Fits → plain text.
  */
 export function MarqueeText({ children, className }: { children: ReactNode; className?: string }) {
   const { outerRef, innerRef, overflow } = useOverflow<HTMLSpanElement, HTMLSpanElement>();
@@ -19,7 +20,7 @@ export function MarqueeText({ children, className }: { children: ReactNode; clas
       className={cn(
         "block min-w-0 overflow-hidden whitespace-nowrap",
         scrolling &&
-          "mask-r-from-[calc(100%-0.75rem)] motion-reduce:text-ellipsis motion-reduce:mask-none",
+          "marquee-mask motion-safe:animate-marquee-fade motion-reduce:text-ellipsis motion-reduce:mask-none",
         className,
       )}
     >
