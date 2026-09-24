@@ -163,7 +163,7 @@ export function BatchAddDialog({
           )}
         </DialogPanel>
         <DialogFooter>
-          <Button variant="ghost" onClick={close} disabled={running}>
+          <Button variant="outline" onClick={close} disabled={running}>
             {progress && !running ? m.common_done() : m.common_cancel()}
           </Button>
           <Button

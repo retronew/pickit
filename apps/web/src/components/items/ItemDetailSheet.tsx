@@ -1,4 +1,5 @@
 import { useItemDetail } from "#hooks/useItemDetail";
+import { useMediaQuery } from "#hooks/use-media-query";
 import { Streamdown, defaultRemarkPlugins } from "streamdown";
 import remarkBreaks from "remark-breaks";
 import {
@@ -72,10 +73,15 @@ export function ItemDetailSheet({
     summarize,
     share,
   } = useItemDetail(item, open, onChanged);
+  const isPhone = useMediaQuery("max-sm");
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetPopup>
+      {/* Phones: a bottom sheet within thumb reach; wider screens: the right edge. */}
+      <SheetPopup
+        side={isPhone ? "bottom" : "right"}
+        className={isPhone ? "max-h-[85svh] rounded-t-2xl" : undefined}
+      >
         {item && (
           <>
             <SheetHeader>

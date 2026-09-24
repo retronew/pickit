@@ -1,5 +1,7 @@
+import { useCallback, useState } from "react";
 import type { Item } from "#hooks/useItems";
 import { ItemCard } from "#components/items/ItemCard";
+import { ItemActionsMenu, type ItemActionsTarget } from "#components/items/ItemActionsMenu";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { cn } from "#lib/utils";
 import { m } from "#lib/i18n";
@@ -19,6 +21,10 @@ interface Props {
 
 /** Items grouped by category, or the empty state. */
 export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds, ...handlers }: Props) {
+  const [actionsTarget, setActionsTarget] = useState<ItemActionsTarget | null>(null);
+  // Stable so the memoized cards don't re-render when the menu opens.
+  const openActions = useCallback((item: Item, anchor: HTMLElement) => setActionsTarget({ item, anchor }), []);
+
   if (grouped.length === 0) {
     return (
       <Empty className="animate-fade-in">
@@ -47,12 +53,20 @@ export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds,
                 item={item}
                 selectMode={selectMode}
                 selected={selectedIds.has(item.id)}
+                onOpenActions={openActions}
                 {...handlers}
               />
             ))}
           </div>
         </section>
       ))}
+      <ItemActionsMenu
+        target={actionsTarget}
+        onClose={() => setActionsTarget(null)}
+        onEdit={handlers.onEdit}
+        onDelete={handlers.onDelete}
+        onTogglePin={handlers.onTogglePin}
+      />
     </div>
   );
 }

@@ -187,7 +187,7 @@ export const OrganizeReviewDialog = createCallable<{ ids: number[] }, number | n
           )}
         </DialogPanel>
         <DialogFooter>
-          <Button variant="ghost" disabled={applying} onClick={() => call.end(null)}>
+          <Button variant="outline" disabled={applying} onClick={() => call.end(null)}>
             {m.common_cancel()}
           </Button>
           <Button disabled={selected.length === 0 || applying} loading={applying} onClick={apply}>

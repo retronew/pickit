@@ -118,7 +118,7 @@ export const RestoreDialog = createCallable<{ name: string }, RestoreResult | nu
             </div>
           </DialogPanel>
           <DialogFooter>
-            <Button variant="ghost" disabled={restoring} onClick={() => call.end(null)}>
+            <Button variant="outline" disabled={restoring} onClick={() => call.end(null)}>
               {m.common_cancel()}
             </Button>
             <Button

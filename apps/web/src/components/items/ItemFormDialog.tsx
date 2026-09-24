@@ -214,11 +214,11 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
               </Field>
             </form>
           </DialogPanel>
-          <DialogFooter className="items-center">
+          <DialogFooter className="sm:items-center">
             {saveError && (
-              <p className="text-destructive me-auto text-sm">{saveError}</p>
+              <p className="text-destructive col-span-full me-auto text-sm">{saveError}</p>
             )}
-            <Button variant="ghost" disabled={saving} onClick={() => call.end(null)}>
+            <Button variant="outline" disabled={saving} onClick={() => call.end(null)}>
               {m.common_cancel()}
             </Button>
             <Button type="submit" form="item-form" disabled={!form.name || saving}>

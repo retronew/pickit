@@ -20,16 +20,13 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
   const [shared, setShared] = useState(false);
 
   useEffect(() => {
-    setSummary(item?.aiSummary ?? "");
+    // Reset and load only on open: clearing on close would shrink the sheet
+    // mid-way through its closing animation.
+    if (!item || !open) return;
+    setSummary(item.aiSummary ?? "");
     setRelated([]);
-    setLinkStatus(
-      item ? { httpStatus: item.httpStatus, checkedAt: item.checkedAt } : null,
-    );
+    setLinkStatus({ httpStatus: item.httpStatus, checkedAt: item.checkedAt });
     setShared(false);
-    if (!item || !open) {
-      setRelatedLoading(false);
-      return;
-    }
     let cancelled = false;
     setRelatedLoading(true);
     fetch(`/api/items/${item.id}/related?limit=6`)
@@ -44,7 +41,10 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
     return () => {
       cancelled = true;
     };
-  }, [item, open]);
+    // Keyed on the id: a list refresh hands in a new object for the same item,
+    // which shouldn't clear and refetch what's on screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, open]);
 
   async function checkLinkNow() {
     if (!item) return;

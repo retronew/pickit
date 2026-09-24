@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { PencilIcon, PinIcon, Trash2Icon } from "lucide-react";
+import { EllipsisIcon, PencilIcon, PinIcon, Trash2Icon } from "lucide-react";
 import type { Item } from "#hooks/useItems";
 import { Favicon } from "#components/Favicon";
 import { Card } from "#components/ui/card";
@@ -59,6 +59,7 @@ export const ItemCard = memo(function ItemCard({
   onDelete,
   onTogglePin,
   onOpenDetail,
+  onOpenActions,
   selectMode,
   selected,
   onToggleSelect,
@@ -68,6 +69,8 @@ export const ItemCard = memo(function ItemCard({
   onDelete: (item: Item) => void;
   onTogglePin: (item: Item) => void;
   onOpenDetail?: (item: Item) => void;
+  /** Phones: open the shared pin / edit / delete menu at `anchor`. */
+  onOpenActions?: (item: Item, anchor: HTMLElement) => void;
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: number) => void;
@@ -118,9 +121,25 @@ export const ItemCard = memo(function ItemCard({
             </Badge>
           )}
         </div>
-        {/* Phones: no room for the actions (they're in the detail sheet), just mark pinned. */}
-        {!selectMode && item.pinned && (
-          <PinIcon aria-hidden className="mt-0.5 size-3.5 shrink-0 fill-current sm:hidden" />
+        {/* Phones: no room for three buttons; a pinned mark plus a shared actions menu. */}
+        {!selectMode && (
+          <div className="-my-0.5 -mr-1 flex shrink-0 items-center sm:hidden">
+            {item.pinned && <PinIcon aria-hidden className="size-3.5 fill-current" />}
+            {onOpenActions && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={m.field_actions()}
+                className="text-muted-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenActions(item, e.currentTarget);
+                }}
+              >
+                <EllipsisIcon />
+              </Button>
+            )}
+          </div>
         )}
         {!selectMode && (
           <div

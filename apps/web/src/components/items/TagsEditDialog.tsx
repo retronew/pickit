@@ -46,7 +46,7 @@ export const TagsEditDialog = createCallable<Props, string[] | null>(
             <TagsField tags={tags} onChange={setTags} suggestions={suggestions} />
           </DialogPanel>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => call.end(null)}>
+            <Button variant="outline" onClick={() => call.end(null)}>
               {m.common_cancel()}
             </Button>
             <Button

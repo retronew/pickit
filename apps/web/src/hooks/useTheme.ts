@@ -76,21 +76,26 @@ export function useTheme() {
     return () => query.removeEventListener("change", onChange);
   }, [mode]);
 
-  /** Cycles system → light → dark. */
-  function cycle(origin?: { x: number; y: number }) {
-    const nextMode = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
-    const nextTheme = resolve(nextMode);
+  /** Switches to `next`, revealing the new theme from `origin` when it changes. */
+  function changeMode(next: ThemeMode, origin?: { x: number; y: number }) {
+    const nextTheme = resolve(next);
     try {
-      localStorage.setItem(STORAGE_KEY, nextMode);
+      localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // Not persisted; the choice still applies to this page.
     }
     applyTheme(nextTheme, origin, () => {
-      setMode(nextMode);
+      setMode(next);
       setTheme(nextTheme);
     });
   }
 
   const nextMode = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
-  return { mode, theme, nextMode, cycle };
+
+  /** Cycles system → light → dark. */
+  function cycle(origin?: { x: number; y: number }) {
+    changeMode(nextMode, origin);
+  }
+
+  return { mode, theme, nextMode, cycle, setMode: changeMode };
 }
