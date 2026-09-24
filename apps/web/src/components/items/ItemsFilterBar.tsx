@@ -1,5 +1,5 @@
 import { ArrowUpDownIcon, CheckSquareIcon, Share2Icon, XIcon } from "lucide-react";
-import { shareAndCopy } from "#lib/shares";
+import { ShareDialog } from "#components/shares/ShareDialog";
 import { Button } from "#components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#components/ui/select";
 import { CategoryFilter, type CategoryOption } from "#components/items/CategoryFilter";
@@ -101,7 +101,7 @@ export function ItemsFilterBar(p: Props) {
               size="xs"
               variant="ghost"
               className="ml-auto text-muted-foreground"
-              onClick={() => shareAndCopy(share.type, share.value)}
+              onClick={() => ShareDialog.call({ target: { type: share.type, value: share.value } })}
             >
               <Share2Icon />
               {share.label}

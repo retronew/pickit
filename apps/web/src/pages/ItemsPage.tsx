@@ -16,6 +16,7 @@ import { TagsEditDialog } from "#components/items/TagsEditDialog";
 import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
 import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
+import { ShareDialog } from "#components/shares/ShareDialog";
 import { SavedSearchesBar } from "#components/items/SavedSearchesBar";
 import { useSavedSearchBinding } from "#hooks/useSavedSearchBinding";
 import { useItemKeyboardNav } from "#hooks/useItemKeyboardNav";
@@ -144,6 +145,7 @@ export function ItemsPage() {
           onEditTags={selection.editTags}
           onAiOrganize={selection.aiOrganize}
           onSummarize={selection.summarize}
+          onShare={selection.shareCollection}
           onCancel={selection.exitSelectMode}
         />
       )}
@@ -172,6 +174,7 @@ export function ItemsPage() {
       <OrganizeReviewDialog />
       <Confirm />
       <Prompt />
+      <ShareDialog />
       <BatchAddDialog
         open={batchOpen}
         onOpenChange={setBatchOpen}

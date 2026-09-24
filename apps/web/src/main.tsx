@@ -9,6 +9,7 @@ import { TrashPage } from "#pages/TrashPage";
 import { TagsPage } from "#pages/TagsPage";
 import { StatsPage } from "#pages/StatsPage";
 import { SettingsPage } from "#pages/SettingsPage";
+import { SharesPage } from "#pages/SharesPage";
 import { AuditPage } from "#pages/AuditPage";
 import { LoginPage } from "#pages/LoginPage";
 import { PublicSharePage } from "#pages/PublicSharePage";
@@ -31,6 +32,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/add" element={<AddPage />} />
           <Route path="/trash" element={<TrashPage />} />
           <Route path="/tags" element={<TagsPage />} />
+          <Route path="/shares" element={<SharesPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/audit" element={<AuditPage />} />
           <Route path="/settings" element={<SettingsPage />} />

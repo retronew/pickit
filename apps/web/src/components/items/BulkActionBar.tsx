@@ -10,6 +10,7 @@ import {
   MinusIcon,
   SparklesIcon,
   TextQuoteIcon,
+  Share2Icon,
 } from "lucide-react";
 import { Menu, MenuTrigger, MenuPopup, MenuItem } from "#components/ui/menu";
 import { Button } from "#components/ui/button";
@@ -32,6 +33,7 @@ export function BulkActionBar({
   onEditTags,
   onAiOrganize,
   onSummarize,
+  onShare,
   onCancel,
 }: {
   count: number;
@@ -43,6 +45,7 @@ export function BulkActionBar({
   onEditTags: (mode: "add" | "remove") => void;
   onAiOrganize: () => void;
   onSummarize: () => void;
+  onShare: () => void;
   onCancel: () => void;
 }) {
   const [resetKey, setResetKey] = useState(0);
@@ -103,6 +106,10 @@ export function BulkActionBar({
         <Button variant="outline" size="sm" onClick={onAiOrganize}>
           <SparklesIcon />
           <span className="max-sm:sr-only">{m.bulk_ai_organize()}</span>
+        </Button>
+        <Button variant="outline" size="sm" onClick={onShare}>
+          <Share2Icon />
+          <span className="max-sm:sr-only">{m.bulk_share()}</span>
         </Button>
         <Button variant="destructive" size="sm" onClick={onDelete}>
           <Trash2Icon />

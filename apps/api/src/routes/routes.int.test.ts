@@ -130,6 +130,64 @@ describe("public shares", () => {
     const { slug } = await t.json("/api/shares", { json: { type: "item", value: String(id) } });
     await t.json(`/api/public/shares/${slug}/rss`, { auth: false }, 404);
   });
+
+  it("shares a hand-picked collection in the picked order", async () => {
+    const a = await create({ name: "A", url: "https://a.dev" });
+    const b = await create({ name: "B", url: "https://b.dev" });
+    const gone = await create({ name: "C", url: "https://c.dev" });
+    await t.json(`/api/items/${gone}`, { method: "DELETE" });
+    await t.json("/api/shares", { json: { type: "collection", ids: [] } }, 400);
+    await t.json("/api/shares", { json: { type: "collection", ids: [gone] } }, 404);
+
+    const { slug } = await t.json("/api/shares", {
+      json: { type: "collection", ids: [b, a, gone, a], title: "精选" },
+    });
+    // Collections are never reused.
+    const other = await t.json("/api/shares", { json: { type: "collection", ids: [b, a] } });
+    expect(other.slug).not.toBe(slug);
+
+    const shared = await t.json(`/api/public/shares/${slug}`, { auth: false });
+    expect(shared).toMatchObject({ type: "collection", title: "精选", value: "" });
+    expect(shared.items.map((i: { name: string }) => i.name)).toEqual(["B", "A"]);
+    expect((await t.json("/api/shares")).find((s: { slug: string }) => s.slug === slug)).toMatchObject({
+      type: "collection",
+      itemCount: 2,
+    });
+    const res = await t.request(`/api/public/shares/${slug}/rss`, { auth: false });
+    expect(await res.text()).toContain("<title>精选</title>");
+  });
+
+  it("renames shares and keeps list titles non-empty", async () => {
+    await create({ name: "A", url: "https://a.dev", tags: ["ai"] });
+    const { slug } = await t.json("/api/shares", { json: { type: "tag", value: "ai" } });
+    expect(await t.json(`/api/shares/${slug}`, { method: "PATCH", json: { title: " AI 工具 " } })).toMatchObject({
+      title: "AI 工具",
+    });
+    expect((await t.json(`/api/public/shares/${slug}`, { auth: false })).title).toBe("AI 工具");
+    await t.json(`/api/shares/${slug}`, { method: "PATCH", json: { title: "" } }, 400);
+    await t.json(`/api/shares/${slug}`, { method: "PATCH", json: { ids: [1] } }, 400);
+    await t.json("/api/shares/nope", { method: "PATCH", json: { title: "x" } }, 404);
+    // Sharing again with a title renames the existing link.
+    expect((await t.json("/api/shares", { json: { type: "tag", value: "ai", title: "新名字" } })).slug).toBe(slug);
+    expect((await t.json("/api/shares"))[0].title).toBe("新名字");
+  });
+
+  it("counts visits, skipping crawlers", async () => {
+    await create({ name: "A", url: "https://a.dev", tags: ["ai"] });
+    const { slug } = await t.json("/api/shares", { json: { type: "tag", value: "ai" } });
+    await t.json(`/api/public/shares/${slug}`, { auth: false, headers: { Referer: "https://news.ycombinator.com/item" } });
+    await t.json(`/api/public/shares/${slug}`, { auth: false, headers: { Referer: `http://localhost/s/${slug}` } });
+    await t.json(`/api/public/shares/${slug}`, { auth: false, headers: { "User-Agent": "Twitterbot/1.0" } });
+    await t.request(`/api/public/shares/${slug}/rss`, { auth: false });
+
+    expect((await t.json("/api/shares"))[0]).toMatchObject({ viewCount: 3, lastViewedAt: expect.any(Number) });
+    const stats = await t.json(`/api/shares/${slug}/stats`);
+    expect(stats).toMatchObject({ total: 3, last30: 3, referrers: [{ host: "news.ycombinator.com", count: 1 }] });
+    expect(stats.byDay).toHaveLength(30);
+    expect(stats.byDay.at(-1)).toMatchObject({ page: 2, rss: 1 });
+    expect(stats.recent).toHaveLength(3);
+    await t.json("/api/shares/nope/stats", {}, 404);
+  });
 });
 
 describe("tags", () => {

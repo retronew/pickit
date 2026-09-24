@@ -16,3 +16,16 @@ export function formatBytes(bytes: number): string {
 export function formatDate(ts: number): string {
   return new Intl.DateTimeFormat(intlLocale(), { year: "numeric", month: "2-digit", day: "2-digit" }).format(ts);
 }
+
+export function formatDateTime(ts: number): string {
+  return new Intl.DateTimeFormat(intlLocale(), { dateStyle: "short", timeStyle: "short" }).format(ts);
+}
+
+/** "JP" → "Japan" in the UI language; the code itself when unknown. */
+export function formatCountry(code: string): string {
+  try {
+    return new Intl.DisplayNames([intlLocale()], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}

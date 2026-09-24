@@ -10,7 +10,6 @@ import { ApiTokenCard } from "#components/settings/ApiTokenCard";
 import { AllowedEmailsCard } from "#components/settings/AllowedEmailsCard";
 import { AiSettingsCard } from "#components/settings/ai/AiSettingsCard";
 import { AiLanguageCard } from "#components/settings/ai/AiLanguageCard";
-import { SharesCard } from "#components/settings/SharesCard";
 import { McpCard } from "#components/settings/McpCard";
 import { ReembedCard } from "#components/settings/ReembedCard";
 import { BuildInfo } from "#components/settings/BuildInfo";
@@ -82,7 +81,6 @@ const TABS: SettingsTab[] = [
         <AllowedEmailsCard />
         <ApiTokenCard />
         <McpCard />
-        <SharesCard />
       </div>
     ),
   },

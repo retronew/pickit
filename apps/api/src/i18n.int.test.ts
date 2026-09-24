@@ -17,7 +17,7 @@ describe("API language", () => {
 
   it("follows the web app's cookie, then the X-PickIt-Locale header", async () => {
     expect(await shareError({ Cookie: "theme=x; pickit_locale=en" })).toBe(
-      "type (item / category / tag) and value are required",
+      "type (item / category / tag / collection) and value (ids for a collection) are required",
     );
     expect(await shareError({ "X-PickIt-Locale": "ja" })).toContain("必須です");
     expect(await shareError({ Cookie: "pickit_locale=fr" })).toContain("必填");

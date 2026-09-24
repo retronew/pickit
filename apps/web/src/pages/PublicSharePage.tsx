@@ -5,11 +5,12 @@ import { Button } from "#components/ui/button";
 import { Skeleton } from "#components/ui/skeleton";
 import { SharedItemCard, type SharedItem } from "#components/share/SharedItemCard";
 import { api } from "#lib/api";
+import { SHARE_TYPE_LABELS } from "#lib/shares";
 import { m } from "#lib/i18n";
 
 type Shared =
   | { type: "item"; title: string; item: SharedItem }
-  | { type: "category" | "tag"; title: string; value: string; items: SharedItem[] };
+  | { type: "category" | "tag" | "collection"; title: string; value: string; items: SharedItem[] };
 
 /** Advertises the RSS feed to browsers and feed readers while the page is open. */
 function useFeedLink(href: string | null, title: string) {
@@ -81,7 +82,7 @@ export function PublicSharePage() {
               <div>
                 <h1 className="font-heading font-semibold text-xl">{data.title}</h1>
                 <p className="text-muted-foreground text-sm">
-                  {data.type === "category" ? m.share_type_category() : m.share_type_tag()} · {m.items_total({ count: data.items.length })}
+                  {SHARE_TYPE_LABELS[data.type]} · {m.items_total({ count: data.items.length })}
                 </p>
               </div>
               <Button variant="outline" size="sm" render={<a href={feed!} target="_blank" rel="noreferrer" />}>

@@ -108,7 +108,9 @@ function describeShare(body: Body): MessageRef {
       ? msg("share_category", { name: quote(body.value) })
       : body.type === "tag"
         ? msg("share_tag", { name: quote(body.value) })
-        : quote(body.title) || `#${body.value}`;
+        : body.type === "collection"
+          ? msg("share_collection", { count: Array.isArray(body.ids) ? body.ids.length : 0 })
+          : quote(body.title) || `#${body.value}`;
   return msg("share_create", { what });
 }
 
@@ -221,6 +223,13 @@ export function describe(
   }
   if ((m = p.match(/^\/shares\/([^/]+)$/)) && method === "DELETE") {
     return { action: "share.revoke", target: `share:${m[1]}`, summary: msg("share_revoke", { slug: m[1] }) };
+  }
+  if ((m = p.match(/^\/shares\/([^/]+)$/)) && method === "PATCH") {
+    return {
+      action: "share.update",
+      target: `share:${m[1]}`,
+      summary: msg("share_update", { slug: m[1], title: quote(body.title) }),
+    };
   }
   if ((m = p.match(/^\/jobs\/(\w+)\/(start|pause|resume|retry)$/))) {
     // Known jobs get their label; anything else (a 404) shows the raw name.

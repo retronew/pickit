@@ -1,5 +1,5 @@
 import { api, toastError, toastSuccess } from "#lib/api";
-import { shareAndCopy } from "#lib/shares";
+import { ShareDialog } from "#components/shares/ShareDialog";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { TagCard } from "#components/tags/TagCard";
@@ -97,7 +97,7 @@ export function TagsPage() {
                     tag={tag}
                     count={count}
                     onOpen={() => navigate(`/?tag=${encodeURIComponent(tag)}`)}
-                    onShare={() => shareAndCopy("tag", tag)}
+                    onShare={() => ShareDialog.call({ target: { type: "tag", value: tag } })}
                     onRename={() => rename(tag)}
                     onDelete={() => remove(tag)}
                   />
@@ -110,6 +110,7 @@ export function TagsPage() {
 
       <Confirm />
       <Prompt />
+      <ShareDialog />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import type { Item } from "@pickit/shared";
 import { Confirm } from "#components/Confirm";
 import { TagsEditDialog } from "#components/items/TagsEditDialog";
 import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
+import { ShareDialog } from "#components/shares/ShareDialog";
 import { api, toastError, toastLoading, toastSuccess } from "#lib/api";
 import { m } from "#lib/i18n";
 
@@ -111,6 +112,14 @@ export function useBulkSelection(refresh: () => void, items: Item[], allTags: st
     refresh();
   }
 
+  /** Shares the selection as one public collection, in list order. */
+  async function shareCollection() {
+    const listed = items.filter((i) => selectedIds.has(i.id)).map((i) => i.id);
+    const ids = [...listed, ...[...selectedIds].filter((id) => !listed.includes(id))];
+    if (ids.length === 0) return;
+    if (await ShareDialog.call({ target: { type: "collection", ids } })) exitSelectMode();
+  }
+
   async function bulkDelete() {
     const ok = await Confirm.call({
       title: m.bulk_delete_title({ count: selectedIds.size }),
@@ -132,5 +141,6 @@ export function useBulkSelection(refresh: () => void, items: Item[], allTags: st
     editTags,
     aiOrganize,
     summarize,
+    shareCollection,
   };
 }

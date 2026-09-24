@@ -83,6 +83,8 @@ const REQUESTS: [string, string, Record<string, unknown>, Record<string, unknown
   ["POST", "/api/shares", { type: "category", value: "x" }],
   ["POST", "/api/shares", { type: "tag", value: "x" }],
   ["POST", "/api/shares", { type: "item", value: "1", title: "t" }],
+  ["POST", "/api/shares", { type: "collection", ids: [1, 2] }],
+  ["PATCH", "/api/shares/abc", { title: "t" }],
   ["DELETE", "/api/shares/abc", {}],
   ["POST", "/api/settings/ai", {}],
   ["POST", "/api/settings/ai/models", { target: "embedding" }],

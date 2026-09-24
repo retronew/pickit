@@ -40,6 +40,7 @@ export const AUDIT_ACTIONS = [
   "tag.delete",
   "share.create",
   "share.revoke",
+  "share.update",
   "settings.ai_update",
   "settings.ai_models",
   "settings.ai_test",
