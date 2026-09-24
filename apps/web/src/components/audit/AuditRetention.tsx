@@ -91,13 +91,25 @@ export function AuditRetention({ reloadKey }: { reloadKey: unknown }) {
   const items = current in PRESETS ? PRESETS : { ...PRESETS, custom: m.retention_days({ days: data.retentionDays }) };
 
   return (
-    <div className="flex animate-fade-in items-center gap-x-4 gap-y-2 rounded-xl sm:flex-wrap border bg-muted/30 px-3 py-2 text-sm">
-      <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-        <DatabaseIcon className="size-4 shrink-0" />
-        <span className="truncate">
-        {m.audit_usage({ count: stats.count.toLocaleString(intlLocale()), size: formatBytes(stats.bytes) })}
-        {stats.databaseBytes != null && ` ${m.audit_usage_database({ size: formatBytes(stats.databaseBytes) })}`}
-        {stats.oldest != null && ` · ${m.audit_usage_oldest({ date: formatDate(stats.oldest) })}`}
+    <div className="flex animate-fade-in items-center gap-x-4 gap-y-2 rounded-xl border sm:flex-wrap bg-muted/30 px-3 py-2 text-sm">
+      {/* Phones: totals on the first line, database size and oldest date below. */}
+      <span className="flex min-w-0 items-start gap-1.5 text-muted-foreground sm:items-center">
+        <DatabaseIcon className="mt-0.5 size-4 shrink-0 sm:mt-0" />
+        <span className="flex min-w-0 flex-col sm:flex-row sm:flex-wrap sm:gap-x-1">
+          <span>
+            {m.audit_usage({ count: stats.count.toLocaleString(intlLocale()), size: formatBytes(stats.bytes) })}
+          </span>
+          {(stats.databaseBytes != null || stats.oldest != null) && (
+            <span className="text-xs sm:text-sm">
+              <span className="max-sm:hidden">· </span>
+              {[
+                stats.databaseBytes != null && m.audit_usage_database({ size: formatBytes(stats.databaseBytes) }),
+                stats.oldest != null && m.audit_usage_oldest({ date: formatDate(stats.oldest) }),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )}
         </span>
       </span>
       <span className="ml-auto flex shrink-0 items-center gap-2">

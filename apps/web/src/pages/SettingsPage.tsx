@@ -15,6 +15,7 @@ import { ReembedCard } from "#components/settings/ReembedCard";
 import { BuildInfo } from "#components/settings/BuildInfo";
 import { BackupsCard } from "#components/settings/backups/BackupsCard";
 import { Confirm } from "#components/Confirm";
+import { ScrollFade } from "#components/ScrollFade";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
 import { m } from "#lib/i18n";
 
@@ -92,24 +93,24 @@ export function SettingsPage() {
   const tab = TABS.some((t) => t.id === requested) ? requested! : TABS[0].id;
 
   return (
-    <div className="space-y-6">
+    <div className="compact-controls space-y-6">
       <h1 className="font-heading text-lg font-semibold">{m.nav_settings()}</h1>
 
       <Tabs
         value={tab}
         onValueChange={(value) => setParams({ tab: String(value) }, { replace: true })}
-        className="gap-5"
+        className="min-w-0 gap-5"
       >
-        <div className="-mx-4 overflow-x-auto px-4">
+        <ScrollFade className="-mx-4 px-4">
           <TabsList>
             {TABS.map(({ id, label, icon: Icon }) => (
-              <TabsTab key={id} value={id}>
-                <Icon className="size-4" />
+              <TabsTab key={id} value={id} className="max-sm:text-sm">
+                <Icon className="size-3.5 sm:size-4" />
                 {label}
               </TabsTab>
             ))}
           </TabsList>
-        </div>
+        </ScrollFade>
         {TABS.map((t) => (
           <TabsPanel key={t.id} value={t.id} className="space-y-4">
             <p className="text-muted-foreground text-sm">{t.description}</p>

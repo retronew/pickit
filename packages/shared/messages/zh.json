@@ -268,7 +268,7 @@
   "audit_title": "审计日志",
   "audit_updated_at": "更新于 {time}",
   "audit_usage": "共 {count} 条 · 约 {size}",
-  "audit_usage_database": "（数据库共 {size}）",
+  "audit_usage_database": "数据库共 {size}",
   "audit_usage_oldest": "最早 {date}",
   "back_to_top": "回到顶部",
   "backup_delete_failed": "删除备份失败",

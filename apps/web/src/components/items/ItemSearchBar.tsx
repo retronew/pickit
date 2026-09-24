@@ -2,6 +2,7 @@ import { SearchIcon, PlusIcon, ChevronDownIcon, ListPlusIcon, XIcon } from "luci
 import { Spinner } from "#components/ui/spinner";
 import { Input } from "#components/ui/input";
 import { Button, buttonVariants } from "#components/ui/button";
+import { MarqueeText } from "#components/MarqueeText";
 import { Kbd } from "#components/ui/kbd";
 import { Menu, MenuTrigger, MenuPopup, MenuItem } from "#components/ui/menu";
 import { cn } from "#lib/utils";
@@ -32,10 +33,16 @@ export function ItemSearchBar({
           size="lg"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder={m.search_placeholder()}
+          aria-label={m.search_placeholder()}
           aria-busy={searching}
           className="pl-7 pr-9 sm:pr-14"
         />
+        {/* Placeholder as an overlay so a long hint can scroll instead of being cut off. */}
+        {!query && (
+          <MarqueeText className="pointer-events-none absolute inset-y-0 left-10 right-9 z-raised flex items-center text-base text-muted-foreground/72 sm:right-14 sm:text-sm">
+            {m.search_placeholder()}
+          </MarqueeText>
+        )}
         {query ? (
           <Button
             variant="ghost"

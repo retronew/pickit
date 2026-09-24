@@ -118,10 +118,14 @@ export const ItemCard = memo(function ItemCard({
             </Badge>
           )}
         </div>
+        {/* Phones: no room for the actions (they're in the detail sheet), just mark pinned. */}
+        {!selectMode && item.pinned && (
+          <PinIcon aria-hidden className="mt-0.5 size-3.5 shrink-0 fill-current sm:hidden" />
+        )}
         {!selectMode && (
           <div
             className={cn(
-              "flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100",
+              "flex shrink-0 items-center gap-0.5 opacity-0 max-sm:hidden transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100",
               item.pinned && "opacity-100",
             )}
           >
@@ -164,19 +168,19 @@ export const ItemCard = memo(function ItemCard({
         )}
       </div>
       {item.note && (
-        <p className="mt-1 text-muted-foreground text-sm whitespace-pre-line line-clamp-2">
+        <p className="mt-1 text-muted-foreground text-xs whitespace-pre-line line-clamp-2 sm:text-sm">
           {item.note}
         </p>
       )}
       {(item.tags.length > 0 || item.clickCount > 0) && (
-        <div className="mt-2 flex flex-wrap items-center gap-1">
+        <div className="mt-2 flex items-center gap-1 overflow-hidden max-sm:mask-r-from-[calc(100%-1rem)] sm:flex-wrap">
           {item.tags.map((t) => (
-            <Badge key={t} variant="secondary" size="sm">
+            <Badge key={t} variant="secondary" size="sm" className="shrink-0">
               {t}
             </Badge>
           ))}
           {item.clickCount > 0 && (
-            <span className="ml-auto text-muted-foreground/72 text-xs">
+            <span className="ml-auto text-muted-foreground/72 text-xs max-sm:hidden">
               {m.item_clicks({ count: item.clickCount })}
             </span>
           )}

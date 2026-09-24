@@ -40,7 +40,7 @@ export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds,
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {cat} · {list.length}
           </h2>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             {list.map((item) => (
               <ItemCard
                 key={item.id}

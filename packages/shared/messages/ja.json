@@ -268,7 +268,7 @@
   "audit_title": "監査ログ",
   "audit_updated_at": "{time} に更新",
   "audit_usage": "{count} 件 · 約 {size}",
-  "audit_usage_database": "（データベース全体 {size}）",
+  "audit_usage_database": "データベース全体 {size}",
   "audit_usage_oldest": "最古 {date}",
   "back_to_top": "トップへ戻る",
   "backup_delete_failed": "バックアップの削除に失敗しました",

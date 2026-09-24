@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Outlet, Link, NavLink, useLocation, useNavigate } from "react-router";
 import { LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "#hooks/useTheme";
+import { ScrollFade } from "#components/ScrollFade";
 import { Button } from "#components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipPopup } from "#components/ui/tooltip";
 import { BackToTop } from "#components/BackToTop";
@@ -89,12 +90,9 @@ export function AppShell() {
           <Link to="/" className="shrink-0 font-heading font-bold tracking-tight">
             PickIt
           </Link>
-          <nav
-            ref={navRef}
-            className="-my-2 flex min-w-0 flex-1 gap-1 overflow-x-auto py-2 [scrollbar-width:none] max-md:mask-r-from-[calc(100%-1.5rem)] md:flex-none [&::-webkit-scrollbar]:hidden"
-          >
+          <ScrollFade as="nav" ref={navRef} className="-my-2 flex flex-1 gap-1 py-2 md:flex-none">
             {renderNavLinks()}
-          </nav>
+          </ScrollFade>
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <LanguageMenu />
             <Tooltip>

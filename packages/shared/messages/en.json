@@ -268,7 +268,7 @@
   "audit_title": "Audit log",
   "audit_updated_at": "Updated {time}",
   "audit_usage": "{count} entries · about {size}",
-  "audit_usage_database": "(database {size})",
+  "audit_usage_database": "Database {size}",
   "audit_usage_oldest": "oldest {date}",
   "back_to_top": "Back to top",
   "backup_delete_failed": "Couldn't delete the backup",
