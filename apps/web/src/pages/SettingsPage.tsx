@@ -23,12 +23,15 @@ import { GithubTokenCard } from "#components/settings/GithubTokenCard";
 import { ActivityCheckCard } from "#components/settings/ActivityCheckCard";
 import { CardColumns } from "#components/settings/CardColumns";
 import { CronTasksCard } from "#components/settings/cron/CronTasksCard";
+import { SettingsTabHeader } from "#components/settings/SettingsTabHeader";
 
 interface SettingsTab {
   id: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
   description: string;
+  /** The content renders the description itself (to put controls beside it). */
+  ownHeader?: boolean;
   content: ReactNode;
 }
 
@@ -108,7 +111,8 @@ const TABS: SettingsTab[] = [
     label: m.settings_tab_cron(),
     icon: ClockIcon,
     description: m.settings_tab_cron_description(),
-    content: <CronTasksCard />,
+    ownHeader: true,
+    content: <CronTasksCard description={m.settings_tab_cron_description()} />,
   },
 ];
 
@@ -139,7 +143,7 @@ export function SettingsPage() {
         </ScrollFade>
         {TABS.map((t) => (
           <TabsPanel key={t.id} value={t.id} className="space-y-4">
-            <p className="text-muted-foreground text-sm">{t.description}</p>
+            {!t.ownHeader && <SettingsTabHeader description={t.description} />}
             {t.content}
           </TabsPanel>
         ))}

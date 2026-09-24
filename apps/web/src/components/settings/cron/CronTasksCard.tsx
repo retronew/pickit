@@ -8,24 +8,31 @@ import { m } from "#lib/i18n";
 import { Hint } from "#components/Hint";
 import { LiveRefreshControls } from "#components/LiveRefreshControls";
 import { usePersistentFlag } from "#hooks/usePersistentFlag";
+import { SettingsTabHeader } from "#components/settings/SettingsTabHeader";
 
-/** Scheduled tasks grouped by trigger (every minute / daily), with runs and next run times. */
-export function CronTasksCard() {
+/**
+ * Scheduled tasks grouped by trigger (every minute / daily), with runs and
+ * next run times. Renders the tab's description with the refresh controls beside it.
+ */
+export function CronTasksCard({ description }: { description: string }) {
   const [live, setLive] = usePersistentFlag("pickit-cron-live", true);
   const { overview, running, refreshing, updatedAt, reload, runNow } = useCron(live);
   const groups = overview ? [...new Set(overview.tasks.map((t) => t.cron))] : [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
-        <LiveRefreshControls
-          live={live}
-          onLiveChange={setLive}
-          onRefresh={reload}
-          refreshing={refreshing}
-          updatedAt={updatedAt}
-        />
-      </div>
+    <div className="space-y-4">
+      <SettingsTabHeader
+        description={description}
+        actions={
+          <LiveRefreshControls
+            live={live}
+            onLiveChange={setLive}
+            onRefresh={reload}
+            refreshing={refreshing}
+            updatedAt={updatedAt}
+          />
+        }
+      />
       {overview === null ? (
         <Card>
           <CardContent className="pt-6">
@@ -33,7 +40,8 @@ export function CronTasksCard() {
           </CardContent>
         </Card>
       ) : (
-        groups.map((cron) => {
+        <div className="space-y-6">
+        {groups.map((cron) => {
           const tasks = overview.tasks.filter((t) => t.cron === cron);
           const tick = overview.lastTicks[cron];
           return (
@@ -61,7 +69,8 @@ export function CronTasksCard() {
               </CardContent>
             </Card>
           );
-        })
+        })}
+        </div>
       )}
     </div>
   );
