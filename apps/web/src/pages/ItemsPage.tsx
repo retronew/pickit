@@ -129,7 +129,13 @@ export function ItemsPage() {
       <TagsEditDialog />
       <OrganizeReviewDialog />
       <Confirm />
-      <BatchAddDialog open={batchOpen} onOpenChange={setBatchOpen} onDone={refresh} />
+      <BatchAddDialog
+        open={batchOpen}
+        onOpenChange={setBatchOpen}
+        onDone={refresh}
+        categories={filters.categories}
+        allTags={filters.allTags}
+      />
       <ItemDetailSheet
         item={detailItem}
         open={detail.detailOpen}

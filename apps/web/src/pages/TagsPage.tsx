@@ -1,8 +1,12 @@
 import { api, toastError, toastSuccess } from "#lib/api";
 import { shareAndCopy } from "#lib/shares";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { TagCard } from "#components/tags/TagCard";
+import { WindowVirtualList } from "#components/WindowVirtualList";
+import { useMediaQuery } from "#hooks/use-media-query";
+import { chunk } from "#lib/chunk";
+import { cn } from "#lib/utils";
 import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
@@ -18,6 +22,9 @@ export function TagsPage() {
   const [tags, setTags] = useState<TagRow[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  // Virtualized rows need the column count in JS; matches the old lg:grid-cols-3.
+  const columns = useMediaQuery("lg") ? 3 : 2;
+  const rows = useMemo(() => chunk(tags, columns), [tags, columns]);
 
   function refresh() {
     return fetch("/api/tags")
@@ -77,18 +84,27 @@ export function TagsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="grid animate-fade-in grid-cols-2 gap-2 lg:grid-cols-3">
-          {tags.map(({ tag, count }) => (
-            <TagCard
-              key={tag}
-              tag={tag}
-              count={count}
-              onOpen={() => navigate(`/?tag=${encodeURIComponent(tag)}`)}
-              onShare={() => shareAndCopy("tag", tag)}
-              onRename={() => rename(tag)}
-              onDelete={() => remove(tag)}
-            />
-          ))}
+        <div className="animate-fade-in">
+          <WindowVirtualList
+            rows={rows}
+            getKey={(row) => row[0].tag}
+            estimateSize={() => (columns === 3 ? 58 : 84)}
+            renderRow={(row) => (
+              <div className={cn("grid gap-2 pb-2", columns === 3 ? "grid-cols-3" : "grid-cols-2")}>
+                {row.map(({ tag, count }) => (
+                  <TagCard
+                    key={tag}
+                    tag={tag}
+                    count={count}
+                    onOpen={() => navigate(`/?tag=${encodeURIComponent(tag)}`)}
+                    onShare={() => shareAndCopy("tag", tag)}
+                    onRename={() => rename(tag)}
+                    onDelete={() => remove(tag)}
+                  />
+                ))}
+              </div>
+            )}
+          />
         </div>
       )}
 

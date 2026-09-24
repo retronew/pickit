@@ -1,178 +1,178 @@
 import { useState } from "react";
+import { ArrowLeftIcon } from "lucide-react";
 import { toastError, toastSuccess } from "#lib/api";
 import {
   Dialog,
   DialogPopup,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogPanel,
   DialogFooter,
 } from "#components/ui/dialog";
 import { Textarea } from "#components/ui/textarea";
 import { Button } from "#components/ui/button";
+import { Spinner } from "#components/ui/spinner";
 import { Field, FieldLabel, FieldDescription } from "#components/ui/field";
+import { Confirm } from "#components/Confirm";
+import { BatchReviewStep, type SlideDirection } from "#components/items/batch/BatchReviewStep";
+import { BatchSummaryStep } from "#components/items/batch/BatchSummaryStep";
+import { useBatchAdd, type Decision } from "#hooks/useBatchAdd";
+import { parseBatchUrls } from "#lib/batch-urls";
 import { m } from "#lib/i18n";
 
-interface Progress {
-  total: number;
-  done: number;
-  added: number;
-  skipped: number;
-  failed: number;
-}
+type Step = "input" | "review" | "summary";
 
-async function analyzeAndSave(
-  url: string,
-): Promise<"added" | "skipped" | "failed"> {
-  let payload: {
-    name: string;
-    url: string;
-    icon: string;
-    note: string;
-    category: string;
-    tags: string[];
-  };
-  try {
-    const res = await fetch("/api/items/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      payload = {
-        name: data.name || new URL(url).hostname,
-        url,
-        icon: data.icon || "",
-        note: data.note || "",
-        category: data.category || "",
-        tags: data.tags ?? [],
-      };
-    } else {
-      payload = {
-        name: new URL(url).hostname,
-        url,
-        icon: "",
-        note: "",
-        category: "",
-        tags: [],
-      };
-    }
-  } catch {
-    return "failed";
-  }
-  try {
-    const res = await fetch("/api/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.status === 409) return "skipped";
-    return res.ok ? "added" : "failed";
-  } catch {
-    return "failed";
-  }
-}
-
+/**
+ * Batch add in three steps: paste URLs → review each analyzed entry
+ * (accept / edit / discard) → check the accepted ones and save them.
+ */
 export function BatchAddDialog({
   open,
   onOpenChange,
   onDone,
+  categories,
+  allTags,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
+  categories: string[];
+  allTags: string[];
 }) {
   const [text, setText] = useState("");
-  const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<Progress | null>(null);
+  const [step, setStep] = useState<Step>("input");
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState<SlideDirection>("next");
+  const batch = useBatchAdd();
+  const urls = parseBatchUrls(text);
+  const accepted = batch.entries.filter((e) => e.decision === "accepted");
 
-  async function start() {
-    const urls = [
-      ...new Set(
-        text
-          .split(/\r?\n/)
-          .map((l) => l.trim())
-          .filter((l) => /^https?:\/\//.test(l)),
-      ),
-    ];
-    if (urls.length === 0) return;
-    setRunning(true);
-    const p: Progress = { total: urls.length, done: 0, added: 0, skipped: 0, failed: 0 };
-    setProgress({ ...p });
-
-    let idx = 0;
-    async function worker() {
-      while (idx < urls.length) {
-        const url = urls[idx++];
-        const result = await analyzeAndSave(url);
-        p.done++;
-        p[result]++;
-        setProgress({ ...p });
-      }
-    }
-    await Promise.all([worker(), worker()]);
-
-    setRunning(false);
-    const summary = p.failed
-      ? m.batch_summary_failed({ added: p.added, skipped: p.skipped, failed: p.failed })
-      : m.batch_summary({ added: p.added, skipped: p.skipped });
-    if (p.failed && !p.added) toastError(m.batch_failed(), new Error(summary), { id: "batch-add" });
-    else toastSuccess(m.batch_done(), { description: summary, id: "batch-add" });
-    onDone();
+  function navigate(to: number) {
+    setDirection(to < index ? "prev" : "next");
+    setIndex(to);
   }
 
-  function close() {
-    if (running) return;
+  function start() {
+    if (urls.length === 0) return;
+    batch.start(urls);
+    setIndex(0);
+    setDirection("next");
+    setStep("review");
+  }
+
+  function decide(url: string, decision: Decision) {
+    batch.decide(url, decision);
+    // Move on to the next undecided entry, wrapping around; none left → summary.
+    const pending = batch.entries.map((e, i) => (e.url !== url && e.decision === "pending" ? i : -1)).filter((i) => i >= 0);
+    const next = pending.find((i) => i > index) ?? pending[0];
+    if (next == null) setStep("summary");
+    else navigate(next);
+  }
+
+  async function save() {
+    const r = await batch.saveAccepted();
+    const summary = r.failed
+      ? m.batch_summary_failed({ added: r.added, skipped: r.skipped, failed: r.failed })
+      : m.batch_summary({ added: r.added, skipped: r.skipped });
+    if (r.failed && !r.added) toastError(m.batch_failed(), new Error(summary), { id: "batch-add" });
+    else toastSuccess(m.batch_done(), { description: summary, id: "batch-add" });
+    if (r.added || r.skipped) onDone();
+    // Failed entries stay in the summary with their error for another try.
+    if (!r.failed) reset();
+  }
+
+  function reset() {
+    batch.reset();
     setText("");
-    setProgress(null);
+    setStep("input");
     onOpenChange(false);
+  }
+
+  async function close() {
+    if (batch.saving) return;
+    if (step !== "input" && accepted.length > 0) {
+      const ok = await Confirm.call({
+        title: m.batch_leave_title(),
+        message: m.batch_leave_message({ count: accepted.length }),
+        confirmLabel: m.batch_leave_confirm(),
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    reset();
   }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogPopup>
+      <DialogPopup className={step === "review" ? "sm:max-w-2xl" : undefined}>
         <DialogHeader>
           <DialogTitle>{m.batch_title()}</DialogTitle>
+          {step === "summary" && (
+            <DialogDescription>{m.batch_summary_title({ count: accepted.length })}</DialogDescription>
+          )}
         </DialogHeader>
         <DialogPanel>
-          <Field>
-            <FieldLabel htmlFor="batch-urls">{m.batch_label()}</FieldLabel>
-            <Textarea
-              id="batch-urls"
-              className="min-h-40 font-mono text-xs"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={running}
-              placeholder={"https://a.com\nhttps://b.com"}
+          {step === "input" && (
+            <Field>
+              <FieldLabel htmlFor="batch-urls">{m.batch_label()}</FieldLabel>
+              <Textarea
+                id="batch-urls"
+                className="min-h-40 font-mono text-xs"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={"https://a.com\nhttps://b.com"}
+              />
+              <FieldDescription>{m.batch_hint()}</FieldDescription>
+            </Field>
+          )}
+          {step === "review" && batch.entries.length > 0 && (
+            <BatchReviewStep
+              entries={batch.entries}
+              index={Math.min(index, batch.entries.length - 1)}
+              direction={direction}
+              onNavigate={navigate}
+              onUpdate={batch.updateForm}
+              onDecide={decide}
+              categories={categories}
+              allTags={allTags}
             />
-            <FieldDescription>
-              {m.batch_hint()}
-            </FieldDescription>
-          </Field>
-          {progress && (
-            <p className="mt-3 text-muted-foreground text-sm">
-              {m.batch_progress({
-                done: progress.done,
-                total: progress.total,
-                added: progress.added,
-                skipped: progress.skipped,
-              })}
-              {progress.failed > 0 && ` · ${m.batch_progress_failed({ failed: progress.failed })}`}
-            </p>
+          )}
+          {step === "summary" && (
+            <BatchSummaryStep entries={accepted} onRemove={(url) => batch.decide(url, "discarded")} />
           )}
         </DialogPanel>
         <DialogFooter>
-          <Button variant="outline" onClick={close} disabled={running}>
-            {progress && !running ? m.common_done() : m.common_cancel()}
-          </Button>
-          <Button
-            onClick={start}
-            disabled={running || !text.trim()}
-            loading={running}
-          >
-            {m.batch_start()}
-          </Button>
+          {step === "input" && (
+            <>
+              <Button variant="outline" onClick={close}>
+                {m.common_cancel()}
+              </Button>
+              <Button onClick={start} disabled={urls.length === 0}>
+                {m.batch_start({ count: urls.length })}
+              </Button>
+            </>
+          )}
+          {step === "review" && (
+            <>
+              <Button variant="outline" onClick={close}>
+                {m.common_cancel()}
+              </Button>
+              <Button onClick={() => setStep("summary")}>{m.batch_to_summary({ count: accepted.length })}</Button>
+            </>
+          )}
+          {step === "summary" && (
+            <>
+              <Button variant="outline" disabled={batch.saving} onClick={() => setStep("review")}>
+                <ArrowLeftIcon />
+                {m.batch_back()}
+              </Button>
+              <Button disabled={accepted.length === 0 || batch.saving} onClick={save}>
+                {batch.saving && <Spinner />}
+                {m.batch_save({ count: accepted.length })}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogPopup>
     </Dialog>

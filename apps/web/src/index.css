@@ -16,6 +16,8 @@
   --animate-skeleton: skeleton 2s -1s infinite linear;
   --animate-fade-in: fade-in 0.25s ease-out;
   --animate-marquee: marquee var(--marquee-duration) ease-in-out infinite alternate;
+  --animate-slide-from-right: slide-from-right 0.25s var(--ease-smooth-out);
+  --animate-slide-from-left: slide-from-left 0.25s var(--ease-smooth-out);
   --animate-caret-blink: 1s ease-out infinite caret-blink;
   --animate-toast-success-odd: toast-success-odd 0.32s cubic-bezier(0.5, 1, 0.89, 1);
   --animate-toast-success-even: toast-success-even 0.32s cubic-bezier(0.5, 1, 0.89, 1);
@@ -75,6 +77,19 @@
   @keyframes skeleton {
   to {
     background-position: -200% 0;
+    }
+  }
+  /* Carousel steps (batch add review): the new card slides in from its side. */
+  @keyframes slide-from-right {
+  from {
+    opacity: 0;
+    translate: 1.5rem 0;
+    }
+  }
+  @keyframes slide-from-left {
+  from {
+    opacity: 0;
+    translate: -1.5rem 0;
     }
   }
   /* Ping-pong scroll for overflowing text; distance set by MarqueeText. */
