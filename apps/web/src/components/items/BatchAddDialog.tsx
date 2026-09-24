@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, XIcon } from "lucide-react";
 import { toastError, toastSuccess } from "#lib/api";
 import {
   Dialog,
@@ -47,6 +47,7 @@ export function BatchAddDialog({
   const batch = useBatchAdd();
   const urls = parseBatchUrls(text);
   const accepted = batch.entries.filter((e) => e.decision === "accepted");
+  const current = batch.entries[Math.min(index, batch.entries.length - 1)];
 
   function navigate(to: number) {
     setDirection(to < index ? "prev" : "next");
@@ -105,7 +106,7 @@ export function BatchAddDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogPopup className={step === "review" ? "sm:max-w-2xl" : undefined}>
+      <DialogPopup>
         <DialogHeader>
           <DialogTitle>{m.batch_title()}</DialogTitle>
           {step === "summary" && (
@@ -133,7 +134,7 @@ export function BatchAddDialog({
               direction={direction}
               onNavigate={navigate}
               onUpdate={batch.updateForm}
-              onDecide={decide}
+              onShowSummary={() => setStep("summary")}
               categories={categories}
               allTags={allTags}
             />
@@ -153,12 +154,24 @@ export function BatchAddDialog({
               </Button>
             </>
           )}
-          {step === "review" && (
+          {step === "review" && current && (
             <>
-              <Button variant="outline" onClick={close}>
-                {m.common_cancel()}
+              <Button
+                variant="outline"
+                className="text-destructive-foreground"
+                disabled={current.decision === "discarded"}
+                onClick={() => decide(current.url, "discarded")}
+              >
+                <XIcon />
+                {m.batch_discard()}
               </Button>
-              <Button onClick={() => setStep("summary")}>{m.batch_to_summary({ count: accepted.length })}</Button>
+              <Button
+                disabled={!current.form.name.trim() || current.decision === "accepted"}
+                onClick={() => decide(current.url, "accepted")}
+              >
+                <CheckIcon />
+                {m.batch_accept()}
+              </Button>
             </>
           )}
           {step === "summary" && (
