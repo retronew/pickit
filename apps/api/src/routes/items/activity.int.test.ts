@@ -122,3 +122,39 @@ describe("GitHub token on the settings page", () => {
     await t.json("/api/settings/github-token", { method: "PUT", json: { token: "" } }, 400);
   });
 });
+
+describe("activity batch job", () => {
+  const repo = (name: string, stars: number) => {
+    api[`https://api.github.com/repos/o/${name}`] = { body: { pushed_at: "2026-09-01T00:00:00Z", stargazers_count: stars } };
+  };
+
+  it("checks every project bookmark with progress, skipping other URLs", async () => {
+    const a = await create("https://github.com/o/a");
+    const b = await create("https://github.com/o/b");
+    await create("https://example.com/not-a-project");
+    repo("a", 1);
+    repo("b", 2);
+
+    const started = await t.json("/api/jobs/activity/start", { json: { mode: "all" } });
+    expect(started).toMatchObject({ status: "running", total: 2, done: 0 });
+    const job = await t.json("/api/jobs/activity/step", { json: {} });
+    expect(job).toMatchObject({ status: "done", done: 2, failures: [] });
+    expect((await activityOf(a)).stars).toBe(1);
+    expect((await activityOf(b)).stars).toBe(2);
+
+    // Everything was checked just now: nothing is due.
+    expect(await t.json("/api/jobs/activity/start", { json: { mode: "missing" } })).toMatchObject({ total: 0, status: "done" });
+  });
+
+  it("pauses on GitHub's rate limit instead of failing the rest", async () => {
+    await create("https://github.com/o/a");
+    await create("https://github.com/o/b");
+    api["https://api.github.com/repos/o/a"] = { status: 403, body: {} };
+    repo("b", 2);
+
+    await t.json("/api/jobs/activity/start", { json: { mode: "all" } });
+    const job = await t.json("/api/jobs/activity/step", { json: {} });
+    expect(job).toMatchObject({ status: "paused", done: 0, pending: 2 });
+    expect(job.lastError).toMatch(/GitHub/);
+  });
+});

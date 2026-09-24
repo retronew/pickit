@@ -20,6 +20,7 @@ import { ScrollFade } from "#components/ScrollFade";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
 import { m } from "#lib/i18n";
 import { GithubTokenCard } from "#components/settings/GithubTokenCard";
+import { ActivityCheckCard } from "#components/settings/ActivityCheckCard";
 
 interface SettingsTab {
   id: string;
@@ -55,6 +56,7 @@ const TABS: SettingsTab[] = [
         <OrganizeCard />
         <SummarizeCard />
         <DuplicatesCard />
+        <ActivityCheckCard />
       </div>
     ),
   },

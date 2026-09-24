@@ -35,7 +35,7 @@ jobRoutes.post("/:kind/start", async (c) => {
   if (current.status === "running") {
     return c.json({ error: await tr(c, "api_job_running") }, 409);
   }
-  const ids = await selectJobIds(c.env, kind, mode, settings!);
+  const ids = await selectJobIds(c.env, kind, mode, settings);
   return c.json(view(await startJob(c.env.DB, kind, mode, ids)));
 });
 

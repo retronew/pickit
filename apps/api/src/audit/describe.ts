@@ -21,7 +21,7 @@ const msg = (key: string, params?: Params): MessageRef => ({ key: `audit_sum_${k
 const quote = (text: unknown): MessageRef | string =>
   text ? { key: "audit_quote", params: { text: String(text) } } : "";
 
-const JOB_KINDS = new Set(["reembed", "organize", "summarize"]);
+const JOB_KINDS = new Set(["reembed", "organize", "summarize", "activity"]);
 
 const BULK_ACTIONS = new Set([
   "delete",

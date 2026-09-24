@@ -6,7 +6,7 @@
 // cron keeps stepping when nobody is watching. Each step claims a short lock
 // so two drivers never process the same batch.
 
-export type JobKind = "reembed" | "organize" | "summarize";
+export type JobKind = "reembed" | "organize" | "summarize" | "activity";
 export type JobStatus = "idle" | "running" | "paused" | "done";
 
 export interface JobFailure {

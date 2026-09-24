@@ -10,18 +10,24 @@ import { summarizeItem } from "#summarize";
 import { errorText, LocalizedError, renderMessage } from "#i18n";
 import { aiLocale, uiLocale } from "#locale";
 import { dispatchEvent } from "#webhooks";
+import { RECHECK_MS, refreshActivity } from "#activity";
+import { parseProjectUrl } from "@pickit/shared";
 
 /** How many items one step handles. Kept small so a step stays well under Worker limits. */
-const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4, summarize: 4 };
+const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4, summarize: 4, activity: 5 };
 
 export const JOB_MODES: Record<JobKind, string[]> = {
   reembed: ["missing", "all"],
   organize: ["missing", "all"],
   summarize: ["missing", "all"],
+  // missing: never checked or not in the last week; all: every GitHub / npm bookmark.
+  activity: ["missing", "all"],
 };
 
 /** Why a job can't run with the current settings (a message key), or null when it can. */
 export function jobConfigError(kind: JobKind, settings: AiSettings | null): string | null {
+  // Only asks GitHub / npm: no AI needed.
+  if (kind === "activity") return null;
   if (kind === "reembed") {
     return settings && isEmbeddingConfigured(settings) ? null : "api_job_needs_embedding";
   }
@@ -33,14 +39,15 @@ export async function selectJobIds(
   env: Env,
   kind: JobKind,
   mode: string,
-  settings: AiSettings,
+  settings: AiSettings | null,
 ): Promise<number[]> {
+  if (kind === "activity") return selectProjectIds(env, mode);
   let sql = "SELECT id FROM items WHERE deleted_at IS NULL";
   const binds: unknown[] = [];
   if (kind === "reembed" && mode === "missing") {
     // No vector yet, or one produced by a different model (not comparable).
     sql += " AND (embedding IS NULL OR embedding_model IS NOT ?)";
-    binds.push(createProvider(settings)?.embeddingModelId ?? "");
+    binds.push((settings && createProvider(settings)?.embeddingModelId) ?? "");
   }
   if (kind === "organize" && mode === "missing") {
     sql += " AND (category = '' OR tags = '[]')";
@@ -52,6 +59,20 @@ export async function selectJobIds(
     .bind(...binds)
     .all<{ id: number }>();
   return results.map((r) => r.id);
+}
+
+/** GitHub / npm bookmarks; "missing": never checked or not in the last week. */
+async function selectProjectIds(env: Env, mode: string): Promise<number[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT id, url FROM items
+     WHERE deleted_at IS NULL AND (url LIKE '%github.com/%' OR url LIKE '%npmjs.com/package/%')
+       AND (? = 'all' OR activity_at IS NULL OR activity_at < ?)
+     ORDER BY id`,
+  )
+    .bind(mode, Date.now() - RECHECK_MS)
+    .all<{ id: number; url: string }>();
+  // The LIKE is loose; keep only URLs that really are repositories / packages.
+  return results.filter((r) => parseProjectUrl(r.url)).map((r) => r.id);
 }
 
 async function loadRows(env: Env, ids: number[]): Promise<ItemRow[]> {
@@ -161,10 +182,30 @@ async function summarizeBatch(env: Env, settings: AiSettings, ids: number[]): Pr
   return chatBatch(env, settings, ids, (chat, row) => summarizeItem(env.DB, chat, row, locale));
 }
 
+/**
+ * Checks a batch of projects. Hitting GitHub's rate limit pauses the job
+ * (resume once the quota is back) instead of failing every remaining item.
+ */
+async function activityBatch(env: Env, _settings: AiSettings | null, ids: number[]): Promise<StepResult> {
+  const rows = await loadRows(env, ids);
+  const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
+  for (const row of rows) {
+    const activity = await refreshActivity(env, row.id, row.url);
+    if (activity?.error === "rate_limited") throw new Error(await errorText(env, "api_job_rate_limited"));
+    if (activity?.error) {
+      const key = activity.error === "not_found" ? "activity_error_not_found" : "activity_error_other";
+      result.failures.push({ id: row.id, name: row.name, error: await errorText(env, key) });
+    }
+    else result.doneIds.push(row.id);
+  }
+  return result;
+}
+
 const RUNNERS: Record<JobKind, (env: Env, settings: AiSettings, ids: number[]) => Promise<StepResult>> = {
   reembed: reembedBatch,
   organize: organizeBatch,
   summarize: summarizeBatch,
+  activity: activityBatch,
 };
 
 /**
