@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
 import { m } from "#lib/i18n";
 import { GithubTokenCard } from "#components/settings/GithubTokenCard";
 import { ActivityCheckCard } from "#components/settings/ActivityCheckCard";
+import { CardColumns } from "#components/settings/CardColumns";
 
 interface SettingsTab {
   id: string;
@@ -29,8 +30,6 @@ interface SettingsTab {
   description: string;
   content: ReactNode;
 }
-
-const TWO_COLUMNS = "grid gap-6 lg:grid-cols-2 lg:items-start";
 
 const TABS: SettingsTab[] = [
   {
@@ -52,12 +51,20 @@ const TABS: SettingsTab[] = [
     icon: WandSparklesIcon,
     description: m.settings_tab_organize_description(),
     content: (
-      <div className={TWO_COLUMNS}>
-        <OrganizeCard />
-        <SummarizeCard />
-        <DuplicatesCard />
-        <ActivityCheckCard />
-      </div>
+      <CardColumns
+        left={
+          <>
+            <OrganizeCard />
+            <SummarizeCard />
+          </>
+        }
+        right={
+          <>
+            <DuplicatesCard />
+            <ActivityCheckCard />
+          </>
+        }
+      />
     ),
   },
   {
@@ -67,10 +74,7 @@ const TABS: SettingsTab[] = [
     description: m.settings_tab_data_description(),
     content: (
       <div className="space-y-6">
-        <div className={TWO_COLUMNS}>
-          <DataImportExportCard />
-          <BookmarkletCard />
-        </div>
+        <CardColumns left={<DataImportExportCard />} right={<BookmarkletCard />} />
         <BackupsCard />
       </div>
     ),
@@ -81,19 +85,21 @@ const TABS: SettingsTab[] = [
     icon: ShieldCheckIcon,
     description: m.settings_tab_access_description(),
     content: (
-      // Two independent stacks: a grid would align each row to its tallest card
-      // and leave gaps under the short ones.
-      <div className={TWO_COLUMNS}>
-        <div className="space-y-6">
-          <AllowedEmailsCard />
-          <ApiTokenCard />
-          <GithubTokenCard />
-        </div>
-        <div className="space-y-6">
-          <McpCard />
-          <WebhooksCard />
-        </div>
-      </div>
+      <CardColumns
+        left={
+          <>
+            <AllowedEmailsCard />
+            <ApiTokenCard />
+            <GithubTokenCard />
+          </>
+        }
+        right={
+          <>
+            <McpCard />
+            <WebhooksCard />
+          </>
+        }
+      />
     ),
   },
 ];
