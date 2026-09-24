@@ -93,6 +93,7 @@ const REQUESTS: [string, string, Record<string, unknown>, Record<string, unknown
   ["DELETE", "/api/settings/api-token", {}],
   ["PUT", "/api/settings/allowed-emails", { emails: [] }],
   ["PUT", "/api/settings/locale", { locale: "en" }],
+  ["PUT", "/api/settings/saved-searches", [] as unknown as Record<string, unknown>],
   ["PUT", "/api/audit/settings", { retentionDays: 0 }, { deleted: 2 }],
   ["PUT", "/api/audit/settings", { retentionDays: 30 }],
   ["POST", "/api/backups", {}, { name: "n", count: 1 }],

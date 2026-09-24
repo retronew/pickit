@@ -186,6 +186,11 @@ export function describe(
         action: "settings.locale",
         summary: msg("locale", { locale: String(body.locale ?? "—"), ai: String(body.aiLanguage ?? "—") }),
       };
+    case "PUT /settings/saved-searches":
+      return {
+        action: "settings.saved_searches",
+        summary: msg("saved_searches", { count: Array.isArray(body) ? body.length : 0 }),
+      };
     case "PUT /audit/settings": {
       const pruned = res.deleted ? msg("retention_pruned", { count: res.deleted }) : "";
       return {

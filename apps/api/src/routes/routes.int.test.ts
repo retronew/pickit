@@ -214,3 +214,20 @@ describe("AI settings", () => {
     expect(saved.chat.apiKeyMasked).toBe("");
   });
 });
+
+describe("saved searches", () => {
+  it("starts empty, stores a sanitized list and replaces it on each save", async () => {
+    expect(await t.json("/api/settings/saved-searches")).toEqual([]);
+    const saved = await t.json("/api/settings/saved-searches", {
+      method: "PUT",
+      json: [
+        { id: "1", name: " AI ", query: "llm", category: "", tags: ["a"], sort: "created" },
+        { id: "2", name: "" },
+      ],
+    });
+    expect(saved).toEqual([{ id: "1", name: "AI", query: "llm", category: "", tags: ["a"], sort: "created" }]);
+    expect(await t.json("/api/settings/saved-searches")).toEqual(saved);
+    await t.json("/api/settings/saved-searches", { method: "PUT", json: [] });
+    expect(await t.json("/api/settings/saved-searches")).toEqual([]);
+  });
+});

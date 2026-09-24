@@ -48,6 +48,7 @@ export const AUDIT_ACTIONS = [
   "settings.allowed_emails",
   "settings.audit_retention",
   "settings.locale",
+  "settings.saved_searches",
   "job.start",
   "job.pause",
   "job.resume",

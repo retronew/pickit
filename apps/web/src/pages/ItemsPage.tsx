@@ -15,6 +15,9 @@ import { BatchAddDialog } from "#components/items/BatchAddDialog";
 import { TagsEditDialog } from "#components/items/TagsEditDialog";
 import { OrganizeReviewDialog } from "#components/items/OrganizeReviewDialog";
 import { Confirm } from "#components/Confirm";
+import { Prompt } from "#components/Prompt";
+import { SavedSearchesBar } from "#components/items/SavedSearchesBar";
+import { useSavedSearchBinding } from "#hooks/useSavedSearchBinding";
 import { AskAi } from "#components/AskAi";
 import { PageLoading } from "#components/PageLoading";
 import { m } from "#lib/i18n";
@@ -43,6 +46,15 @@ export function ItemsPage() {
   const detail = useDetailSheet(items);
   const selection = useBulkSelection(refresh, items, filters.allTags);
   const [batchOpen, setBatchOpen] = useState(false);
+  const savedSearches = useSavedSearchBinding(
+    { query: search.query, category: filters.category, tags: filters.selectedTags, sort: filters.sortKey },
+    (s) => {
+      search.setQuery(s.query);
+      filters.setCategory(s.category);
+      filters.setTagFilter(s.tags);
+      filters.setSortKey(s.sort);
+    },
+  );
 
   const { detailItem, setDetailOpen } = detail;
   const onDeleted = useCallback(
@@ -73,6 +85,15 @@ export function ItemsPage() {
         error={search.error}
         hasHits={!!search.hits}
         count={filters.visibleItems.length}
+      />
+
+      <SavedSearchesBar
+        list={savedSearches.list}
+        activeId={savedSearches.activeId}
+        canSave={savedSearches.canSave}
+        onApply={savedSearches.apply}
+        onSave={savedSearches.saveCurrent}
+        onRemove={(s) => savedSearches.remove(s.id)}
       />
 
       <ItemsFilterBar
@@ -129,6 +150,7 @@ export function ItemsPage() {
       <TagsEditDialog />
       <OrganizeReviewDialog />
       <Confirm />
+      <Prompt />
       <BatchAddDialog
         open={batchOpen}
         onOpenChange={setBatchOpen}

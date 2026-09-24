@@ -11,6 +11,7 @@ import {
   embeddingRequestUrls,
   type AiSettings,
   type AiEndpoint,
+  sanitizeSavedSearches,
 } from "@pickit/shared";
 import type { Env } from "#types";
 import { getRawSettings, saveSettings, getApiToken, setApiToken } from "#settings";
@@ -195,4 +196,30 @@ settingsRoutes.put("/locale", async (c) => {
   }
   await setLocalePrefs(c.env.DB, body as Partial<LocalePrefs>);
   return c.json(await getLocalePrefs(c.env.DB));
+});
+
+const SAVED_SEARCHES_KEY = "saved_searches";
+
+settingsRoutes.get("/saved-searches", async (c) => {
+  const row = await c.env.DB.prepare("SELECT value FROM settings WHERE key = ?")
+    .bind(SAVED_SEARCHES_KEY)
+    .first<{ value: string }>();
+  let stored: unknown = [];
+  try {
+    stored = row ? JSON.parse(row.value) : [];
+  } catch {
+    // Corrupt value: treat as none.
+  }
+  return c.json(sanitizeSavedSearches(stored));
+});
+
+/** body: SavedSearch[] — replaces the whole list (order is the display order). */
+settingsRoutes.put("/saved-searches", async (c) => {
+  const list = sanitizeSavedSearches(await c.req.json().catch(() => []));
+  await c.env.DB.prepare(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+  )
+    .bind(SAVED_SEARCHES_KEY, JSON.stringify(list))
+    .run();
+  return c.json(list);
 });
