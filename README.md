@@ -13,7 +13,7 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **AI** (optional; OpenAI, Anthropic, Gemini and any OpenAI-compatible API): auto-fill name/category/tags for new links, per-item summaries, chat over your library, batch re-organize, one-click translation of notes and summaries. AI writes in a configurable output language (default: the interface language); semantic search works across languages. Chat and embedding models are configured independently, so they can come from different providers
 - **Import / export**: Markdown tables, JSON, browser bookmark HTML
 - **Sharing**: public read-only links (`/s/:slug`) for a single bookmark, or a live list of a category (with sub-categories) or a tag, with an RSS feed
-- **Capture**: bookmarklet that opens `/add?url=...` for the current page
+- **Capture**: bookmarklet that opens `/add?url=...` for the current page; PickIt also installs as a PWA (add to home screen), and on Android appears in the system share sheet
 - **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist that can be edited in Settings (no passwords)
 - **Languages**: Chinese, English and Japanese interface (header menu); the choice is saved and also used for API errors and audit summaries
 - **Theme**: follows the system light / dark setting by default; the header button cycles System → Light → Dark

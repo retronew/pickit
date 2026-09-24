@@ -14,8 +14,10 @@ import { LoginPage } from "#pages/LoginPage";
 import { PublicSharePage } from "#pages/PublicSharePage";
 import { ToastProvider } from "#components/ui/toast";
 import { applyDocumentLocale } from "#lib/i18n";
+import { registerServiceWorker } from "#lib/pwa";
 
 applyDocumentLocale();
+registerServiceWorker();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
