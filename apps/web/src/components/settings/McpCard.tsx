@@ -1,32 +1,15 @@
-import { CheckIcon, CopyIcon } from "lucide-react";
-import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "#components/ui/card";
-import { Button } from "#components/ui/button";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
-import { copyText } from "#lib/api";
+import { CopyButton } from "#components/CopyButton";
 import { m } from "#lib/i18n";
 
 const token = () => m.mcp_token_placeholder();
 
 function Snippet({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
   return (
     <div className="relative">
-      <pre className="overflow-x-auto rounded-lg bg-muted p-3 pr-10 font-mono text-xs leading-relaxed">{code}</pre>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        aria-label={m.action_copy()}
-        className="absolute top-2 right-2"
-        onClick={async () => {
-          if (await copyText(code)) {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          }
-        }}
-      >
-        {copied ? <CheckIcon /> : <CopyIcon />}
-      </Button>
+      <pre className="rounded-lg bg-muted p-3 pr-10 font-mono break-all whitespace-pre-wrap text-xs leading-relaxed">{code}</pre>
+      <CopyButton text={code} aria-label={m.action_copy()} className="absolute top-2 right-2" />
     </div>
   );
 }

@@ -1,9 +1,9 @@
-import { api, copyText, toastError, toastSuccess } from "#lib/api";
+import { api, toastError, toastSuccess } from "#lib/api";
 import { SHARE_TYPE_LABELS, rssUrl, type ShareType } from "#lib/shares";
 import { Badge } from "#components/ui/badge";
 import { ListSkeleton } from "#components/settings/skeletons";
 import { useEffect, useState } from "react";
-import { CopyIcon, Trash2Icon, RssIcon } from "lucide-react";
+import { Trash2Icon, RssIcon } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -12,6 +12,8 @@ import {
   CardContent,
 } from "#components/ui/card";
 import { Button } from "#components/ui/button";
+import { Confirm } from "#components/Confirm";
+import { CopyButton } from "#components/CopyButton";
 import { m } from "#lib/i18n";
 
 interface Share {
@@ -35,18 +37,21 @@ export function SharesCard() {
     refresh();
   }, []);
 
-  async function remove(slug: string) {
+  async function remove(s: Share) {
+    const ok = await Confirm.call({
+      title: m.shares_revoke_title({ title: s.title || s.value }),
+      message: m.shares_revoke_message(),
+      confirmLabel: m.shares_revoke(),
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await api(`/api/shares/${slug}`, { method: "DELETE" });
+      await api(`/api/shares/${s.slug}`, { method: "DELETE" });
       toastSuccess(m.share_revoked(), { id: "share" });
     } catch (err) {
       toastError(m.share_revoke_failed(), err, { id: "share" });
     }
     refresh();
-  }
-
-  async function copy(slug: string) {
-    await copyText(`${window.location.origin}/s/${slug}`, m.share_link_copied());
   }
 
   return (
@@ -84,29 +89,24 @@ export function SharesCard() {
                 </span>
                 <div className="flex shrink-0 items-center gap-0.5">
                   {s.type !== "item" && (
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
+                    <CopyButton
+                      text={rssUrl(s.slug)}
+                      toast={m.shares_rss_copied()}
+                      icon={<RssIcon />}
                       aria-label={m.shares_copy_rss()}
                       title={m.shares_copy_rss()}
-                      onClick={() => copyText(rssUrl(s.slug), m.shares_rss_copied())}
-                    >
-                      <RssIcon />
-                    </Button>
+                    />
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
+                  <CopyButton
+                    text={`${window.location.origin}/s/${s.slug}`}
+                    toast={m.share_link_copied()}
                     aria-label={m.shares_copy_link()}
-                    onClick={() => copy(s.slug)}
-                  >
-                    <CopyIcon />
-                  </Button>
+                  />
                   <Button
                     variant="ghost"
                     size="icon-xs"
                     aria-label={m.shares_revoke()}
-                    onClick={() => remove(s.slug)}
+                    onClick={() => remove(s)}
                     className="text-muted-foreground hover:text-destructive-foreground"
                   >
                     <Trash2Icon />

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toastError, toastSuccess } from "#lib/api";
-import { UploadIcon, DownloadIcon } from "lucide-react";
+import { UploadIcon, FileBracesIcon, FileTextIcon, FileCodeIcon } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -38,6 +38,12 @@ const FORMAT_LABELS: Record<Format, string> = {
   json: m.import_format_json(),
   html: m.import_format_html(),
 };
+
+const EXPORT_FORMATS = [
+  { format: "json", Icon: FileBracesIcon },
+  { format: "markdown", Icon: FileTextIcon },
+  { format: "html", Icon: FileCodeIcon },
+] as const satisfies { format: Format; Icon: unknown }[];
 
 interface PreviewRow {
   name: string;
@@ -222,14 +228,14 @@ export function DataImportExportCard() {
             {m.export_all()}
           </span>
           <div className="flex flex-wrap items-center gap-1.5">
-            {(["json", "markdown", "html"] as const).map((f) => (
+            {EXPORT_FORMATS.map(({ format: f, Icon }) => (
               <a
                 key={f}
                 href={`/api/items/export?format=${f}`}
                 download
                 className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
               >
-                <DownloadIcon />
+                <Icon />
                 {f.toUpperCase()}
               </a>
             ))}

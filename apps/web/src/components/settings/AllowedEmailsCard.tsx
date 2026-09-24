@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ListSkeleton } from "#components/settings/skeletons";
 import { api, errorMessage, toastSuccess } from "#lib/api";
 import { LockIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipPopup } from "#components/ui/tooltip";
 import {
   Card,
   CardHeader,
@@ -91,7 +92,14 @@ export function AllowedEmailsCard() {
                 className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm"
               >
                 <span className="truncate">{email}</span>
-                <LockIcon className="text-muted-foreground size-3.5 shrink-0" aria-label={m.emails_owner()} />
+                <Tooltip>
+                  <TooltipTrigger
+                    render={<span tabIndex={0} aria-label={m.emails_owner()} className="shrink-0 rounded-sm" />}
+                  >
+                    <LockIcon className="text-muted-foreground size-3.5" />
+                  </TooltipTrigger>
+                  <TooltipPopup>{m.emails_owner()}</TooltipPopup>
+                </Tooltip>
               </div>
             ))}
             {data.emails.map((email) => (
