@@ -11,6 +11,7 @@ import { AllowedEmailsCard } from "#components/settings/AllowedEmailsCard";
 import { AiSettingsCard } from "#components/settings/ai/AiSettingsCard";
 import { AiLanguageCard } from "#components/settings/ai/AiLanguageCard";
 import { McpCard } from "#components/settings/McpCard";
+import { WebhooksCard } from "#components/settings/webhooks/WebhooksCard";
 import { ReembedCard } from "#components/settings/ReembedCard";
 import { BuildInfo } from "#components/settings/BuildInfo";
 import { BackupsCard } from "#components/settings/backups/BackupsCard";
@@ -81,6 +82,7 @@ const TABS: SettingsTab[] = [
         <AllowedEmailsCard />
         <ApiTokenCard />
         <McpCard />
+        <WebhooksCard />
       </div>
     ),
   },

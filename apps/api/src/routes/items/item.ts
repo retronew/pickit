@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { normalizeUrl } from "@pickit/shared";
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { getSettings } from "#settings";
+import { emitEvent } from "#webhooks";
 import { toItemJson, findDuplicate, embedItem } from "./helpers";
 
 export const itemByIdRoutes = new Hono<{ Bindings: Env }>();
@@ -63,6 +64,7 @@ itemByIdRoutes.put("/:id", async (c) => {
       embedItem(c.env, id, merged, settings).catch(() => {}),
     );
   }
+  emitEvent(c.env, (p) => c.executionCtx.waitUntil(p), "item.updated", { id, ...merged });
   return c.json({ ok: true });
 });
 
@@ -78,9 +80,13 @@ itemByIdRoutes.post("/:id/visit", async (c) => {
 
 itemByIdRoutes.delete("/:id", async (c) => {
   const id = Number(c.req.param("id"));
+  const row = await c.env.DB.prepare("SELECT name, url FROM items WHERE id = ? AND deleted_at IS NULL")
+    .bind(id)
+    .first<{ name: string; url: string }>();
   await c.env.DB.prepare("UPDATE items SET deleted_at = ? WHERE id = ?")
     .bind(Date.now(), id)
     .run();
+  if (row) emitEvent(c.env, (p) => c.executionCtx.waitUntil(p), "item.deleted", { id, ...row });
   return c.json({ ok: true });
 });
 

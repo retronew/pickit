@@ -228,6 +228,12 @@ export function describe(
         target: res.name ? `backup:${res.name}` : undefined,
         summary: msg("backup_create", { count: res.count != null ? msg("backup_count", { count: res.count }) : "" }),
       };
+    case "POST /webhooks":
+      return {
+        action: "settings.webhook_create",
+        target: res.id ? `webhook:${res.id}` : undefined,
+        summary: msg("webhook_create", { url: quote(body.url) }),
+      };
     case "POST /chat":
       return { action: "ai.chat", summary: msg("chat") };
     case "POST /auth/sign-out":
@@ -247,6 +253,12 @@ export function describe(
       target: `share:${m[1]}`,
       summary: msg("share_update", { slug: m[1], title: quote(body.title) }),
     };
+  }
+  if ((m = p.match(/^\/webhooks\/(\d+)(\/test)?$/))) {
+    const target = `webhook:${m[1]}`;
+    if (m[2] && method === "POST") return { action: "settings.webhook_test", target, summary: msg("webhook_test", { id: m[1] }) };
+    if (method === "PATCH") return { action: "settings.webhook_update", target, summary: msg("webhook_update", { id: m[1] }) };
+    if (method === "DELETE") return { action: "settings.webhook_delete", target, summary: msg("webhook_delete", { id: m[1] }) };
   }
   if ((m = p.match(/^\/jobs\/(\w+)\/(start|pause|resume|retry)$/))) {
     // Known jobs get their label; anything else (a 404) shows the raw name.

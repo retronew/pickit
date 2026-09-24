@@ -5,6 +5,7 @@ import { nearest, vectorColumns } from "#vectors";
 import { createProvider, embedText, embeddingInput, type Provider, type AiSettings } from "#ai";
 import { normalizeUrl } from "@pickit/shared";
 import { getSettings } from "#settings";
+import { emitEvent } from "#webhooks";
 
 export async function itemsByIds(db: D1Database, ids: number[]): Promise<Map<number, ItemRow>> {
   if (!ids.length) return new Map();
@@ -142,5 +143,13 @@ export async function createItem(
   const id = Number(meta.last_row_id);
   const settings = await getSettings(env.DB);
   if (settings) opts.waitUntil(embedItem(env, id, item, settings).catch(() => {}));
+  emitEvent(env, opts.waitUntil, "item.created", {
+    id,
+    name: item.name,
+    url: item.url ?? "",
+    note: item.note ?? "",
+    category: item.category ?? "",
+    tags: item.tags ?? [],
+  });
   return { id };
 }

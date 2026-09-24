@@ -9,6 +9,7 @@ import { activeCategories, suggestOrganize } from "#organize";
 import { summarizeItem } from "#summarize";
 import { errorText, LocalizedError, renderMessage } from "#i18n";
 import { aiLocale, uiLocale } from "#locale";
+import { dispatchEvent } from "#webhooks";
 
 /** How many items one step handles. Kept small so a step stays well under Worker limits. */
 const BATCH_SIZE: Record<JobKind, number> = { reembed: 32, organize: 4, summarize: 4 };
@@ -166,14 +167,27 @@ const RUNNERS: Record<JobKind, (env: Env, settings: AiSettings, ids: number[]) =
   summarize: summarizeBatch,
 };
 
-/** Advances a job by one batch. Safe to call from several drivers at once. */
+/**
+ * Advances a job by one batch. Safe to call from several drivers at once.
+ * The step that finishes a job also sends the job.finished webhook.
+ */
 export async function runJobStep(env: Env, kind: JobKind): Promise<JobState> {
-  return stepJob(env.DB, kind, BATCH_SIZE[kind], async (ids) => {
+  const startedAt = Date.now();
+  const job = await stepJob(env.DB, kind, BATCH_SIZE[kind], async (ids) => {
     const settings = await getSettings(env.DB);
     const configError = jobConfigError(kind, settings);
     if (configError) throw new Error(await errorText(env, configError));
     return RUNNERS[kind](env, settings!, ids);
   });
+  if (job.status === "done" && job.finishedAt !== undefined && job.finishedAt >= startedAt) {
+    await dispatchEvent(env, "job.finished", {
+      kind,
+      done: job.done,
+      failed: job.failures.length,
+      lastError: job.lastError ?? null,
+    }).catch(() => {});
+  }
+  return job;
 }
 
 /** Cron driver: keeps running jobs moving while no page is stepping them. */

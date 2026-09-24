@@ -19,7 +19,7 @@
 - **Keyboard shortcuts**: `/` search, `N` new, `J`/`K` move between cards, `Enter` details, `O` open link, `E` edit, `P` pin; `?` lists them all
 - **Theme**: follows the system light / dark setting by default; the header button cycles System → Light → Dark
 - **Audit log**: every write, export, sign-in / sign-out and cron run is recorded (actor, action, target, result, IP, request details with secrets redacted) and kept for 180 days by default (adjustable from 1 day up to 10 years, or forever, on the Audit page, which also shows the log's estimated size); the **Audit** page filters by category, action, actor, result, date range (with presets) and keyword, with live and manual refresh
-- **API access**: Bearer API token for scripts and integrations, plus an MCP server so AI assistants can search and add bookmarks
+- **API access**: Bearer API token for scripts and integrations, plus an MCP server so AI assistants can search and add bookmarks; **webhooks** (Settings → Access & sharing) POST signed JSON (`X-PickIt-Signature: sha256=<HMAC of the body>`) when a bookmark is added, edited or deleted, or a batch job finishes, with a test button and the last delivery result
 - **Batch jobs**: re-embedding, AI re-organizing and AI summaries run (selected bookmarks on the home page can also be summarized directly) in small resumable steps — pause / resume, retry failed items, per-item error details. The job's settings tab drives them while open; a per-minute cron keeps them going in the background
 - **Backups**: daily JSON backups to R2 (kept 30 days) plus "back up now"; the settings table lets you download, delete or restore one — merge (only missing URLs) or replace (current items go to the trash). Every restore first snapshots the current data, so it can be undone
 - **Maintenance cron**: dead-link checks (a dead link gets its closest Wayback Machine snapshot, shown as "View archive"), audit-log pruning, and preview images (og:image) fetched for older bookmarks a few at a time; new ones get theirs from "AI analyze"
@@ -98,7 +98,7 @@ The interface is available in Chinese, English and Japanese. Strings live in `pa
 
 ### Tests
 
-- **API route tests** (`*.int.test.ts`) run the real Worker — routes, auth and audit middleware — against an in-memory SQLite database built from the real migrations (`apps/api/src/test/`, using Node's built-in `node:sqlite`, so Node 22.13+ is required). They cover items, trash, bulk actions, import / export, search, tags, shares, settings, authentication, the audit log, backups / restore, bulk editing (with a stubbed AI model) and MCP.
+- **API route tests** (`*.int.test.ts`) run the real Worker — routes, auth and audit middleware — against an in-memory SQLite database built from the real migrations (`apps/api/src/test/`, using Node's built-in `node:sqlite`, so Node 22.13+ is required). They cover items, trash, bulk actions, import / export, search, tags, categories, shares (incl. expiry / passwords), settings, authentication, the audit log, backups / restore, bulk editing (with a stubbed AI model), webhooks (with a stubbed fetch) and MCP.
 - **Unit tests** cover vectors, jobs, AI settings / URLs, importers, audit description and redaction, and the web app's API client, save flow, filters and formatting.
 - A test fails if any audit action the API records has no display label.
 
