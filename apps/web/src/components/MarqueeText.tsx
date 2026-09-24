@@ -13,10 +13,14 @@ const SPEED = 30;
 export function MarqueeText({ children, className }: { children: ReactNode; className?: string }) {
   const { outerRef, innerRef, overflow } = useOverflow<HTMLSpanElement, HTMLSpanElement>();
   const scrolling = overflow > 0;
+  // Moving takes 60% of each pass; pauses fill the rest.
+  const duration = `${Math.max(2, overflow / SPEED / 0.6)}s`;
 
   return (
     <span
       ref={outerRef}
+      // The duration is read by both animations: the scroll (inner) and the edge fades (outer).
+      style={scrolling ? ({ "--marquee-duration": duration } as CSSProperties) : undefined}
       className={cn(
         "block min-w-0 overflow-hidden whitespace-nowrap",
         scrolling &&
@@ -31,8 +35,6 @@ export function MarqueeText({ children, className }: { children: ReactNode; clas
           scrolling
             ? ({
                 "--marquee-distance": `-${overflow}px`,
-                // Moving takes 60% of each pass; pauses fill the rest.
-                "--marquee-duration": `${Math.max(2, overflow / SPEED / 0.6)}s`,
               } as CSSProperties)
             : undefined
         }

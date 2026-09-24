@@ -105,16 +105,16 @@
   /* Runs in step with marquee: an edge fades only while text is hidden past it. */
   @keyframes marquee-fade {
   0%, 20% {
-    --marquee-fade-l: 0rem;
-    --marquee-fade-r: 0.75rem;
+    --marquee-fade-l: 0px;
+    --marquee-fade-r: 12px;
     }
   30%, 70% {
-    --marquee-fade-l: 0.75rem;
-    --marquee-fade-r: 0.75rem;
+    --marquee-fade-l: 12px;
+    --marquee-fade-r: 12px;
     }
   80%, to {
-    --marquee-fade-l: 0.75rem;
-    --marquee-fade-r: 0rem;
+    --marquee-fade-l: 12px;
+    --marquee-fade-r: 0px;
     }
   }
   @keyframes fade-in {
@@ -379,16 +379,17 @@ button:disabled {
   }
 }
 
-/* Edge fades of MarqueeText; registered so the mask can animate between lengths. */
+/* Edge fades of MarqueeText; registered so the mask can animate between lengths.
+   Initial values must be absolute (px): a rem value invalidates the registration. */
 @property --marquee-fade-l {
   syntax: "<length>";
   inherits: false;
-  initial-value: 0rem;
+  initial-value: 0px;
 }
 @property --marquee-fade-r {
   syntax: "<length>";
   inherits: false;
-  initial-value: 0.75rem;
+  initial-value: 12px;
 }
 @utility marquee-mask {
   mask-image: linear-gradient(
