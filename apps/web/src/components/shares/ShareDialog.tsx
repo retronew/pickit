@@ -12,9 +12,9 @@ import {
 import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Field, FieldLabel } from "#components/ui/field";
-import { ShareTargetPicker, type PickableType } from "#components/shares/ShareTargetPicker";
+import { ShareTargetPicker } from "#components/shares/ShareTargetPicker";
 import { copyText, toastError } from "#lib/api";
-import { createShare, defaultShareTitle, shareUrl, type ShareTarget } from "#lib/shares";
+import { createShare, defaultShareTitle, pickedTarget, shareUrl, type ShareTarget } from "#lib/shares";
 import { m } from "#lib/i18n";
 
 interface Props {
@@ -25,10 +25,10 @@ interface Props {
 /** Names a new public link, creates it and copies it. Resolves to the slug. */
 export const ShareDialog = createCallable<Props, string | null>(({ target, call }) => {
   const [entered, setEntered] = useState(false);
-  const [pickType, setPickType] = useState<PickableType>("category");
-  const [pickValue, setPickValue] = useState("");
-  const resolved: ShareTarget | null = target ?? (pickValue ? { type: pickType, value: pickValue } : null);
-  const placeholder = resolved ? defaultShareTitle(resolved) : "";
+  const [categories, setCategories] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const resolved: ShareTarget | null = target ?? pickedTarget(categories, tags);
+  const placeholder = resolved ? defaultShareTitle(resolved) : m.share_title_placeholder();
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -71,10 +71,10 @@ export const ShareDialog = createCallable<Props, string | null>(({ target, call 
           >
             {!target && (
               <ShareTargetPicker
-                type={pickType}
-                value={pickValue}
-                onTypeChange={setPickType}
-                onValueChange={setPickValue}
+                categories={categories}
+                tags={tags}
+                onCategoriesChange={setCategories}
+                onTagsChange={setTags}
               />
             )}
             <Field>

@@ -1,7 +1,7 @@
 import { api } from "#lib/api";
 import { m } from "#lib/i18n";
 
-export type ShareType = "item" | "category" | "tag" | "collection";
+export type ShareType = "item" | "category" | "tag" | "mix" | "collection";
 
 export interface Share {
   slug: string;
@@ -15,24 +15,49 @@ export interface Share {
   lastViewedAt: number | null;
 }
 
-/** What to share: one item / category / tag, or a hand-picked collection. */
+/** What to share: one item / category / tag, several of them, or a hand-picked collection. */
 export type ShareTarget =
   | { type: "item" | "category" | "tag"; value: string }
+  | { type: "mix"; categories: string[]; tags: string[] }
   | { type: "collection"; ids: number[] };
 
 export const SHARE_TYPE_LABELS: Record<ShareType, string> = {
   item: m.share_type_item(),
   category: m.share_type_category(),
   tag: m.share_type_tag(),
+  mix: m.share_type_mix(),
   collection: m.share_type_collection(),
 };
 
 export const shareUrl = (slug: string) => `${window.location.origin}/s/${slug}`;
 export const rssUrl = (slug: string) => `${window.location.origin}/api/public/shares/${slug}/rss`;
 
+/** Picked categories and tags as a target: a single one keeps its own type. */
+export function pickedTarget(categories: string[], tags: string[]): ShareTarget | null {
+  if (categories.length + tags.length === 0) return null;
+  if (categories.length === 1 && tags.length === 0) return { type: "category", value: categories[0] };
+  if (tags.length === 1 && categories.length === 0) return { type: "tag", value: tags[0] };
+  return { type: "mix", categories, tags };
+}
+
+/** "前端 · #ai" (matches the API's mixTitle). */
+function mixTitle(categories: string[], tags: string[]): string {
+  return [...categories, ...tags.map((t) => `#${t}`)].join(" · ");
+}
+
+function parseMix(value: string): { categories: string[]; tags: string[] } {
+  try {
+    const v = JSON.parse(value);
+    return { categories: v?.categories ?? [], tags: v?.tags ?? [] };
+  } catch {
+    return { categories: [], tags: [] };
+  }
+}
+
 /** The title a share gets when none is entered (matches the API's default). */
 export function defaultShareTitle(target: ShareTarget): string {
   if (target.type === "collection") return m.share_collection_default_title({ count: target.ids.length });
+  if (target.type === "mix") return mixTitle([...target.categories].sort(), [...target.tags].sort());
   if (target.type === "category") return target.value;
   if (target.type === "tag") return `#${target.value}`;
   return "";
@@ -41,6 +66,10 @@ export function defaultShareTitle(target: ShareTarget): string {
 /** A short description of what a share contains, for lists. */
 export function shareSubject(s: Share): string {
   if (s.type === "collection") return m.items_total({ count: s.itemCount ?? 0 });
+  if (s.type === "mix") {
+    const { categories, tags } = parseMix(s.value);
+    return mixTitle(categories, tags);
+  }
   if (s.type === "tag") return `#${s.value}`;
   if (s.type === "category") return s.value;
   return "";

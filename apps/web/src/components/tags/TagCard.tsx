@@ -4,6 +4,7 @@ import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
 import { MarqueeText } from "#components/MarqueeText";
 import { m } from "#lib/i18n";
+import { Hint } from "#components/Hint";
 
 /**
  * One tag with its bookmark count and actions. Narrow (two per row on phones):
@@ -26,27 +27,20 @@ export function TagCard({
 }) {
   return (
     <Card className="flex flex-col gap-1.5 p-3 shadow-none before:shadow-none sm:flex-row sm:items-center sm:gap-2 dark:before:shadow-none">
-      <button
-        type="button"
-        onClick={onOpen}
-        title={`#${tag}`}
-        className="min-w-0 flex-1 text-left font-medium"
-      >
-        <MarqueeText>#{tag}</MarqueeText>
-      </button>
+      <Hint content={`#${tag}`}>
+        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left font-medium">
+          <MarqueeText>#{tag}</MarqueeText>
+        </button>
+      </Hint>
       <div className="-mr-1 flex shrink-0 items-center gap-0.5">
         <Badge variant="secondary" size="sm" className="mr-auto sm:mr-1">
           {count}
         </Badge>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={m.tag_share()}
-          title={m.tag_share_hint()}
-          onClick={onShare}
-        >
-          <Share2Icon />
-        </Button>
+        <Hint content={m.tag_share_hint()}>
+          <Button variant="ghost" size="icon-xs" aria-label={m.tag_share()} onClick={onShare}>
+            <Share2Icon />
+          </Button>
+        </Hint>
         <Button variant="ghost" size="icon-xs" aria-label={m.action_rename()} onClick={onRename}>
           <PencilIcon />
         </Button>

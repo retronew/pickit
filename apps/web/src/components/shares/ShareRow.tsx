@@ -5,6 +5,7 @@ import { CopyButton } from "#components/CopyButton";
 import { SHARE_TYPE_LABELS, rssUrl, shareSubject, shareUrl, type Share } from "#lib/shares";
 import { formatDate } from "#lib/format";
 import { m } from "#lib/i18n";
+import { Hint } from "#components/Hint";
 
 interface Props {
   share: Share;
@@ -41,33 +42,41 @@ export function ShareRow({ share: s, onStats, onRename, onRevoke }: Props) {
         </div>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-0.5">
-        <Button variant="ghost" size="sm" onClick={onStats} title={m.share_stats_title()} className="tabular-nums">
-          <BarChart3Icon />
-          {m.shares_views({ count: s.viewCount })}
-        </Button>
-        <Button variant="ghost" size="icon-xs" aria-label={m.shares_rename()} title={m.shares_rename()} onClick={onRename}>
-          <PencilIcon />
-        </Button>
+        <Hint content={m.share_stats_title()}>
+          <Button variant="ghost" size="sm" onClick={onStats} className="tabular-nums">
+            <BarChart3Icon />
+            {m.shares_views({ count: s.viewCount })}
+          </Button>
+        </Hint>
+        <Hint content={m.shares_rename()}>
+          <Button variant="ghost" size="icon-xs" aria-label={m.shares_rename()} onClick={onRename}>
+            <PencilIcon />
+          </Button>
+        </Hint>
         {s.type !== "item" && (
-          <CopyButton
-            text={rssUrl(s.slug)}
-            toast={m.shares_rss_copied()}
-            icon={<RssIcon />}
-            aria-label={m.shares_copy_rss()}
-            title={m.shares_copy_rss()}
-          />
+          <Hint content={m.shares_copy_rss()}>
+            <CopyButton
+              text={rssUrl(s.slug)}
+              toast={m.shares_rss_copied()}
+              icon={<RssIcon />}
+              aria-label={m.shares_copy_rss()}
+            />
+          </Hint>
         )}
-        <CopyButton text={shareUrl(s.slug)} toast={m.share_link_copied()} aria-label={m.shares_copy_link()} />
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={m.shares_revoke()}
-          title={m.shares_revoke()}
-          onClick={onRevoke}
-          className="text-muted-foreground hover:text-destructive-foreground"
-        >
-          <Trash2Icon />
-        </Button>
+        <Hint content={m.shares_copy_link()}>
+          <CopyButton text={shareUrl(s.slug)} toast={m.share_link_copied()} aria-label={m.shares_copy_link()} />
+        </Hint>
+        <Hint content={m.shares_revoke()}>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={m.shares_revoke()}
+            onClick={onRevoke}
+            className="text-muted-foreground hover:text-destructive-foreground"
+          >
+            <Trash2Icon />
+          </Button>
+        </Hint>
       </div>
     </div>
   );

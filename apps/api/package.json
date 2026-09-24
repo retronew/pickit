@@ -22,6 +22,7 @@
     "@pickit/shared": "workspace:*",
     "ai": "^7.0.109",
     "better-auth": "^1.7.5",
+    "bowser": "^2.14.1",
     "hono": "^4.13.8"
   },
   "devDependencies": {

@@ -17,11 +17,8 @@ export function SharesPage() {
 
   return (
     <div className="animate-fade-in space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-heading font-semibold text-lg">{m.nav_shares()}</h1>
-          <p className="text-muted-foreground text-sm">{m.shares_description()}</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-heading font-semibold text-lg">{m.nav_shares()}</h1>
         <Button onClick={create}>
           <PlusIcon />
           {m.shares_new()}

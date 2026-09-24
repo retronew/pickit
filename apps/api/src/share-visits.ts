@@ -1,108 +1,95 @@
 // Visit tracking for public share links: lifetime counters on the share
-// plus a pruned per-visit log for the stats on the shares page.
+// plus a pruned per-visit log for the stats on the shares page. A visitor
+// is a hash of IP + user agent + share; their repeat views within
+// REPEAT_MS count once (refreshes, back/forward, double requests).
 
-export type VisitKind = "page" | "rss";
+import type { VisitKind } from "@pickit/shared";
+import { parseUserAgent, type ParsedUserAgent } from "#user-agent";
+
+export type { VisitKind };
+
 
 const KEEP_MS = 180 * 24 * 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
+const REPEAT_MS = 30 * 60 * 1000;
 const BOT_UA = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|headless/i;
 
-export interface VisitInfo {
+export interface VisitInfo extends ParsedUserAgent {
   kind: VisitKind;
+  visitor: string;
   referrer: string;
   country: string;
 }
 
-/** What to log about a request; null for crawlers and link-preview bots. */
-export function visitInfo(req: Request, kind: VisitKind, ownHost: string): VisitInfo | null {
+const hostOf = (url: string | null | undefined) => {
+  try {
+    return new URL(url ?? "").host;
+  } catch {
+    return "";
+  }
+};
+
+/** The referring site's host; "" for direct visits and links from PickIt itself. */
+function refererHost(url: string | null | undefined, ownHosts: string[]): string {
+  try {
+    const host = new URL(url ?? "").host;
+    return ownHosts.includes(host) ? "" : host;
+  } catch {
+    return ""; // No or invalid referrer: a direct visit.
+  }
+}
+
+async function visitorId(ip: string, ua: string, slug: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${ip}|${ua}|${slug}`));
+  return [...new Uint8Array(digest).slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * What to log about a request; null for crawlers and link-preview bots.
+ * `pageReferrer` is the share page's document.referrer: the page loads its
+ * data with fetch, whose Referer header is the share page itself.
+ */
+export async function visitInfo(
+  req: Request,
+  kind: VisitKind,
+  slug: string,
+  ownHosts: string[],
+  pageReferrer?: string,
+): Promise<VisitInfo | null> {
   const ua = req.headers.get("user-agent") ?? "";
   // Feed readers identify as bots too; count those fetches as RSS anyway.
   if (kind === "page" && BOT_UA.test(ua)) return null;
-  let referrer = "";
-  try {
-    const host = new URL(req.headers.get("referer") ?? "").host;
-    if (host !== ownHost) referrer = host;
-  } catch {
-    // No or invalid referrer: a direct visit.
-  }
+  const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "";
   const cf = (req as Request & { cf?: { country?: string } }).cf;
-  return { kind, referrer, country: cf?.country ?? "" };
+  return {
+    kind,
+    visitor: await visitorId(ip, ua, slug),
+    // The page's own fetch sends the share page as Referer: that host is ours too.
+    referrer: refererHost(pageReferrer ?? req.headers.get("referer"), [
+      ...ownHosts,
+      ...(pageReferrer ? [hostOf(req.headers.get("referer"))] : []),
+    ]),
+    country: cf?.country ?? "",
+    ...parseUserAgent(ua),
+  };
 }
 
+/** Logs a visit unless the same visitor viewed this share within REPEAT_MS. */
 export async function recordVisit(db: D1Database, slug: string, visit: VisitInfo, now = Date.now()) {
+  const repeat = await db
+    .prepare("SELECT 1 FROM share_visits WHERE slug = ? AND visitor = ? AND kind = ? AND at > ? LIMIT 1")
+    .bind(slug, visit.visitor, visit.kind, now - REPEAT_MS)
+    .first();
+  if (repeat) return;
   await db.batch([
     db
       .prepare("UPDATE shares SET view_count = view_count + 1, last_viewed_at = ? WHERE slug = ?")
       .bind(now, slug),
     db
-      .prepare("INSERT INTO share_visits (slug, at, kind, referrer, country) VALUES (?, ?, ?, ?, ?)")
-      .bind(slug, now, visit.kind, visit.referrer, visit.country),
+      .prepare(
+        `INSERT INTO share_visits (slug, at, kind, visitor, referrer, country, browser, os, device)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(slug, now, visit.kind, visit.visitor, visit.referrer, visit.country, visit.browser, visit.os, visit.device),
     db.prepare("DELETE FROM share_visits WHERE at < ?").bind(now - KEEP_MS),
   ]);
-}
-
-export interface ShareStats {
-  total: number;
-  lastViewedAt: number | null;
-  last30: number;
-  /** Oldest first, one entry per day (UTC) for the last `days` days. */
-  byDay: { day: string; page: number; rss: number }[];
-  referrers: { host: string; count: number }[];
-  countries: { country: string; count: number }[];
-  recent: { at: number; kind: VisitKind; referrer: string; country: string }[];
-}
-
-const dayKey = (t: number) => new Date(t).toISOString().slice(0, 10);
-
-export async function shareStats(db: D1Database, slug: string, days = 30, now = Date.now()): Promise<ShareStats | null> {
-  const share = await db
-    .prepare("SELECT view_count, last_viewed_at FROM shares WHERE slug = ?")
-    .bind(slug)
-    .first<{ view_count: number; last_viewed_at: number | null }>();
-  if (!share) return null;
-  const since = Date.parse(dayKey(now - (days - 1) * DAY_MS));
-
-  const [daily, referrers, countries, recent] = await Promise.all([
-    db
-      .prepare(
-        `SELECT strftime('%Y-%m-%d', at / 1000, 'unixepoch') AS day, kind, COUNT(*) AS count
-         FROM share_visits WHERE slug = ? AND at >= ? GROUP BY day, kind`,
-      )
-      .bind(slug, since)
-      .all<{ day: string; kind: VisitKind; count: number }>(),
-    db
-      .prepare(
-        `SELECT referrer AS host, COUNT(*) AS count FROM share_visits
-         WHERE slug = ? AND at >= ? AND referrer != '' GROUP BY referrer ORDER BY count DESC LIMIT 10`,
-      )
-      .bind(slug, since)
-      .all<{ host: string; count: number }>(),
-    db
-      .prepare(
-        `SELECT country, COUNT(*) AS count FROM share_visits
-         WHERE slug = ? AND at >= ? AND country != '' GROUP BY country ORDER BY count DESC LIMIT 10`,
-      )
-      .bind(slug, since)
-      .all<{ country: string; count: number }>(),
-    db
-      .prepare("SELECT at, kind, referrer, country FROM share_visits WHERE slug = ? ORDER BY at DESC LIMIT 20")
-      .bind(slug)
-      .all<ShareStats["recent"][number]>(),
-  ]);
-
-  const byDay = Array.from({ length: days }, (_, i) => ({ day: dayKey(since + i * DAY_MS), page: 0, rss: 0 }));
-  const index = new Map(byDay.map((d) => [d.day, d]));
-  for (const r of daily.results) {
-    const d = index.get(r.day);
-    if (d) d[r.kind === "rss" ? "rss" : "page"] += r.count;
-  }
-  return {
-    total: share.view_count,
-    lastViewedAt: share.last_viewed_at,
-    last30: byDay.reduce((sum, d) => sum + d.page + d.rss, 0),
-    byDay,
-    referrers: referrers.results,
-    countries: countries.results,
-    recent: recent.results,
-  };
 }

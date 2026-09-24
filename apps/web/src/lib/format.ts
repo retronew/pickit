@@ -21,6 +21,24 @@ export function formatDateTime(ts: number): string {
   return new Intl.DateTimeFormat(intlLocale(), { dateStyle: "short", timeStyle: "short" }).format(ts);
 }
 
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 365 * 86400_000],
+  ["month", 30 * 86400_000],
+  ["day", 86400_000],
+  ["hour", 3600_000],
+  ["minute", 60_000],
+];
+
+/** "5 分钟前" / "3 days ago": short enough for tight spots; "now" under a minute. */
+export function formatRelative(ts: number, now = Date.now()): string {
+  const diff = ts - now;
+  const rtf = new Intl.RelativeTimeFormat(intlLocale(), { numeric: "auto" });
+  for (const [unit, ms] of RELATIVE_UNITS) {
+    if (Math.abs(diff) >= ms) return rtf.format(Math.round(diff / ms), unit);
+  }
+  return rtf.format(0, "second");
+}
+
 /** "JP" → "Japan" in the UI language; the code itself when unknown. */
 export function formatCountry(code: string): string {
   try {

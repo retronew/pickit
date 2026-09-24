@@ -4,13 +4,16 @@ import { RssIcon } from "lucide-react";
 import { Button } from "#components/ui/button";
 import { Skeleton } from "#components/ui/skeleton";
 import { SharedItemCard, type SharedItem } from "#components/share/SharedItemCard";
+import { SharedItemList } from "#components/share/SharedItemList";
+import { GroupModeToggle } from "#components/share/GroupModeToggle";
+import { useGroupMode } from "#hooks/useGroupMode";
 import { api } from "#lib/api";
 import { SHARE_TYPE_LABELS } from "#lib/shares";
 import { m } from "#lib/i18n";
 
 type Shared =
   | { type: "item"; title: string; item: SharedItem }
-  | { type: "category" | "tag" | "collection"; title: string; value: string; items: SharedItem[] };
+  | { type: "category" | "tag" | "mix" | "collection"; title: string; value: string; items: SharedItem[] };
 
 /** Advertises the RSS feed to browsers and feed readers while the page is open. */
 function useFeedLink(href: string | null, title: string) {
@@ -43,9 +46,12 @@ export function PublicSharePage() {
   const { slug } = useParams();
   const [data, setData] = useState<Shared | null>(null);
   const [error, setError] = useState("");
+  const { mode, setMode } = useGroupMode("pickit.share-view");
 
   useEffect(() => {
-    api<Shared>(`/api/public/shares/${slug}`)
+    // Pass on where the visitor came from: fetch's own Referer is this page.
+    const ref = document.referrer ? `?ref=${encodeURIComponent(document.referrer)}` : "";
+    api<Shared>(`/api/public/shares/${slug}${ref}`)
       .then((d) => {
         setData(d);
         document.title = `${d.title} · PickIt`;
@@ -85,19 +91,18 @@ export function PublicSharePage() {
                   {SHARE_TYPE_LABELS[data.type]} · {m.items_total({ count: data.items.length })}
                 </p>
               </div>
-              <Button variant="outline" size="sm" render={<a href={feed!} target="_blank" rel="noreferrer" />}>
-                <RssIcon />
-                {m.public_rss()}
-              </Button>
+              <div className="flex items-center gap-2">
+                {data.items.length > 0 && <GroupModeToggle value={mode} onChange={setMode} />}
+                <Button variant="outline" size="sm" render={<a href={feed!} target="_blank" rel="noreferrer" />}>
+                  <RssIcon />
+                  {m.public_rss()}
+                </Button>
+              </div>
             </div>
             {data.items.length === 0 ? (
               <p className="text-muted-foreground text-sm">{m.public_empty()}</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {data.items.map((item) => (
-                  <SharedItemCard key={`${item.url}-${item.name}`} item={item} compact />
-                ))}
-              </div>
+              <SharedItemList items={data.items} mode={mode} />
             )}
           </div>
         )}

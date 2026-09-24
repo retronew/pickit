@@ -4,11 +4,13 @@ import {
   collectionIds,
   defaultShareTitle,
   isShareType,
+  mixTitle,
   normalizeIds,
+  normalizeMix,
   sharedItem,
   type ShareRow,
 } from "#shares";
-import { shareStats } from "#share-visits";
+import { shareStats } from "#share-stats";
 import { tr } from "#i18n";
 
 export const shareRoutes = new Hono<{ Bindings: Env }>();
@@ -50,9 +52,11 @@ shareRoutes.post("/", async (c) => {
     type?: string;
     value?: string;
     ids?: unknown;
+    categories?: unknown;
+    tags?: unknown;
     title?: string;
   }>();
-  const title = cleanTitle(body.title);
+  let title = cleanTitle(body.title);
   const now = Date.now();
   const slug = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
 
@@ -68,6 +72,14 @@ shareRoutes.post("/", async (c) => {
       .bind(slug, title || (await tr(c, "share_collection_default_title", { count: found.length })), JSON.stringify(found), now)
       .run();
     return c.json({ slug });
+  }
+
+  // Several categories / tags: stored canonically so the same mix reuses its link.
+  if (body.type === "mix") {
+    const mix = normalizeMix(body.categories, body.tags);
+    if (!mix) return c.json({ error: await tr(c, "api_share_invalid") }, 400);
+    body.value = JSON.stringify(mix);
+    title ||= mixTitle(mix);
   }
 
   if (!isShareType(body.type) || typeof body.value !== "string" || !body.value.trim()) {

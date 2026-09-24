@@ -20,9 +20,14 @@ publicRoutes.get("/favicon/:host", async (c) => {
 
 /** Counts a visit after the response is sent; never fails the request. */
 function trackVisit(c: Context<{ Bindings: Env }>, slug: string, kind: VisitKind) {
-  const visit = visitInfo(c.req.raw, kind, new URL(c.req.url).host);
-  if (!visit) return;
-  c.executionCtx.waitUntil(recordVisit(c.env.DB, slug, visit).catch(() => {}));
+  // The share page passes on its own document.referrer as ?ref=.
+  const ref = c.req.query("ref");
+  const track = async () => {
+    const ownHosts = [new URL(c.req.url).host, c.env.BETTER_AUTH_URL ? new URL(c.env.BETTER_AUTH_URL).host : ""];
+    const visit = await visitInfo(c.req.raw, kind, slug, ownHosts.filter(Boolean), ref);
+    if (visit) await recordVisit(c.env.DB, slug, visit);
+  };
+  c.executionCtx.waitUntil(track().catch(() => {}));
 }
 
 publicRoutes.get("/shares/:slug", async (c) => {
@@ -41,8 +46,8 @@ publicRoutes.get("/shares/:slug", async (c) => {
     trackVisit(c, share.slug, "page");
     return c.json({
       type: share.type,
-      // A collection's value is its id list: nothing to show publicly.
-      value: share.type === "collection" ? "" : share.value,
+      // A collection's value is its id list, a mix's is JSON: nothing to show publicly.
+      value: share.type === "collection" || share.type === "mix" ? "" : share.value,
       title: share.title,
       items,
     });

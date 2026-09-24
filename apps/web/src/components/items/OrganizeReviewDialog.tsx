@@ -26,6 +26,7 @@ import {
 import { api, toastError } from "#lib/api";
 import { cn } from "#lib/utils";
 import { m } from "#lib/i18n";
+import { Hint } from "#components/Hint";
 
 function Tags({ tags, muted }: { tags: string[]; muted?: boolean }) {
   if (tags.length === 0) return <span className="text-muted-foreground">—</span>;
@@ -59,9 +60,9 @@ function Row({ row, checked, onCheck }: { row: SuggestionRow; checked: boolean; 
       <TableCell className="w-8">
         <Checkbox checked={checked} disabled={!changes} onCheckedChange={(v) => onCheck(!!v)} aria-label={row.name} />
       </TableCell>
-      <TableCell className="max-w-48 truncate font-medium" title={row.url}>
-        {row.name}
-      </TableCell>
+      <Hint content={row.url}>
+        <TableCell className="max-w-48 truncate font-medium">{row.name}</TableCell>
+      </Hint>
       {row.error ? (
         <TableCell colSpan={2} className="text-destructive text-xs">
           {row.error}

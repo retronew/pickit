@@ -3,6 +3,7 @@
 // show them in any language; all keys are audit_sum_* in the catalogs.
 
 import type { MessageRef } from "@pickit/shared/i18n";
+import { mixTitle, normalizeMix } from "#shares";
 
 export type Body = Record<string, any>;
 
@@ -108,7 +109,9 @@ function describeShare(body: Body): MessageRef {
       ? msg("share_category", { name: quote(body.value) })
       : body.type === "tag"
         ? msg("share_tag", { name: quote(body.value) })
-        : body.type === "collection"
+        : body.type === "mix"
+          ? quote(mixTitle(normalizeMix(body.categories, body.tags) ?? { categories: [], tags: [] }))
+          : body.type === "collection"
           ? msg("share_collection", { count: Array.isArray(body.ids) ? body.ids.length : 0 })
           : quote(body.title) || `#${body.value}`;
   return msg("share_create", { what });

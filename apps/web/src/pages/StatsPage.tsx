@@ -8,6 +8,7 @@ import {
   CardContent,
   CardFooter,
 } from "#components/ui/card";
+import { StatTile } from "#components/StatTile";
 import {
   type ChartConfig,
   ChartContainer,
@@ -26,15 +27,6 @@ interface Stats {
   embeddingCoverage: number;
   deadLinks: number;
   trash: number;
-}
-
-function StatTile({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="font-heading font-semibold text-2xl">{value}</p>
-    </Card>
-  );
 }
 
 const categoryChartConfig = {

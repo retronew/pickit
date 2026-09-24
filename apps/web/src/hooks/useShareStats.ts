@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
+import type { ShareStats, ShareVisit } from "@pickit/shared";
 import { api } from "#lib/api";
 
-export interface ShareStats {
-  total: number;
-  lastViewedAt: number | null;
-  last30: number;
-  byDay: { day: string; page: number; rss: number }[];
-  referrers: { host: string; count: number }[];
-  countries: { country: string; count: number }[];
-  recent: { at: number; kind: "page" | "rss"; referrer: string; country: string }[];
-}
+export type { ShareStats, ShareVisit };
 
 /** Visit stats of one share; `error` is set when they couldn't be loaded. */
 export function useShareStats(slug: string) {

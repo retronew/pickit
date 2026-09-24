@@ -108,6 +108,23 @@ describe("public shares", () => {
     expect((await t.json(`/api/public/shares/${slug}`, { auth: false })).items).toHaveLength(3);
   });
 
+  it("shares a mix of categories and tags, reusing the link for the same mix", async () => {
+    await create({ name: "React", url: "https://react.dev", category: "前端/React" });
+    await create({ name: "Rust", url: "https://rust.dev", category: "后端" });
+    await create({ name: "GPT", url: "https://gpt.dev", tags: ["ai"] });
+    await create({ name: "Other", url: "https://o.dev", category: "杂项", tags: ["misc"] });
+
+    const body = { type: "mix", categories: ["前端", "后端"], tags: ["ai", ""] };
+    const { slug } = await t.json("/api/shares", { json: body });
+    const shared = await t.json(`/api/public/shares/${slug}`, { auth: false });
+    expect(shared).toMatchObject({ type: "mix", value: "", title: "前端 · 后端 · #ai" });
+    expect(shared.items.map((i: { name: string }) => i.name).sort()).toEqual(["GPT", "React", "Rust"]);
+
+    const again = { type: "mix", categories: ["后端", "前端"], tags: ["ai"] };
+    expect((await t.json("/api/shares", { json: again })).slug).toBe(slug);
+    await t.json("/api/shares", { json: { type: "mix", categories: [], tags: [" "] } }, 400);
+  });
+
   it("shares a tag list with an escaped RSS feed", async () => {
     await create({ name: "A & <B>", url: "https://a.dev/?x=1&y=2", note: "好用", tags: ["ai"] });
     await create({ name: "Other", url: "https://o.dev", tags: ["misc"] });
@@ -172,20 +189,38 @@ describe("public shares", () => {
     expect((await t.json("/api/shares"))[0].title).toBe("新名字");
   });
 
-  it("counts visits, skipping crawlers", async () => {
+  it("counts visits, skipping crawlers and repeat views", async () => {
     await create({ name: "A", url: "https://a.dev", tags: ["ai"] });
     const { slug } = await t.json("/api/shares", { json: { type: "tag", value: "ai" } });
-    await t.json(`/api/public/shares/${slug}`, { auth: false, headers: { Referer: "https://news.ycombinator.com/item" } });
-    await t.json(`/api/public/shares/${slug}`, { auth: false, headers: { Referer: `http://localhost/s/${slug}` } });
+    const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1";
+    const visitor = (ip: string) => ({ "CF-Connecting-IP": ip, "User-Agent": iphone });
+    // The page passes on its document.referrer; fetch's Referer is the page itself.
+    const ref = encodeURIComponent("https://news.ycombinator.com/item");
+    await t.json(`/api/public/shares/${slug}?ref=${ref}`, { auth: false, headers: visitor("1.1.1.1") });
+    await t.json(`/api/public/shares/${slug}`, { auth: false, headers: { ...visitor("2.2.2.2"), Referer: `http://localhost/s/${slug}` } });
+    // Opened from PickIt itself (the page's fetch sends the share page as Referer): direct.
+    const own = encodeURIComponent("http://localhost:5175/shares");
+    await t.json(`/api/public/shares/${slug}?ref=${own}`, {
+      auth: false,
+      headers: { ...visitor("3.3.3.3"), Referer: `http://localhost:5175/s/${slug}` },
+    });
+    // A refresh by the same visitor is not counted again; neither are crawlers.
+    await t.json(`/api/public/shares/${slug}`, { auth: false, headers: visitor("2.2.2.2") });
     await t.json(`/api/public/shares/${slug}`, { auth: false, headers: { "User-Agent": "Twitterbot/1.0" } });
     await t.request(`/api/public/shares/${slug}/rss`, { auth: false });
 
-    expect((await t.json("/api/shares"))[0]).toMatchObject({ viewCount: 3, lastViewedAt: expect.any(Number) });
+    expect((await t.json("/api/shares"))[0]).toMatchObject({ viewCount: 4, lastViewedAt: expect.any(Number) });
     const stats = await t.json(`/api/shares/${slug}/stats`);
-    expect(stats).toMatchObject({ total: 3, last30: 3, referrers: [{ host: "news.ycombinator.com", count: 1 }] });
+    expect(stats).toMatchObject({
+      total: 4,
+      last30: 4,
+      visitors30: 4,
+      referrers: [{ host: "news.ycombinator.com", count: 1 }],
+    });
     expect(stats.byDay).toHaveLength(30);
-    expect(stats.byDay.at(-1)).toMatchObject({ page: 2, rss: 1 });
-    expect(stats.recent).toHaveLength(3);
+    expect(stats.byDay.at(-1)).toMatchObject({ page: 3, rss: 1 });
+    expect(stats.recent).toHaveLength(4);
+    expect(stats.recent.at(-1)).toMatchObject({ referrer: "news.ycombinator.com", browser: "Safari", os: "iOS", device: "mobile" });
     await t.json("/api/shares/nope/stats", {}, 404);
   });
 });

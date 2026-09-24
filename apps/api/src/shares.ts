@@ -1,13 +1,21 @@
 import { type ItemRow, ITEM_COLUMNS } from "#types";
 
 // Public share links (/s/:slug): a single item, a live list of every
-// active item in a category (including sub-categories) or with a tag, or a
-// hand-picked collection (value = JSON array of item ids, in order).
+// active item in a category (including sub-categories) or with a tag, a mix
+// of several categories and tags (value = JSON {categories, tags}; an item
+// matching any of them is listed), or a hand-picked collection (value = JSON
+// array of item ids, in order).
 
-export const SHARE_TYPES = ["item", "category", "tag", "collection"] as const;
+export const SHARE_TYPES = ["item", "category", "tag", "mix", "collection"] as const;
 export type ShareType = (typeof SHARE_TYPES)[number];
 export type ListShareType = Exclude<ShareType, "item">;
 export const COLLECTION_MAX = 500;
+const MIX_MAX = 50;
+
+export interface MixValue {
+  categories: string[];
+  tags: string[];
+}
 
 export interface ShareRow {
   slug: string;
@@ -36,7 +44,35 @@ export function isShareType(type: unknown): type is ShareType {
 }
 
 export function isListShare(type: string): type is ListShareType {
-  return type === "category" || type === "tag" || type === "collection";
+  return type === "category" || type === "tag" || type === "mix" || type === "collection";
+}
+
+const cleanNames = (v: unknown): string[] =>
+  Array.isArray(v)
+    ? [...new Set(v.filter((s): s is string => typeof s === "string").map((s) => s.trim()).filter(Boolean))]
+        .sort()
+        .slice(0, MIX_MAX)
+    : [];
+
+/** Sorted, de-duplicated categories and tags; null when both are empty. */
+export function normalizeMix(categories: unknown, tags: unknown): MixValue | null {
+  const mix = { categories: cleanNames(categories), tags: cleanNames(tags) };
+  return mix.categories.length || mix.tags.length ? mix : null;
+}
+
+/** Categories and tags of a mix share, as stored. */
+export function mixValue(value: string): MixValue {
+  try {
+    const v = JSON.parse(value);
+    return { categories: cleanNames(v?.categories), tags: cleanNames(v?.tags) };
+  } catch {
+    return { categories: [], tags: [] };
+  }
+}
+
+/** "前端 · #ai" — the default title of a mix share. */
+export function mixTitle(mix: MixValue): string {
+  return [...mix.categories, ...mix.tags.map((t) => `#${t}`)].join(" · ");
 }
 
 /** Item ids of a collection share, as stored. */
@@ -100,18 +136,24 @@ async function sharedCollection(db: D1Database, ids: number[]): Promise<ItemRow[
   return results.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
 }
 
-/** Active items of a list share: category / tag newest first, collections as picked. */
+const CATEGORY_WHERE = "(category = ? OR category LIKE ? ESCAPE '\\')";
+const TAG_WHERE = "EXISTS (SELECT 1 FROM json_each(items.tags) WHERE value = ?)";
+const categoryArgs = (c: string) => [c, `${c.replace(/[\\%_]/g, (ch) => `\\${ch}`)}/%`];
+
+/** Active items of a list share: category / tag / mix newest first, collections as picked. */
 export async function sharedList(db: D1Database, type: ListShareType, value: string): Promise<ItemRow[]> {
   if (type === "collection") return sharedCollection(db, collectionIds(value));
-  const where =
-    type === "category"
-      ? "(category = ? OR category LIKE ? ESCAPE '\\')"
-      : "EXISTS (SELECT 1 FROM json_each(items.tags) WHERE value = ?)";
-  const args =
-    type === "category" ? [value, `${value.replace(/[\\%_]/g, (ch) => `\\${ch}`)}/%`] : [value];
+  const { categories, tags } =
+    type === "mix"
+      ? mixValue(value)
+      : { categories: type === "category" ? [value] : [], tags: type === "tag" ? [value] : [] };
+  if (categories.length + tags.length === 0) return [];
+  // An item in any of the categories or with any of the tags.
+  const where = [...categories.map(() => CATEGORY_WHERE), ...tags.map(() => TAG_WHERE)].join(" OR ");
+  const args = [...categories.flatMap(categoryArgs), ...tags];
   const { results } = await db
     .prepare(
-      `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL AND ${where}
+      `SELECT ${ITEM_COLUMNS} FROM items WHERE deleted_at IS NULL AND (${where})
        ORDER BY pinned DESC, created_at DESC LIMIT ${LIST_LIMIT}`,
     )
     .bind(...args)

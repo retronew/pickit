@@ -11,6 +11,7 @@ import { useBackups, type BackupInfo, type BackupKind } from "#hooks/useBackups"
 import { formatBytes } from "#lib/format";
 import { toastSuccess } from "#lib/api";
 import { intlLocale, m } from "#lib/i18n";
+import { Hint } from "#components/Hint";
 
 const KIND: Record<BackupKind, { label: string; variant: "secondary" | "info" | "warning" }> = {
   daily: { label: m.backup_kind_daily(), variant: "secondary" },
@@ -106,9 +107,9 @@ export function BackupsCard() {
               ) : (
                 backups.map((b) => (
                   <TableRow key={b.name}>
-                    <TableCell className="tabular-nums" title={b.name}>
-                      {time.format(b.uploaded)}
-                    </TableCell>
+                    <Hint content={b.name}>
+                      <TableCell className="tabular-nums">{time.format(b.uploaded)}</TableCell>
+                    </Hint>
                     <TableCell>
                       <Badge variant={KIND[b.kind].variant}>{KIND[b.kind].label}</Badge>
                     </TableCell>
