@@ -44,7 +44,7 @@ export function useBatchAdd() {
       urls.map((url) => ({
         url,
         status: "analyzing",
-        form: { name: hostnameOf(url), url, icon: "", note: "", category: "", tags: [] },
+        form: { name: hostnameOf(url), url, icon: "", image: "", note: "", category: "", tags: [] },
         duplicates: [],
         decision: "pending",
       })),
@@ -69,6 +69,7 @@ export function useBatchAdd() {
               category: e.form.category || data.category || "",
               tags: e.form.tags.length ? e.form.tags : (data.tags ?? []),
               icon: data.icon || e.form.icon,
+              image: data.image || e.form.image,
             },
           }));
         } catch {

@@ -45,6 +45,7 @@ export function AddPage() {
               name: data.name || title,
               url,
               icon: data.icon || "",
+              image: data.image || "",
               note: data.note || "",
               category: data.category || "",
               tags: data.tags ?? [],

@@ -14,6 +14,7 @@ itemByIdRoutes.put("/:id", async (c) => {
     name?: string;
     url?: string;
     icon?: string;
+    image?: string;
     note?: string;
     category?: string;
     tags?: string[];
@@ -28,6 +29,7 @@ itemByIdRoutes.put("/:id", async (c) => {
     name: body.name ?? existing.name,
     url: body.url ?? existing.url,
     icon: body.icon ?? existing.icon,
+    image: body.image ?? existing.image,
     note: body.note ?? existing.note,
     category: body.category ?? existing.category,
     tags: body.tags ?? JSON.parse(existing.tags || "[]"),
@@ -39,12 +41,13 @@ itemByIdRoutes.put("/:id", async (c) => {
     if (dup) return c.json({ error: "duplicate", existing: dup }, 409);
   }
   await c.env.DB.prepare(
-    "UPDATE items SET name=?, url=?, icon=?, note=?, category=?, tags=?, pinned=?, url_norm=?, updated_at=? WHERE id=?",
+    "UPDATE items SET name=?, url=?, icon=?, image=?, note=?, category=?, tags=?, pinned=?, url_norm=?, updated_at=? WHERE id=?",
   )
     .bind(
       merged.name,
       merged.url,
       merged.icon,
+      merged.image,
       merged.note,
       merged.category,
       JSON.stringify(merged.tags),

@@ -20,12 +20,12 @@ export interface ItemFormPayload {
   name: string;
   url: string;
   icon: string;
+  /** Preview image from "AI analyze"; not an editable field. */
+  image: string;
   note: string;
   category: string;
   tags: string[];
 }
-
-export const EMPTY_ITEM_FORM: ItemFormPayload = { name: "", url: "", icon: "", note: "", category: "", tags: [] };
 
 /**
  * The bookmark fields (URL + AI analyze, name, note, category, tags), shared
@@ -57,6 +57,7 @@ export function ItemFormFields({
       category: data.category || f.category,
       tags: data.tags?.length ? data.tags : f.tags,
       icon: data.icon || f.icon,
+      image: data.image || f.image,
     })),
   );
   const set = (patch: Partial<ItemFormPayload>) => onChange((f) => ({ ...f, ...patch }));

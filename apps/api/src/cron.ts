@@ -1,4 +1,5 @@
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
+import { findArchiveUrl } from "#archive";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const CHECK_BATCH_SIZE = 50;
@@ -18,6 +19,23 @@ export async function checkLink(url: string): Promise<number | null> {
   }
 }
 
+export const isBroken = (status: number | null) => status == null || status >= 400;
+
+/**
+ * Checks one item's link and stores the result. A dead link without an
+ * archive yet gets its closest Wayback Machine snapshot looked up.
+ */
+export async function recordLinkCheck(db: D1Database, row: Pick<ItemRow, "id" | "url" | "archive_url">) {
+  const status = await checkLink(row.url);
+  const checkedAt = Date.now();
+  const archiveUrl = isBroken(status) && !row.archive_url ? await findArchiveUrl(row.url) : row.archive_url;
+  await db
+    .prepare("UPDATE items SET http_status=?, checked_at=?, archive_url=? WHERE id=?")
+    .bind(status, checkedAt, archiveUrl, row.id)
+    .run();
+  return { status, checkedAt, archiveUrl };
+}
+
 export async function runDeadLinkCheck(env: Env) {
   const cutoff = Date.now() - SEVEN_DAYS_MS;
   const { results } = await env.DB.prepare(
@@ -34,13 +52,8 @@ export async function runDeadLinkCheck(env: Env) {
   async function worker() {
     while (idx < results.length) {
       const row = results[idx++];
-      const status = await checkLink(row.url);
-      if (status == null || status >= 400) broken++;
-      await env.DB.prepare(
-        "UPDATE items SET http_status=?, checked_at=? WHERE id=?",
-      )
-        .bind(status, Date.now(), row.id)
-        .run();
+      const { status } = await recordLinkCheck(env.DB, row);
+      if (isBroken(status)) broken++;
     }
   }
   await Promise.all(

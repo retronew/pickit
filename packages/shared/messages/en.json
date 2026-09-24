@@ -476,6 +476,7 @@
   "job_running": "Running",
   "job_summary": "{status} · {processed}/{total} ({pct}%) · {done} succeeded",
   "language_menu": "Language",
+  "link_archive": "View archive",
   "link_check": "Check link",
   "link_check_failed": "Check failed",
   "link_dead": "Link broken",

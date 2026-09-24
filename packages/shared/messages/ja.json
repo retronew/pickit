@@ -476,6 +476,7 @@
   "job_running": "実行中",
   "job_summary": "{status} · {processed}/{total}（{pct}%）· 成功 {done}",
   "language_menu": "表示言語",
+  "link_archive": "アーカイブを見る",
   "link_check": "リンクを確認",
   "link_check_failed": "確認に失敗しました",
   "link_dead": "リンク切れ",

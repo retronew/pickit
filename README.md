@@ -21,7 +21,7 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **API access**: Bearer API token for scripts and integrations, plus an MCP server so AI assistants can search and add bookmarks
 - **Batch jobs**: re-embedding and AI re-organizing run in small resumable steps — pause / resume, retry failed items, per-item error details. The job's settings tab drives them while open; a per-minute cron keeps them going in the background
 - **Backups**: daily JSON backups to R2 (kept 30 days) plus "back up now"; the settings table lets you download, delete or restore one — merge (only missing URLs) or replace (current items go to the trash). Every restore first snapshots the current data, so it can be undone
-- **Maintenance cron**: dead-link checks and audit-log pruning
+- **Maintenance cron**: dead-link checks (a dead link gets its closest Wayback Machine snapshot, shown as "View archive"), audit-log pruning, and preview images (og:image) fetched for older bookmarks a few at a time; new ones get theirs from "AI analyze"
 
 ## Tech stack
 

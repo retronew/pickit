@@ -5,7 +5,7 @@ import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { similarGroups } from "#vectors";
 import { createProvider } from "#ai";
 import { getSettings } from "#settings";
-import { checkLink } from "#cron";
+import { recordLinkCheck } from "#cron";
 import { toItemJson } from "./helpers";
 
 export const maintenanceRoutes = new Hono<{ Bindings: Env }>();
@@ -85,12 +85,6 @@ maintenanceRoutes.post("/:id/check", async (c) => {
     .bind(id)
     .first<ItemRow>();
   if (!row) return c.json({ error: "not found" }, 404);
-  const status = await checkLink(row.url);
-  const checkedAt = Date.now();
-  await c.env.DB.prepare(
-    "UPDATE items SET http_status=?, checked_at=? WHERE id=?",
-  )
-    .bind(status, checkedAt, id)
-    .run();
-  return c.json({ httpStatus: status, checkedAt });
+  const { status, checkedAt, archiveUrl } = await recordLinkCheck(c.env.DB, row);
+  return c.json({ httpStatus: status, checkedAt, archiveUrl });
 });

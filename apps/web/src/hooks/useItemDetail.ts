@@ -6,6 +6,8 @@ import { m } from "#lib/i18n";
 interface LinkStatus {
   httpStatus: number | null;
   checkedAt: number | null;
+  /** Wayback Machine snapshot, found once the link is dead. */
+  archiveUrl: string;
 }
 
 /** Related items, AI summary, link check and sharing for the detail sheet. */
@@ -24,7 +26,7 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
     if (!item) return;
     setSummary(item.aiSummary ?? "");
     setRelated([]);
-    setLinkStatus({ httpStatus: item.httpStatus, checkedAt: item.checkedAt });
+    setLinkStatus({ httpStatus: item.httpStatus, checkedAt: item.checkedAt, archiveUrl: item.archiveUrl });
     setShared(false);
   });
 

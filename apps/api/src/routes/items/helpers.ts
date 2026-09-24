@@ -35,6 +35,8 @@ export function toItemJson(r: ItemRow) {
     aiSummary: r.ai_summary,
     httpStatus: r.http_status,
     checkedAt: r.checked_at,
+    image: r.image,
+    archiveUrl: r.archive_url,
   };
 }
 
@@ -97,6 +99,7 @@ export interface NewItem {
   name: string;
   url?: string;
   icon?: string;
+  image?: string;
   note?: string;
   category?: string;
   tags?: string[];
@@ -118,12 +121,15 @@ export async function createItem(
   }
   const now = Date.now();
   const { meta } = await env.DB.prepare(
-    "INSERT INTO items (name, url, icon, note, category, tags, url_norm, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO items (name, url, icon, image, preview_checked_at, note, category, tags, url_norm, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   )
     .bind(
       item.name,
       item.url ?? "",
       item.icon ?? "",
+      item.image ?? "",
+      // An image from "AI analyze" means the page was already read.
+      item.image ? now : null,
       item.note ?? "",
       item.category ?? "",
       JSON.stringify(item.tags ?? []),

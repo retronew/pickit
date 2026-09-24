@@ -21,6 +21,8 @@ function item(patch: Partial<Item>): Item {
     aiSummary: "",
     httpStatus: null,
     checkedAt: null,
+    image: "",
+    archiveUrl: "",
     ...patch,
   };
 }

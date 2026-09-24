@@ -32,6 +32,9 @@ export interface ItemRow {
   ai_summary: string;
   http_status: number | null;
   checked_at: number | null;
+  image: string;
+  preview_checked_at: number | null;
+  archive_url: string;
   /** Only present when selected explicitly; ITEM_COLUMNS leaves the blobs out. */
   embedding?: ArrayBuffer | null;
   embedding_model: string | null;
@@ -51,6 +54,7 @@ export function itemColumns(alias = ""): string {
     "id", "name", "url", "icon", "note", "category", "tags", "embedding_model",
     "created_at", "updated_at", "pinned", "deleted_at", "click_count",
     "last_visited_at", "url_norm", "ai_summary", "http_status", "checked_at",
+    "image", "preview_checked_at", "archive_url",
   ]
     .map((c) => p + c)
     .concat(`(${p}embedding IS NOT NULL) AS has_embedding`)

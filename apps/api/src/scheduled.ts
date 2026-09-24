@@ -2,6 +2,7 @@ import type { Env } from "#types";
 import { advanceRunningJobs } from "#job-runners";
 import { backfillCompactVectors } from "#vectors";
 import { runDeadLinkCheck } from "#cron";
+import { backfillPreviews } from "#previews";
 import { writeBackup, pruneBackups } from "#backups";
 import { safeAudit, pruneAudit } from "#audit/index";
 
@@ -53,6 +54,8 @@ export async function scheduled(controller: ScheduledController, env: Env, ctx: 
     ctx.waitUntil(advanceRunningJobs(env));
     // Fills compact vectors for embeddings stored before they existed.
     ctx.waitUntil(backfillVectors(env));
+    // Fetches preview images for older items, a few at a time.
+    ctx.waitUntil(backfillPreviews(env.DB).catch(() => {}));
     return;
   }
   ctx.waitUntil(backupWithAudit(env));

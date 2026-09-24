@@ -1,6 +1,7 @@
 // AI-backed routes: analyze, related, summarize, translate, re-embed.
 
 import { Hono } from "hono";
+import { fetchPageMeta } from "#page-meta";
 import { isEmbeddingConfigured } from "@pickit/shared";
 import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { nearest, asFloat32 } from "#vectors";
@@ -25,34 +26,7 @@ aiRoutes.post("/analyze", async (c) => {
     return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
 
-  let pageTitle = "";
-  let description = "";
-  let icon = "";
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; PickIt/1.0)" },
-      redirect: "follow",
-    });
-    const html = (await res.text()).slice(0, 300_000);
-    pageTitle = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? "";
-    description =
-      html.match(
-        /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i,
-      )?.[1]?.trim() ??
-      html.match(
-        /<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["']/i,
-      )?.[1]?.trim() ??
-      "";
-    const faviconHref = html.match(
-      /<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*href=["']([^"']+)["']/i,
-    )?.[1];
-    const origin = new URL(res.url || url).origin;
-    icon = faviconHref
-      ? new URL(faviconHref, origin).toString()
-      : origin + "/favicon.ico";
-  } catch {
-    icon = new URL(url).origin + "/favicon.ico";
-  }
+  const { title: pageTitle, description, icon, image } = await fetchPageMeta(url);
 
   const { results: catRows } = await c.env.DB.prepare(
     "SELECT DISTINCT category FROM items WHERE category != '' AND deleted_at IS NULL",
@@ -96,6 +70,7 @@ aiRoutes.post("/analyze", async (c) => {
     category,
     tags: Array.isArray(analyzed.tags) ? analyzed.tags.slice(0, 5) : [],
     icon,
+    image,
     possibleDuplicates,
   });
 });

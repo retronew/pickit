@@ -24,6 +24,7 @@ export interface BackupItem {
   name: string;
   url: string;
   icon?: string;
+  image?: string;
   note?: string;
   category?: string;
   tags?: string[];
@@ -70,6 +71,7 @@ async function activeItems(db: D1Database): Promise<BackupItem[]> {
     name: r.name,
     url: r.url,
     icon: r.icon,
+    image: r.image,
     note: r.note,
     category: r.category,
     tags: JSON.parse(r.tags || "[]"),
@@ -207,12 +209,13 @@ export async function restoreBackup(
     inserts.push(
       db
         .prepare(
-          "INSERT INTO items (name, url, icon, note, category, tags, url_norm, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO items (name, url, icon, image, note, category, tags, url_norm, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
           row.name,
           url,
           typeof row.icon === "string" ? row.icon : "",
+          typeof row.image === "string" ? row.image : "",
           typeof row.note === "string" ? row.note : "",
           typeof row.category === "string" ? row.category : "",
           JSON.stringify(Array.isArray(row.tags) ? row.tags.filter((t) => typeof t === "string") : []),

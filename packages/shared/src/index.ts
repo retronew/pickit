@@ -15,6 +15,10 @@ export interface Item {
   aiSummary: string;
   httpStatus: number | null;
   checkedAt: number | null;
+  /** Preview image (og:image), "" when there is none. */
+  image: string;
+  /** Wayback Machine snapshot, looked up once the link is found dead. */
+  archiveUrl: string;
 }
 
 // Kept intentionally simple and in sync with the SQL approximation used to

@@ -2,6 +2,7 @@ import { memo } from "react";
 import { EllipsisIcon, PencilIcon, PinIcon, Trash2Icon } from "lucide-react";
 import type { Item } from "#hooks/useItems";
 import { Favicon } from "#components/Favicon";
+import { PreviewImage } from "#components/items/PreviewImage";
 import { Card } from "#components/ui/card";
 import { Button } from "#components/ui/button";
 import { Badge } from "#components/ui/badge";
@@ -186,10 +187,14 @@ export const ItemCard = memo(function ItemCard({
           </div>
         )}
       </div>
-      {item.note && (
-        <p className="mt-1 text-muted-foreground text-xs whitespace-pre-line line-clamp-2 sm:text-sm">
-          {item.note}
-        </p>
+      {(item.note || item.image) && (
+        <div className="mt-1 flex items-start gap-3">
+          <p className="min-w-0 flex-1 text-muted-foreground text-xs whitespace-pre-line line-clamp-2 sm:text-sm">
+            {item.note}
+          </p>
+          {/* Wider screens only: a two-column phone card has no room for it. */}
+          <PreviewImage src={item.image} className="aspect-video w-20 shrink-0 max-sm:hidden" />
+        </div>
       )}
       {(item.tags.length > 0 || item.clickCount > 0) && (
         <div className="mt-2 flex items-center gap-1 overflow-hidden max-sm:mask-r-from-[calc(100%-1rem)] sm:flex-wrap">

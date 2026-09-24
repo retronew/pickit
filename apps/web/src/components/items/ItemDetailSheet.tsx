@@ -3,6 +3,7 @@ import { useMediaQuery } from "#hooks/use-media-query";
 import { Streamdown, defaultRemarkPlugins } from "streamdown";
 import remarkBreaks from "remark-breaks";
 import {
+  ArchiveIcon,
   PencilIcon,
   PinIcon,
   SparklesIcon,
@@ -25,6 +26,7 @@ import { Badge } from "#components/ui/badge";
 import { Skeleton } from "#components/ui/skeleton";
 import { Table, TableBody, TableCell, TableRow } from "#components/ui/table";
 import { Favicon } from "#components/Favicon";
+import { PreviewImage } from "#components/items/PreviewImage";
 import { TranslatePanel } from "#components/items/TranslatePanel";
 import { intlLocale, m } from "#lib/i18n";
 
@@ -74,6 +76,8 @@ export function ItemDetailSheet({
     share,
   } = useItemDetail(item, open, onChanged);
   const isPhone = useMediaQuery("max-sm");
+  const isDead =
+    linkStatus?.checkedAt != null && (linkStatus.httpStatus == null || linkStatus.httpStatus >= 400);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -115,6 +119,16 @@ export function ItemDetailSheet({
                       : m.link_dead()}
                   </Badge>
                 )}
+                {isDead && linkStatus.archiveUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    render={<a href={linkStatus.archiveUrl} target="_blank" rel="noreferrer" />}
+                  >
+                    <ArchiveIcon />
+                    {m.link_archive()}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -127,6 +141,7 @@ export function ItemDetailSheet({
               </div>
             </SheetHeader>
             <SheetPanel className="space-y-5">
+              <PreviewImage src={item.image} className="aspect-video w-full" />
               {item.note && (
                 <div className="text-sm leading-relaxed [&_a]:underline [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-2">
                   <Streamdown remarkPlugins={NOTE_REMARK_PLUGINS}>{item.note}</Streamdown>

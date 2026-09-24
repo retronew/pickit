@@ -7,7 +7,7 @@ vi.mock("#components/ui/toast", () => ({ toastManager: { add: vi.fn() } }));
 const { saveItem } = await import("./items");
 const { toastManager } = await import("#components/ui/toast");
 
-const payload = { name: "Vite", url: "https://vite.dev", icon: "", note: "", category: "", tags: [] };
+const payload = { name: "Vite", url: "https://vite.dev", icon: "", image: "", note: "", category: "", tags: [] };
 const calls: { url: string; method?: string; body: unknown }[] = [];
 
 function respond(...responses: Response[]) {

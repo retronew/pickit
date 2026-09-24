@@ -15,6 +15,7 @@ export interface AnalyzeResult {
   category: string;
   tags: string[];
   icon: string;
+  image: string;
   possibleDuplicates?: PossibleDuplicate[];
 }
 

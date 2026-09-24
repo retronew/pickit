@@ -476,6 +476,7 @@
   "job_running": "进行中",
   "job_summary": "{status} · {processed}/{total}（{pct}%）· 成功 {done}",
   "language_menu": "界面语言",
+  "link_archive": "查看存档",
   "link_check": "检查链接",
   "link_check_failed": "检查失败",
   "link_dead": "链接失效",
