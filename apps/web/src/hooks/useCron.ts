@@ -11,6 +11,7 @@ const POLL_MS = 30_000;
 export function useCron() {
   const [overview, setOverview] = useState<CronOverview | null>(null);
   const [running, setRunning] = useState<CronTaskId | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -19,6 +20,13 @@ export function useCron() {
       toastError(m.cron_load_failed(), err, { id: "cron" });
     }
   }, []);
+
+  /** "Refresh" button: same as the poll, with a spinner. */
+  async function reload() {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }
 
   useEffect(() => {
     refresh();
@@ -40,5 +48,5 @@ export function useCron() {
     }
   }
 
-  return { overview, running, runNow };
+  return { overview, running, refreshing, reload, runNow };
 }

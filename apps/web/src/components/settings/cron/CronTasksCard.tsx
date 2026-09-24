@@ -6,15 +6,23 @@ import { scheduleLabel, timeZoneLabel } from "#lib/cron";
 import { formatDateTime, formatRelative } from "#lib/format";
 import { m } from "#lib/i18n";
 import { Hint } from "#components/Hint";
+import { RefreshCwIcon } from "lucide-react";
+import { Button } from "#components/ui/button";
 
 /** Scheduled tasks grouped by trigger (every minute / daily), with runs and next run times. */
 export function CronTasksCard() {
-  const { overview, running, runNow } = useCron();
+  const { overview, running, refreshing, reload, runNow } = useCron();
   const groups = overview ? [...new Set(overview.tasks.map((t) => t.cron))] : [];
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground text-sm">{m.cron_timezone_note({ tz: timeZoneLabel() })}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-muted-foreground text-sm">{m.cron_timezone_note({ tz: timeZoneLabel() })}</p>
+        <Button variant="outline" size="sm" onClick={reload} loading={refreshing}>
+          <RefreshCwIcon />
+          {m.cron_refresh()}
+        </Button>
+      </div>
       {overview === null ? (
         <Card>
           <CardContent className="pt-6">
