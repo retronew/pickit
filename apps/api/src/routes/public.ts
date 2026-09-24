@@ -2,12 +2,20 @@ import { Hono } from "hono";
 import type { Env } from "#types";
 import { defaultShareTitle, getShare, publicItem, sharedItem, sharedList, shareRss } from "#shares";
 import { enabledProviders } from "#auth";
+import { faviconResponse, isValidHost } from "#favicons";
 
 /** Routes that work without signing in, mounted at /api/public. */
 export const publicRoutes = new Hono<{ Bindings: Env }>();
 
 // Lets the login page show only the providers that are configured.
 publicRoutes.get("/auth-providers", (c) => c.json({ providers: enabledProviders(c.env) }));
+
+// Site icons through the edge cache (public: shared pages show them too).
+publicRoutes.get("/favicon/:host", async (c) => {
+  const host = c.req.param("host").toLowerCase();
+  if (!isValidHost(host)) return c.json({ error: "invalid host" }, 400);
+  return faviconResponse(host, c.req.raw, (p) => c.executionCtx.waitUntil(p));
+});
 
 publicRoutes.get("/shares/:slug", async (c) => {
   const share = await getShare(c.env.DB, c.req.param("slug"));

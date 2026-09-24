@@ -1,8 +1,10 @@
 import { useState } from "react";
 
+// Served by our API, which caches icons at Cloudflare's edge (30 days) and
+// lets the browser keep them for a week, instead of hitting Google each view.
 function faviconSrc(url: string) {
   try {
-    return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`;
+    return `/api/public/favicon/${new URL(url).hostname}`;
   } catch {
     return "";
   }
