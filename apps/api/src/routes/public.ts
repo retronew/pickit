@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import type { Env } from "#types";
-import { getShare, isListShare, publicItem, sharedItem, sharedList, shareRss } from "#shares";
+import { getShare, isListShare, publicItem, sharedItem, sharedList, shareRss, type ShareRow } from "#shares";
+import { accessKey, checkAccess, verifyPassword } from "#share-access";
 import { recordVisit, visitInfo, type VisitKind } from "#share-visits";
 import { enabledProviders } from "#auth";
 import { faviconResponse, isValidHost } from "#favicons";
@@ -30,9 +31,24 @@ function trackVisit(c: Context<{ Bindings: Env }>, slug: string, kind: VisitKind
   c.executionCtx.waitUntil(track().catch(() => {}));
 }
 
+type PublicContext = Context<{ Bindings: Env }>;
+
+/** The access key from the share page (header) or an RSS link (?key=). */
+const keyOf = (c: PublicContext) => c.req.header("x-share-key") ?? c.req.query("key");
+
+/** A 410 for expired links and a 401 for locked ones; null when the share may be shown. */
+async function denied(c: PublicContext, share: ShareRow) {
+  const access = await checkAccess(share, keyOf(c), c.env.BETTER_AUTH_SECRET);
+  if (access === "expired") return c.json({ error: "expired" }, 410);
+  if (access === "locked") return c.json({ error: "password_required" }, 401);
+  return null;
+}
+
 publicRoutes.get("/shares/:slug", async (c) => {
   const share = await getShare(c.env.DB, c.req.param("slug"));
   if (!share) return c.json({ error: "not found" }, 404);
+  const blocked = await denied(c, share);
+  if (blocked) return blocked;
 
   if (share.type === "item") {
     const row = await sharedItem(c.env.DB, share.value);
@@ -55,19 +71,35 @@ publicRoutes.get("/shares/:slug", async (c) => {
   return c.json({ error: "unsupported share type" }, 400);
 });
 
+/** Checks a share's password; the returned key unlocks the page and its RSS feed. */
+publicRoutes.post("/shares/:slug/unlock", async (c) => {
+  const share = await getShare(c.env.DB, c.req.param("slug"));
+  if (!share) return c.json({ error: "not found" }, 404);
+  if (share.expires_at !== null && share.expires_at <= Date.now()) return c.json({ error: "expired" }, 410);
+  if (!share.password_hash) return c.json({ key: "" });
+  const { password } = await c.req.json<{ password?: unknown }>().catch(() => ({ password: undefined }));
+  if (typeof password !== "string" || !(await verifyPassword(password, share.password_hash))) {
+    return c.json({ error: "wrong_password" }, 401);
+  }
+  return c.json({ key: await accessKey(c.env.BETTER_AUTH_SECRET, share.slug, share.password_hash) });
+});
+
 /** RSS feed of a list share. */
 publicRoutes.get("/shares/:slug/rss", async (c) => {
   const share = await getShare(c.env.DB, c.req.param("slug"));
   if (!share || !isListShare(share.type)) {
     return c.json({ error: "not found" }, 404);
   }
+  const blocked = await denied(c, share);
+  if (blocked) return blocked;
   trackVisit(c, share.slug, "rss");
   const items = (await sharedList(c.env.DB, share.type, share.value)).map(publicItem);
   const origin = c.env.BETTER_AUTH_URL ?? new URL(c.req.url).origin;
   return new Response(shareRss(share, items, origin), {
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
+      // A protected feed must not sit in shared caches.
+      "Cache-Control": share.password_hash ? "private, max-age=300" : "public, max-age=300",
     },
   });
 });

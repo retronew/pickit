@@ -11,6 +11,7 @@ import {
   type ShareRow,
 } from "#shares";
 import { shareStats } from "#share-stats";
+import { accessKey, hashPassword, parseAccessInput } from "#share-access";
 import { tr } from "#i18n";
 
 export const shareRoutes = new Hono<{ Bindings: Env }>();
@@ -18,7 +19,8 @@ export const shareRoutes = new Hono<{ Bindings: Env }>();
 const TITLE_MAX = 200;
 const cleanTitle = (title: unknown) => (typeof title === "string" ? title.trim().slice(0, TITLE_MAX) : "");
 
-function view(r: ShareRow) {
+/** A share as the owner sees it; `accessKey` lets the owner copy a working RSS link. */
+async function view(r: ShareRow, secret: string) {
   return {
     slug: r.slug,
     title: r.title,
@@ -28,14 +30,39 @@ function view(r: ShareRow) {
     createdAt: r.created_at,
     viewCount: r.view_count,
     lastViewedAt: r.last_viewed_at,
+    expiresAt: r.expires_at,
+    hasPassword: !!r.password_hash,
+    accessKey: r.password_hash ? await accessKey(secret, r.slug, r.password_hash) : undefined,
   };
+}
+
+type AccessInput = ReturnType<typeof parseAccessInput>;
+
+/** Applies an expiry / password change; fields left undefined stay as they are. */
+async function applyAccess(db: D1Database, slug: string, access: AccessInput) {
+  if (access.expiresAt !== undefined) {
+    await db.prepare("UPDATE shares SET expires_at = ? WHERE slug = ?").bind(access.expiresAt, slug).run();
+  }
+  if (access.password !== undefined) {
+    const hash = access.password === null ? null : await hashPassword(access.password);
+    await db.prepare("UPDATE shares SET password_hash = ? WHERE slug = ?").bind(hash, slug).run();
+  }
+}
+
+/** Parses expiresAt / password from a request body; null when they're invalid. */
+function accessFrom(body: { expiresAt?: unknown; password?: unknown }): AccessInput | null {
+  try {
+    return parseAccessInput(body);
+  } catch {
+    return null;
+  }
 }
 
 shareRoutes.get("/", async (c) => {
   const { results } = await c.env.DB.prepare(
     "SELECT * FROM shares ORDER BY created_at DESC",
   ).all<ShareRow>();
-  return c.json(results.map(view));
+  return c.json(await Promise.all(results.map((r) => view(r, c.env.BETTER_AUTH_SECRET))));
 });
 
 async function existingIds(db: D1Database, ids: number[]): Promise<number[]> {
@@ -55,7 +82,11 @@ shareRoutes.post("/", async (c) => {
     categories?: unknown;
     tags?: unknown;
     title?: string;
+    expiresAt?: unknown;
+    password?: unknown;
   }>();
+  const access = accessFrom(body);
+  if (!access) return c.json({ error: await tr(c, "api_share_invalid") }, 400);
   let title = cleanTitle(body.title);
   const now = Date.now();
   const slug = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
@@ -71,6 +102,7 @@ shareRoutes.post("/", async (c) => {
     )
       .bind(slug, title || (await tr(c, "share_collection_default_title", { count: found.length })), JSON.stringify(found), now)
       .run();
+    await applyAccess(c.env.DB, slug, access);
     return c.json({ slug });
   }
 
@@ -99,6 +131,7 @@ shareRoutes.post("/", async (c) => {
     if (title) {
       await c.env.DB.prepare("UPDATE shares SET title = ? WHERE slug = ?").bind(title, existing.slug).run();
     }
+    await applyAccess(c.env.DB, existing.slug, access);
     return c.json({ slug: existing.slug });
   }
 
@@ -107,15 +140,18 @@ shareRoutes.post("/", async (c) => {
   )
     .bind(slug, title || defaultShareTitle(body.type, value), body.type, value, now)
     .run();
+  await applyAccess(c.env.DB, slug, access);
   return c.json({ slug });
 });
 
-/** Rename a share, or replace a collection's items. */
+/** Rename a share, replace a collection's items, or change its expiry / password. */
 shareRoutes.patch("/:slug", async (c) => {
   const slug = c.req.param("slug");
   const share = await c.env.DB.prepare("SELECT * FROM shares WHERE slug = ?").bind(slug).first<ShareRow>();
   if (!share) return c.json({ error: "not found" }, 404);
-  const body = await c.req.json<{ title?: unknown; ids?: unknown }>();
+  const body = await c.req.json<{ title?: unknown; ids?: unknown; expiresAt?: unknown; password?: unknown }>();
+  const access = accessFrom(body);
+  if (!access) return c.json({ error: await tr(c, "api_share_invalid") }, 400);
 
   const title = body.title === undefined ? share.title : cleanTitle(body.title);
   if (!title && share.type !== "item") return c.json({ error: await tr(c, "api_share_title_required") }, 400);
@@ -126,7 +162,9 @@ shareRoutes.patch("/:slug", async (c) => {
     value = JSON.stringify(await existingIds(c.env.DB, ids));
   }
   await c.env.DB.prepare("UPDATE shares SET title = ?, value = ? WHERE slug = ?").bind(title, value, slug).run();
-  return c.json(view({ ...share, title, value }));
+  await applyAccess(c.env.DB, slug, access);
+  const updated = await c.env.DB.prepare("SELECT * FROM shares WHERE slug = ?").bind(slug).first<ShareRow>();
+  return c.json(await view(updated!, c.env.BETTER_AUTH_SECRET));
 });
 
 shareRoutes.get("/:slug/stats", async (c) => {

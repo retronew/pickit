@@ -18,13 +18,13 @@ export class ApiError extends Error {
  */
 export async function api<T = unknown>(
   url: string,
-  init: { method?: string; json?: unknown } = {},
+  init: { method?: string; json?: unknown; headers?: Record<string, string> } = {},
 ): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {
       method: init.method ?? (init.json === undefined ? "GET" : "POST"),
-      headers: init.json === undefined ? undefined : { "Content-Type": "application/json" },
+      headers: { ...(init.json === undefined ? {} : { "Content-Type": "application/json" }), ...init.headers },
       body: init.json === undefined ? undefined : JSON.stringify(init.json),
     });
   } catch {

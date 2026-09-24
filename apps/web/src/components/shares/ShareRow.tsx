@@ -1,8 +1,8 @@
-import { BarChart3Icon, PencilIcon, RssIcon, Trash2Icon } from "lucide-react";
+import { BarChart3Icon, LockIcon, PencilIcon, RssIcon, ShieldIcon, Trash2Icon } from "lucide-react";
 import { Badge } from "#components/ui/badge";
 import { Button } from "#components/ui/button";
 import { CopyButton } from "#components/CopyButton";
-import { SHARE_TYPE_LABELS, rssUrl, shareSubject, shareUrl, type Share } from "#lib/shares";
+import { SHARE_TYPE_LABELS, daysLeft, isExpired, rssUrl, shareSubject, shareUrl, type Share } from "#lib/shares";
 import { formatDate } from "#lib/format";
 import { m } from "#lib/i18n";
 import { Hint } from "#components/Hint";
@@ -11,14 +11,17 @@ interface Props {
   share: Share;
   onStats: () => void;
   onRename: () => void;
+  onAccess: () => void;
   onRevoke: () => void;
 }
 
 /** One share link on the shares page: what it is, how often it's opened, actions. */
-export function ShareRow({ share: s, onStats, onRename, onRevoke }: Props) {
+export function ShareRow({ share: s, onStats, onRename, onAccess, onRevoke }: Props) {
   const subject = shareSubject(s);
+  const expired = isExpired(s);
   const meta = [
     subject !== s.title ? subject : "",
+    s.expiresAt !== null && !expired ? m.share_expires_in({ count: daysLeft(s.expiresAt) }) : "",
     m.shares_created_on({ date: formatDate(s.createdAt) }),
     s.lastViewedAt ? m.shares_last_visit({ date: formatDate(s.lastViewedAt) }) : "",
   ].filter(Boolean);
@@ -31,13 +34,29 @@ export function ShareRow({ share: s, onStats, onRename, onRevoke }: Props) {
         </Badge>
         <div className="min-w-0">
           <a
-            href={`/s/${s.slug}`}
+            // The owner's link opens a protected share without asking for the password.
+            href={`/s/${s.slug}${s.accessKey ? `?key=${s.accessKey}` : ""}`}
             target="_blank"
             rel="noreferrer"
             className="block truncate font-medium text-sm underline-offset-2 hover:underline"
           >
             {s.title || s.value}
           </a>
+          {(expired || s.hasPassword) && (
+            <span className="mt-0.5 flex flex-wrap gap-1">
+              {expired && (
+                <Badge variant="destructive" size="sm">
+                  {m.share_expired()}
+                </Badge>
+              )}
+              {s.hasPassword && (
+                <Badge variant="outline" size="sm">
+                  <LockIcon />
+                  {m.share_protected()}
+                </Badge>
+              )}
+            </span>
+          )}
           <p className="truncate text-muted-foreground text-xs">{meta.join(" · ")}</p>
         </div>
       </div>
@@ -48,6 +67,11 @@ export function ShareRow({ share: s, onStats, onRename, onRevoke }: Props) {
             {m.shares_views({ count: s.viewCount })}
           </Button>
         </Hint>
+        <Hint content={m.share_access_title()}>
+          <Button variant="ghost" size="icon-xs" aria-label={m.share_access_title()} onClick={onAccess}>
+            <ShieldIcon />
+          </Button>
+        </Hint>
         <Hint content={m.shares_rename()}>
           <Button variant="ghost" size="icon-xs" aria-label={m.shares_rename()} onClick={onRename}>
             <PencilIcon />
@@ -56,7 +80,7 @@ export function ShareRow({ share: s, onStats, onRename, onRevoke }: Props) {
         {s.type !== "item" && (
           <Hint content={m.shares_copy_rss()}>
             <CopyButton
-              text={rssUrl(s.slug)}
+              text={rssUrl(s.slug, s.accessKey)}
               toast={m.shares_rss_copied()}
               icon={<RssIcon />}
               aria-label={m.shares_copy_rss()}

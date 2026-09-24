@@ -13,8 +13,9 @@ import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Field, FieldLabel } from "#components/ui/field";
 import { ShareTargetPicker } from "#components/shares/ShareTargetPicker";
+import { ShareAccessFields, type ExpiryChoice } from "#components/shares/ShareAccessFields";
 import { copyText, toastError } from "#lib/api";
-import { createShare, defaultShareTitle, pickedTarget, shareUrl, type ShareTarget } from "#lib/shares";
+import { createShare, defaultShareTitle, expiryAt, pickedTarget, shareUrl, type ShareTarget } from "#lib/shares";
 import { m } from "#lib/i18n";
 
 interface Props {
@@ -31,6 +32,10 @@ export const ShareDialog = createCallable<Props, string | null>(({ target, call 
   const placeholder = resolved ? defaultShareTitle(resolved) : m.share_title_placeholder();
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expiry, setExpiry] = useState<ExpiryChoice>("never");
+  const [protect, setProtect] = useState(false);
+  const [password, setPassword] = useState("");
+  const missingPassword = protect && !password;
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setEntered(true));
@@ -38,10 +43,13 @@ export const ShareDialog = createCallable<Props, string | null>(({ target, call 
   }, []);
 
   async function submit() {
-    if (!resolved || saving) return;
+    if (!resolved || saving || missingPassword) return;
     setSaving(true);
     try {
-      const slug = await createShare(resolved, title.trim() || undefined);
+      const slug = await createShare(resolved, title.trim() || undefined, {
+        expiresAt: expiry === "keep" ? undefined : expiryAt(expiry),
+        password: protect ? password : undefined,
+      });
       await copyText(shareUrl(slug), m.share_link_copied());
       call.end(slug);
     } catch (err) {
@@ -88,13 +96,21 @@ export const ShareDialog = createCallable<Props, string | null>(({ target, call 
                 autoFocus={!!target}
               />
             </Field>
+            <ShareAccessFields
+              expiry={expiry}
+              onExpiryChange={setExpiry}
+              protect={protect}
+              onProtectChange={setProtect}
+              password={password}
+              onPasswordChange={setPassword}
+            />
           </form>
         </DialogPanel>
         <DialogFooter>
           <Button variant="outline" onClick={() => call.end(null)}>
             {m.common_cancel()}
           </Button>
-          <Button onClick={submit} disabled={!resolved} loading={saving}>
+          <Button onClick={submit} disabled={!resolved || missingPassword} loading={saving}>
             {m.share_create_copy()}
           </Button>
         </DialogFooter>

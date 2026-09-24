@@ -8,11 +8,12 @@ import { Prompt } from "#components/Prompt";
 import { ShareDialog } from "#components/shares/ShareDialog";
 import { ShareRow } from "#components/shares/ShareRow";
 import { ShareStatsDialog } from "#components/shares/ShareStatsDialog";
+import { ShareAccessDialog } from "#components/shares/ShareAccessDialog";
 import { useShares } from "#hooks/useShares";
 import { m } from "#lib/i18n";
 
 export function SharesPage() {
-  const { shares, create, rename, remove } = useShares();
+  const { shares, create, rename, editAccess, remove } = useShares();
   const totalViews = shares?.reduce((sum, s) => sum + s.viewCount, 0) ?? 0;
 
   return (
@@ -48,6 +49,7 @@ export function SharesPage() {
               share={s}
               onStats={() => ShareStatsDialog.call({ slug: s.slug, title: s.title || s.value })}
               onRename={() => rename(s)}
+              onAccess={() => editAccess(s)}
               onRevoke={() => remove(s)}
             />
           ))}
@@ -56,6 +58,7 @@ export function SharesPage() {
 
       <ShareDialog />
       <ShareStatsDialog />
+      <ShareAccessDialog />
       <Prompt />
       <Confirm />
     </div>

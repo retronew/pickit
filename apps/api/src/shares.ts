@@ -25,6 +25,8 @@ export interface ShareRow {
   created_at: number;
   view_count: number;
   last_viewed_at: number | null;
+  expires_at: number | null;
+  password_hash: string | null;
 }
 
 export interface PublicItem {

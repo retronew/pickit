@@ -1,19 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router";
 import { RssIcon } from "lucide-react";
 import { Button } from "#components/ui/button";
 import { Skeleton } from "#components/ui/skeleton";
-import { SharedItemCard, type SharedItem } from "#components/share/SharedItemCard";
+import { SharedItemCard } from "#components/share/SharedItemCard";
 import { SharedItemList } from "#components/share/SharedItemList";
+import { SharePasswordForm } from "#components/share/SharePasswordForm";
 import { GroupModeToggle } from "#components/share/GroupModeToggle";
 import { useGroupMode } from "#hooks/useGroupMode";
-import { api } from "#lib/api";
+import { usePublicShare } from "#hooks/usePublicShare";
 import { SHARE_TYPE_LABELS } from "#lib/shares";
 import { m } from "#lib/i18n";
-
-type Shared =
-  | { type: "item"; title: string; item: SharedItem }
-  | { type: "category" | "tag" | "mix" | "collection"; title: string; value: string; items: SharedItem[] };
 
 /** Advertises the RSS feed to browsers and feed readers while the page is open. */
 function useFeedLink(href: string | null, title: string) {
@@ -43,26 +40,22 @@ function LoadingCards() {
 }
 
 export function PublicSharePage() {
-  const { slug } = useParams();
-  const [data, setData] = useState<Shared | null>(null);
-  const [error, setError] = useState("");
+  const { slug = "" } = useParams();
+  const { state, key, unlock } = usePublicShare(slug);
   const { mode, setMode } = useGroupMode("pickit.share-view");
-
-  useEffect(() => {
-    // Pass on where the visitor came from: fetch's own Referer is this page.
-    const ref = document.referrer ? `?ref=${encodeURIComponent(document.referrer)}` : "";
-    api<Shared>(`/api/public/shares/${slug}${ref}`)
-      .then((d) => {
-        setData(d);
-        document.title = `${d.title} · PickIt`;
-      })
-      .catch((err) =>
-        setError(err?.status === 404 ? m.public_not_found() : m.public_load_failed()),
-      );
-  }, [slug]);
+  const data = state.status === "ready" ? state.data : null;
+  const error =
+    state.status === "missing"
+      ? m.public_not_found()
+      : state.status === "expired"
+        ? m.public_expired()
+        : state.status === "failed"
+          ? m.public_load_failed()
+          : "";
 
   const isList = data && data.type !== "item";
-  const feed = isList ? `/api/public/shares/${slug}/rss` : null;
+  // A protected feed carries its key, so feed readers can fetch it on their own.
+  const feed = isList ? `/api/public/shares/${slug}/rss${key ? `?key=${key}` : ""}` : null;
   useFeedLink(feed, data?.title ?? "");
 
   return (
@@ -74,7 +67,8 @@ export function PublicSharePage() {
         </div>
 
         {error && <p className="text-center text-muted-foreground text-sm">{error}</p>}
-        {!data && !error && <LoadingCards />}
+        {state.status === "loading" && <LoadingCards />}
+        {state.status === "locked" && <SharePasswordForm onUnlock={unlock} />}
 
         {data?.type === "item" && (
           <div className="mx-auto max-w-lg animate-fade-in">
