@@ -14,12 +14,15 @@ export function ItemSearchBar({
   searching,
   onAdd,
   onBatchAdd,
+  inputRef,
 }: {
   query: string;
   onQueryChange: (query: string) => void;
   searching: boolean;
   onAdd: () => void;
   onBatchAdd: () => void;
+  /** Lets the "/" shortcut focus the field. */
+  inputRef?: React.Ref<HTMLInputElement>;
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -30,6 +33,7 @@ export function ItemSearchBar({
           <SearchIcon className="z-raised pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         )}
         <Input
+          ref={inputRef}
           size="lg"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}

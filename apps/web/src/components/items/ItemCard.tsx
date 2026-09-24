@@ -63,6 +63,7 @@ export const ItemCard = memo(function ItemCard({
   onOpenActions,
   selectMode,
   selected,
+  focused,
   onToggleSelect,
 }: {
   item: Item;
@@ -74,6 +75,8 @@ export const ItemCard = memo(function ItemCard({
   onOpenActions?: (item: Item, anchor: HTMLElement) => void;
   selectMode?: boolean;
   selected?: boolean;
+  /** Highlighted by keyboard navigation. */
+  focused?: boolean;
   onToggleSelect?: (id: number) => void;
 }) {
   return (
@@ -86,6 +89,7 @@ export const ItemCard = memo(function ItemCard({
         item.pinned && "border-ring/40",
         (selectMode || onOpenDetail) && "cursor-pointer",
         selected && "border-ring/60 bg-accent/40",
+        focused && "ring-2 ring-ring/60 ring-offset-1 ring-offset-background",
       )}
     >
       <div className="flex items-start justify-between gap-2">

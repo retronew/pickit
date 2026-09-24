@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useItems, type Item } from "#hooks/useItems";
 import { useItemSearch } from "#hooks/useItemSearch";
 import { useItemFilters } from "#hooks/useItemFilters";
@@ -18,6 +18,7 @@ import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
 import { SavedSearchesBar } from "#components/items/SavedSearchesBar";
 import { useSavedSearchBinding } from "#hooks/useSavedSearchBinding";
+import { useItemKeyboardNav } from "#hooks/useItemKeyboardNav";
 import { AskAi } from "#components/AskAi";
 import { PageLoading } from "#components/PageLoading";
 import { m } from "#lib/i18n";
@@ -46,6 +47,9 @@ export function ItemsPage() {
   const detail = useDetailSheet(items);
   const selection = useBulkSelection(refresh, items, filters.allTags);
   const [batchOpen, setBatchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Cards in display order (grouped by category), for j / k.
+  const displayOrder = useMemo(() => filters.grouped.flatMap(([, list]) => list), [filters.grouped]);
   const savedSearches = useSavedSearchBinding(
     { query: search.query, category: filters.category, tags: filters.selectedTags, sort: filters.sortKey },
     (s) => {
@@ -69,10 +73,25 @@ export function ItemsPage() {
     allTags: filters.allTags,
     onDeleted,
   });
+  const keyboard = useItemKeyboardNav({
+    items: displayOrder,
+    searchRef,
+    // Select mode has its own interactions; the detail sheet is a dialog anyway.
+    enabled: !selection.selectMode,
+    onOpenDetail: detail.openDetail,
+    onOpenLink: (item) => {
+      navigator.sendBeacon(`/api/items/${item.id}/visit`);
+      window.open(item.url, "_blank", "noreferrer");
+    },
+    onEdit: actions.editItem,
+    onTogglePin: actions.togglePin,
+    onAdd: actions.addItem,
+  });
 
   return (
     <div className="space-y-5 pb-28">
       <ItemSearchBar
+        inputRef={searchRef}
         query={search.query}
         onQueryChange={search.setQuery}
         searching={search.searching}
@@ -137,6 +156,7 @@ export function ItemsPage() {
           dimmed={search.searching}
           selectMode={selection.selectMode}
           selectedIds={selection.selectedIds}
+          focusedId={keyboard.focusedId}
           onToggleSelect={selection.toggleSelect}
           onEdit={actions.editItem}
           onDelete={actions.deleteItem}

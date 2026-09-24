@@ -16,6 +16,7 @@ A self-hosted, single-user bookmark manager that runs entirely on Cloudflare Wor
 - **Capture**: bookmarklet that opens `/add?url=...` for the current page; PickIt also installs as a PWA (add to home screen), and on Android appears in the system share sheet
 - **Sign-in**: Google / GitHub via [Better Auth](https://better-auth.com), restricted to an email allowlist that can be edited in Settings (no passwords)
 - **Languages**: Chinese, English and Japanese interface (header menu); the choice is saved and also used for API errors and audit summaries
+- **Keyboard shortcuts**: `/` search, `N` new, `J`/`K` move between cards, `Enter` details, `O` open link, `E` edit, `P` pin; `?` lists them all
 - **Theme**: follows the system light / dark setting by default; the header button cycles System → Light → Dark
 - **Audit log**: every write, export, sign-in / sign-out and cron run is recorded (actor, action, target, result, IP, request details with secrets redacted) and kept for 180 days by default (adjustable from 1 day up to 10 years, or forever, on the Audit page, which also shows the log's estimated size); the **Audit** page filters by category, action, actor, result, date range (with presets) and keyword, with live and manual refresh
 - **API access**: Bearer API token for scripts and integrations, plus an MCP server so AI assistants can search and add bookmarks

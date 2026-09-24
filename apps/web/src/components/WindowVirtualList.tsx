@@ -1,5 +1,10 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
+
+export interface WindowVirtualListHandle {
+  /** Scrolls row `index` into view (it may not be mounted yet). */
+  scrollToIndex: (index: number) => void;
+}
 
 /**
  * A list virtualized against the window scroll: only rows near the viewport
@@ -13,12 +18,14 @@ export function WindowVirtualList<T>({
   estimateSize,
   renderRow,
   overscan = 6,
+  handleRef,
 }: {
   rows: T[];
   getKey: (row: T) => string;
   estimateSize: (row: T) => number;
   renderRow: (row: T) => ReactNode;
   overscan?: number;
+  handleRef?: Ref<WindowVirtualListHandle>;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
   // Where the list starts on the page; content above it (search, filters) shifts it.
@@ -40,6 +47,12 @@ export function WindowVirtualList<T>({
     overscan,
     scrollMargin,
   });
+
+  useImperativeHandle(
+    handleRef,
+    () => ({ scrollToIndex: (index) => virtualizer.scrollToIndex(index, { align: "auto" }) }),
+    [virtualizer],
+  );
 
   return (
     <div ref={listRef} className="relative" style={{ height: virtualizer.getTotalSize() }}>

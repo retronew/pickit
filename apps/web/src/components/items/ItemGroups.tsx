@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Item } from "#hooks/useItems";
 import { ItemCard } from "#components/items/ItemCard";
 import { ItemActionsMenu, type ItemActionsTarget } from "#components/items/ItemActionsMenu";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
-import { WindowVirtualList } from "#components/WindowVirtualList";
+import { WindowVirtualList, type WindowVirtualListHandle } from "#components/WindowVirtualList";
 import { toItemRows } from "#lib/item-rows";
 import { cn } from "#lib/utils";
 import { m } from "#lib/i18n";
@@ -16,6 +16,8 @@ interface Props {
   dimmed: boolean;
   selectMode: boolean;
   selectedIds: Set<number>;
+  /** The card highlighted by keyboard navigation; scrolled into view. */
+  focusedId?: number | null;
   onToggleSelect: (id: number) => void;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
@@ -28,11 +30,19 @@ interface Props {
  * window scroll: only rows near the viewport are mounted, since a library of
  * 600+ cards made the page slow to mount and scroll.
  */
-export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds, ...handlers }: Props) {
+export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds, focusedId, ...handlers }: Props) {
   const [actionsTarget, setActionsTarget] = useState<ItemActionsTarget | null>(null);
   // Stable so the memoized cards don't re-render when the menu opens.
   const openActions = useCallback((item: Item, anchor: HTMLElement) => setActionsTarget({ item, anchor }), []);
   const rows = useMemo(() => toItemRows(grouped, COLUMNS), [grouped]);
+  const listRef = useRef<WindowVirtualListHandle>(null);
+
+  // Keyboard navigation can move to a card that isn't mounted yet.
+  useEffect(() => {
+    if (focusedId == null) return;
+    const index = rows.findIndex((r) => r.kind === "cards" && r.items.some((i) => i.id === focusedId));
+    if (index >= 0) listRef.current?.scrollToIndex(index);
+  }, [focusedId, rows]);
 
   if (grouped.length === 0) {
     return (
@@ -51,6 +61,7 @@ export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds,
   return (
     <div className={cn("animate-fade-in transition-opacity", dimmed && "opacity-60")}>
       <WindowVirtualList
+        handleRef={listRef}
         rows={rows}
         getKey={(row) => row.key}
         estimateSize={(row) => (row.kind === "header" ? 32 : 104)}
@@ -72,6 +83,7 @@ export function ItemGroups({ grouped, filtered, dimmed, selectMode, selectedIds,
                   item={item}
                   selectMode={selectMode}
                   selected={selectedIds.has(item.id)}
+                  focused={item.id === focusedId}
                   onOpenActions={openActions}
                   {...handlers}
                 />

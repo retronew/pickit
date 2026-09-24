@@ -6,6 +6,7 @@ import { ScrollFade } from "#components/ScrollFade";
 import { Button } from "#components/ui/button";
 import { BackToTop } from "#components/BackToTop";
 import { CommandPalette } from "#components/CommandPalette";
+import { ShortcutsDialog } from "#components/ShortcutsDialog";
 import { HeaderMenu } from "#components/HeaderMenu";
 import { LanguageMenu } from "#components/LanguageMenu";
 import { ThemeToggle } from "#components/ThemeToggle";
@@ -109,6 +110,7 @@ export function AppShell() {
       </main>
       <BackToTop />
       <CommandPalette />
+      <ShortcutsDialog />
     </div>
   );
 }
