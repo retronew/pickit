@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import type { Item } from "@pickit/shared";
 import { api, copyText, toastError, toastSuccess } from "#lib/api";
 import { m } from "#lib/i18n";
@@ -19,17 +19,25 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
   const [sharing, setSharing] = useState(false);
   const [shared, setShared] = useState(false);
 
-  useEffect(() => {
-    // Reset and load only on open: clearing on close would shrink the sheet
-    // mid-way through its closing animation.
-    if (!item || !open) return;
+  // Reads the item at open time without re-running for every new object of it.
+  const showItem = useEffectEvent(() => {
+    if (!item) return;
     setSummary(item.aiSummary ?? "");
     setRelated([]);
     setLinkStatus({ httpStatus: item.httpStatus, checkedAt: item.checkedAt });
     setShared(false);
+  });
+
+  // Reset and load only on open, keyed on the id: clearing on close would
+  // shrink the sheet mid-way through its closing animation, and a list refresh
+  // hands in a new object for the same item that shouldn't clear the screen.
+  const itemId = item?.id;
+  useEffect(() => {
+    if (itemId == null || !open) return;
+    showItem();
     let cancelled = false;
     setRelatedLoading(true);
-    fetch(`/api/items/${item.id}/related?limit=6`)
+    fetch(`/api/items/${itemId}/related?limit=6`)
       .then((r) => r.json())
       .then((data: Item[]) => {
         if (!cancelled) setRelated(data);
@@ -41,10 +49,7 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
     return () => {
       cancelled = true;
     };
-    // Keyed on the id: a list refresh hands in a new object for the same item,
-    // which shouldn't clear and refetch what's on screen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item?.id, open]);
+  }, [itemId, open]);
 
   async function checkLinkNow() {
     if (!item) return;

@@ -28,7 +28,10 @@ export function isChange(row: SuggestionRow): boolean {
 }
 
 /** Loads AI suggestions for up to 100 items, chunk by chunk. */
-export function useOrganizeSuggestions(ids: number[]) {
+export function useOrganizeSuggestions(idsProp: number[]) {
+  // The ids are fixed for the dialog's lifetime; keep the first ones so a new
+  // array from a parent re-render doesn't restart loading.
+  const [ids] = useState(idsProp);
   const [rows, setRows] = useState<SuggestionRow[]>([]);
   const [loaded, setLoaded] = useState(0);
   const [error, setError] = useState("");
@@ -59,9 +62,7 @@ export function useOrganizeSuggestions(ids: number[]) {
     return () => {
       cancelled = true;
     };
-    // ids are fixed for the dialog's lifetime.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ids]);
 
   return { rows, loaded, total, error, done };
 }

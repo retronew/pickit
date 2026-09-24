@@ -4,7 +4,7 @@ import { useEffect, useState, type RefObject } from "react";
  * Whether a horizontally scrolling element has more content off either edge,
  * e.g. to show a fade only on the side that can still scroll.
  */
-export function useScrollEdges(ref: RefObject<HTMLElement | null>, deps: unknown[] = []) {
+export function useScrollEdges(ref: RefObject<HTMLElement | null>) {
   const [edges, setEdges] = useState({ start: false, end: false });
 
   useEffect(() => {
@@ -24,8 +24,7 @@ export function useScrollEdges(ref: RefObject<HTMLElement | null>, deps: unknown
       el.removeEventListener("scroll", update);
       observer.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ref, ...deps]);
+  }, [ref]);
 
   return edges;
 }

@@ -69,6 +69,9 @@ importers:
       '@pickit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@tanstack/react-virtual':
+        specifier: ^3.14.13
+        version: 3.14.13(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       better-auth:
         specifier: ^1.7.5
         version: 1.7.5(@opentelemetry/api@1.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.1(@opentelemetry/api@1.9.1)(@types/node@24.13.6)(vite@8.3.0(@types/node@24.13.6)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)))
@@ -1222,6 +1225,15 @@ packages:
     resolution: {integrity: sha512-yYU8cogLeSh/ms2jh8Fj7jaba/EWa7Ja6GoUqYZaraEuCI5YS6ms6ObZgjjedm+jm6XZjdNRWBpPP6Z86oOxcw==}
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
+
+  '@tanstack/react-virtual@3.14.13':
+    resolution: {integrity: sha512-JbDTAwtzZ99aOeCrAfW5EsE5KSq5RWh6Af2dtFwyLIIk48Ja7vm6n4axu/43T3vfjFnEGJalxJ1wyYjSQD6bSg==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@tanstack/virtual-core@3.17.11':
+    resolution: {integrity: sha512-+ILjvtHup6Y2hzQ6YzwMgX1Q+oQpxEGOXCEsCNaPoIP0VxMbizIBTmYTDtkerkIQS8/CbP1BRuyt8V/8BCsy1g==}
 
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
@@ -3455,6 +3467,14 @@ snapshots:
       '@tailwindcss/oxide': 4.3.3
       tailwindcss: 4.3.3
       vite: 8.3.0(@types/node@24.13.6)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)
+
+  '@tanstack/react-virtual@3.14.13(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@tanstack/virtual-core': 3.17.11
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+
+  '@tanstack/virtual-core@3.17.11': {}
 
   '@tybys/wasm-util@0.10.4':
     dependencies:

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import type { Item } from "@pickit/shared";
 import { m } from "#lib/i18n";
 
@@ -69,13 +69,13 @@ export function useChat(onChunk?: () => void) {
     });
   }
 
-  useEffect(() => {
-    // Only for the messages restored from localStorage on first mount —
-    // messages sent afterwards resolve their refs at the end of send().
+  // Only for the messages restored from localStorage on first mount —
+  // messages sent afterwards resolve their refs at the end of send().
+  const loadRestoredRefs = useEffectEvent(() => {
     const ids = messages.flatMap((msg) => (msg.role === "assistant" ? extractRefIds(msg.content) : []));
     if (ids.length > 0) loadRefItems(ids);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  useEffect(() => loadRestoredRefs(), []);
 
   function setLastReply(content: string) {
     setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content }]);
