@@ -6,6 +6,7 @@ import { createProvider, embedText, embeddingInput, type Provider, type AiSettin
 import { normalizeUrl } from "@pickit/shared";
 import { getSettings } from "#settings";
 import { emitEvent } from "#webhooks";
+import { captureContent } from "#item-content";
 
 export async function itemsByIds(db: D1Database, ids: number[]): Promise<Map<number, ItemRow>> {
   if (!ids.length) return new Map();
@@ -39,6 +40,9 @@ export function toItemJson(r: ItemRow) {
     image: r.image,
     archiveUrl: r.archive_url,
     position: r.position,
+    contentStatus: r.content_status,
+    contentAt: r.content_at,
+    contentSize: r.content_size,
   };
 }
 
@@ -143,6 +147,7 @@ export async function createItem(
   const id = Number(meta.last_row_id);
   const settings = await getSettings(env.DB);
   if (settings) opts.waitUntil(embedItem(env, id, item, settings).catch(() => {}));
+  if (item.url) opts.waitUntil(captureContent(env, id, item.url).catch(() => {}));
   emitEvent(env, opts.waitUntil, "item.created", {
     id,
     name: item.name,

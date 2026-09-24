@@ -23,6 +23,7 @@
 - **Batch jobs**: re-embedding, AI re-organizing and AI summaries run (selected bookmarks on the home page can also be summarized directly) in small resumable steps — pause / resume, retry failed items, per-item error details. The job's settings tab drives them while open; a per-minute cron keeps them going in the background
 - **Backups**: daily JSON backups to R2 (kept 30 days) plus "back up now"; the settings table lets you download, delete or restore one — merge (only missing URLs) or replace (current items go to the trash). Every restore first snapshots the current data, so it can be undone
 - **Maintenance cron**: dead-link checks (a dead link gets its closest Wayback Machine snapshot, shown as "View archive"), audit-log pruning, and preview images (og:image) fetched for older bookmarks a few at a time; new ones get theirs from "AI analyze"
+- **Page text snapshots** (needs the R2 bucket used for backups): PickIt saves the readable text of each page (article only, no scripts or page chrome, up to 200 KB) to R2 as `content/<id>.txt`, so a bookmark stays readable after the page changes or disappears. New bookmarks are captured in the background and older ones a few per minute; the detail panel shows when it was captured, opens a reader view and can capture it again. A snapshot is never synced with the live page, and a failed refetch keeps the old text. Pages behind a login or rendered only by JavaScript may have no text.
 
 ## Tech stack
 

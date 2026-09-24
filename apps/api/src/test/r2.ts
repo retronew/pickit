@@ -17,8 +17,9 @@ export function createMemoryR2() {
   });
 
   const bucket = {
-    async put(key: string, value: string, opts?: { customMetadata?: Record<string, string> }) {
-      const o = { body: value, uploaded: new Date(), customMetadata: opts?.customMetadata ?? {} };
+    async put(key: string, value: string | Uint8Array, opts?: { customMetadata?: Record<string, string> }) {
+      const body = typeof value === "string" ? value : new TextDecoder().decode(value);
+      const o = { body, uploaded: new Date(), customMetadata: opts?.customMetadata ?? {} };
       objects.set(key, o);
       return meta(key, o);
     },
@@ -36,8 +37,8 @@ export function createMemoryR2() {
       const list = [...objects].filter(([k]) => k.startsWith(prefix)).map(([k, o]) => meta(k, o));
       return { objects: list, truncated: false };
     },
-    async delete(key: string) {
-      objects.delete(key);
+    async delete(keys: string | string[]) {
+      for (const key of Array.isArray(keys) ? keys : [keys]) objects.delete(key);
     },
   };
 

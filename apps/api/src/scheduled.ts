@@ -5,6 +5,7 @@ import { runDeadLinkCheck } from "#cron";
 import { backfillPreviews } from "#previews";
 import { writeBackup, pruneBackups } from "#backups";
 import { safeAudit, pruneAudit } from "#audit/index";
+import { backfillContent } from "#item-content";
 
 /** Must match the per-minute entry in wrangler.jsonc `triggers.crons`. */
 const JOB_CRON = "* * * * *";
@@ -56,6 +57,8 @@ export async function scheduled(controller: ScheduledController, env: Env, ctx: 
     ctx.waitUntil(backfillVectors(env));
     // Fetches preview images for older items, a few at a time.
     ctx.waitUntil(backfillPreviews(env.DB).catch(() => {}));
+    // Captures page text for older items, a few at a time (needs R2).
+    ctx.waitUntil(backfillContent(env).catch(() => {}));
     return;
   }
   ctx.waitUntil(backupWithAudit(env));

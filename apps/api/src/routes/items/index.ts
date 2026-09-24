@@ -7,6 +7,7 @@ import { bulkRoutes } from "./bulk";
 import { aiRoutes } from "./ai";
 import { itemByIdRoutes } from "./item";
 import { orderRoutes } from "./order";
+import { contentRoutes } from "./content";
 
 export { itemsByIds, embedItem } from "./helpers";
 
@@ -19,4 +20,5 @@ export const itemRoutes = new Hono<{ Bindings: Env }>()
   .route("/", bulkRoutes)
   .route("/", aiRoutes)
   .route("/", orderRoutes)
+  .route("/", contentRoutes)
   .route("/", itemByIdRoutes);

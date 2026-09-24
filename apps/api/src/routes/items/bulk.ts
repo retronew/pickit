@@ -7,6 +7,7 @@ import { createProvider, describeError } from "#ai";
 import { activeCategories, suggestOrganize } from "#organize";
 import { LocalizedError, renderMessage, requestLocale, tr } from "#i18n";
 import { aiLocale } from "#locale";
+import { deleteContent } from "#item-content";
 
 export const bulkRoutes = new Hono<{ Bindings: Env }>();
 
@@ -128,6 +129,7 @@ bulkRoutes.post("/bulk", async (c) => {
       break;
     case "purge":
       await run("DELETE FROM items WHERE id IN ($IDS)");
+      await deleteContent(c.env, ids);
       break;
     case "pin":
     case "unpin":

@@ -6,6 +6,7 @@ import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { getSettings } from "#settings";
 import { emitEvent } from "#webhooks";
 import { toItemJson, findDuplicate, embedItem } from "./helpers";
+import { deleteContent } from "#item-content";
 
 export const itemByIdRoutes = new Hono<{ Bindings: Env }>();
 
@@ -101,6 +102,7 @@ itemByIdRoutes.post("/:id/restore", async (c) => {
 itemByIdRoutes.delete("/:id/purge", async (c) => {
   const id = Number(c.req.param("id"));
   await c.env.DB.prepare("DELETE FROM items WHERE id = ?").bind(id).run();
+  await deleteContent(c.env, [id]);
   return c.json({ ok: true });
 });
 

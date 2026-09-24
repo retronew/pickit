@@ -24,6 +24,9 @@ function item(patch: Partial<Item>): Item {
     image: "",
     archiveUrl: "",
     position: null,
+    contentStatus: "",
+    contentAt: null,
+    contentSize: null,
     ...patch,
   };
 }

@@ -37,6 +37,10 @@ export interface ItemRow {
   archive_url: string;
   /** Manual order within the category; null = never reordered. */
   position: number | null;
+  /** Page text snapshot (text in R2): "" never tried, "ok", "empty", "failed". */
+  content_status: string;
+  content_at: number | null;
+  content_size: number | null;
   /** Only present when selected explicitly; ITEM_COLUMNS leaves the blobs out. */
   embedding?: ArrayBuffer | null;
   embedding_model: string | null;
@@ -57,6 +61,7 @@ export function itemColumns(alias = ""): string {
     "created_at", "updated_at", "pinned", "deleted_at", "click_count",
     "last_visited_at", "url_norm", "ai_summary", "http_status", "checked_at",
     "image", "preview_checked_at", "archive_url", "position",
+    "content_status", "content_at", "content_size",
   ]
     .map((c) => p + c)
     .concat(`(${p}embedding IS NOT NULL) AS has_embedding`)

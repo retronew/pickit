@@ -21,6 +21,10 @@ export interface Item {
   archiveUrl: string;
   /** Manual order within the category; null = never reordered (newest first). */
   position: number | null;
+  /** Page text snapshot: "" never tried, "ok", "empty" (no readable text), "failed". */
+  contentStatus: "" | "ok" | "empty" | "failed";
+  contentAt: number | null;
+  contentSize: number | null;
 }
 
 // Kept intentionally simple and in sync with the SQL approximation used to

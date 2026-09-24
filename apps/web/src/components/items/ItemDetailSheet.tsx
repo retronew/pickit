@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableRow } from "#components/ui/table";
 import { Favicon } from "#components/Favicon";
 import { PreviewImage } from "#components/items/PreviewImage";
 import { TranslatePanel } from "#components/items/TranslatePanel";
+import { ContentSnapshot } from "#components/items/ContentSnapshot";
 import { intlLocale, m } from "#lib/i18n";
 
 // Single newlines in a note render as line breaks, like they were typed.
@@ -159,6 +160,8 @@ export function ItemDetailSheet({
                   ))}
                 </div>
               )}
+
+              <ContentSnapshot item={item} open={open} />
 
               <div className="overflow-hidden rounded-lg border">
                 <Table>
