@@ -40,6 +40,12 @@ export interface CronTaskView {
   lastRun: CronRun | null;
   /** Latest runs, newest first (per-minute tasks only log runs that did something or failed). */
   recent: CronRun[];
+  /**
+   * Per-minute tasks: when the schedule last fired after `lastRun`, i.e. the
+   * task ran since then with nothing to do (such runs aren't logged; failures
+   * always are). null when `lastRun` is the latest run.
+   */
+  quietAt: number | null;
 }
 
 export interface CronOverview {

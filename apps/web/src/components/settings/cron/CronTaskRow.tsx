@@ -30,6 +30,9 @@ interface Props {
 export function CronTaskRow({ task, running, onRun, actions }: Props) {
   const label = CRON_TASK_LABELS[task.id];
   const last = task.lastRun;
+  // Ran again since the last logged run, with nothing to do: that is the current state.
+  const quietAt = task.quietAt;
+  const status = quietAt ? "ok" : last?.status;
 
   return (
     <Collapsible className="rounded-lg px-2 py-2.5 hover:bg-accent/40">
@@ -37,11 +40,17 @@ export function CronTaskRow({ task, running, onRun, actions }: Props) {
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-sm">{label.name()}</p>
-            {last && <CronRunStatus status={last.status} />}
+            {status && <CronRunStatus status={status} />}
           </div>
           <p className="text-muted-foreground text-xs">{label.hint()}</p>
           <p className="text-muted-foreground text-xs">
-            {last ? (
+            {quietAt ? (
+              <>
+                {m.cron_last({ when: "" })}
+                <When at={quietAt} />
+                {` · ${m.cron_nothing_to_do()}`}
+              </>
+            ) : last ? (
               <>
                 {m.cron_last({ when: "" })}
                 <When at={last.startedAt} />
@@ -58,7 +67,15 @@ export function CronTaskRow({ task, running, onRun, actions }: Props) {
               </>
             )}
           </p>
-          {last?.error && <p className="break-words text-destructive-foreground text-xs">{last.error}</p>}
+          {last?.error &&
+            (quietAt ? (
+              <p className="text-muted-foreground text-xs">
+                {m.cron_recovered({ when: "" })}
+                <When at={last.startedAt} />
+              </p>
+            ) : (
+              <p className="break-words text-destructive-foreground text-xs">{last.error}</p>
+            ))}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-1">
           {task.recent.length > 0 && (

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestApp, type TestApp } from "../test/app";
-import { DAILY, EVERY_MINUTE, runSchedule } from "#cron-tasks";
+import { DAILY, EVERY_MINUTE, isTransientD1Error, runSchedule, runTask } from "#cron-tasks";
 
 let t: TestApp;
 
@@ -55,5 +55,43 @@ describe("scheduled tasks", () => {
     expect(run).toMatchObject({ task: "audit_prune", trigger: "manual", status: "ok" });
     expect((await task("audit_prune")).recent).toHaveLength(1);
     await t.json("/api/cron/nope/run", { json: {} }, 404);
+  });
+
+  it("shows a per-minute task as running again after a failure when later ticks were quiet", async () => {
+    const failedAt = Date.now() - 2 * 86_400_000;
+    await t.db
+      .prepare("INSERT INTO cron_runs (task, trigger, started_at, finished_at, status, processed, error) VALUES ('jobs', 'cron', ?, ?, 'error', 0, 'D1_ERROR: Network connection lost.')")
+      .bind(failedAt, failedAt + 100)
+      .run();
+    // No tick since: the failure is the latest state.
+    expect((await task("jobs")).quietAt).toBeNull();
+
+    await runSchedule(t.env, EVERY_MINUTE);
+    const jobs = await task("jobs");
+    expect(jobs.lastRun).toMatchObject({ status: "error" });
+    expect(jobs.quietAt).toBeGreaterThan(failedAt);
+  });
+
+  it("retries a task once when D1 drops its connection", async () => {
+    expect(isTransientD1Error(new Error("D1_ERROR: Network connection lost."))).toBe(true);
+    expect(isTransientD1Error(new Error("no such column: x"))).toBe(false);
+
+    let calls = 0;
+    const flaky = {
+      id: "vectors" as const,
+      cron: EVERY_MINUTE,
+      run: async () => {
+        if (++calls === 1) throw new Error("D1_ERROR: Network connection lost.");
+        return { processed: 1 };
+      },
+    };
+    expect(await runTask(t.env, flaky, "cron")).toMatchObject({ status: "ok", processed: 1 });
+    expect(calls).toBe(2);
+
+    // Other errors fail at once.
+    calls = 0;
+    const broken = { ...flaky, run: async () => (calls++, Promise.reject(new Error("no such column: x"))) };
+    expect(await runTask(t.env, broken, "cron")).toMatchObject({ status: "error", error: "no such column: x" });
+    expect(calls).toBe(1);
   });
 });

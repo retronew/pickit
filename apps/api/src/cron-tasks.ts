@@ -103,9 +103,29 @@ export const TASKS: CronTask[] = [
 
 export const findTask = (id: string) => TASKS.find((t) => t.id === id);
 
+/** Errors D1 raises when its connection drops for a moment; retrying the query works (Cloudflare's advice). */
+export function isTransientD1Error(e: unknown): boolean {
+  const message = String(e instanceof Error ? e.message : e);
+  return /Network connection lost|storage caused object to be reset|transient issue|D1_ERROR: .*(?:timed? ?out|Internal error)/i.test(message);
+}
+
+const RETRY_DELAY_MS = 2_000;
+
+/** Runs a task, once more after a short pause if D1 dropped its connection. */
+async function runWithRetry(env: Env, task: CronTask): Promise<TaskResult> {
+  try {
+    return await task.run(env);
+  } catch (e) {
+    if (!isTransientD1Error(e)) throw e;
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    return await task.run(env);
+  }
+}
+
 /**
  * Runs one task and logs it. Per-minute tasks that did nothing aren't
  * logged (they'd flood the table); daily and manual runs always are.
+ * A transient D1 error is retried once before the run counts as failed.
  */
 export async function runTask(env: Env, task: CronTask, trigger: "cron" | "manual"): Promise<CronRun | null> {
   const startedAt = Date.now();
@@ -113,7 +133,7 @@ export async function runTask(env: Env, task: CronTask, trigger: "cron" | "manua
   let result: TaskResult = { processed: 0 };
   let error: string | null = null;
   try {
-    result = await task.run(env);
+    result = await runWithRetry(env, task);
     if (result.skipped) status = "skipped";
   } catch (e) {
     status = "error";
@@ -197,11 +217,18 @@ export async function cronOverview(db: D1Database, now = Date.now()): Promise<Cr
       db.prepare("SELECT value FROM settings WHERE key = ?").bind(`cron_tick:${c}`).first<{ value: string }>(),
     ),
   );
+  const lastTicks: Record<string, number | null> = Object.fromEntries(
+    crons.map((c, i) => [c, ticks[i] ? Number(ticks[i]!.value) : null]),
+  );
   return {
     tasks: TASKS.map((t) => {
       const recent = runs.filter((r) => r.task === t.id);
-      return { id: t.id, cron: t.cron, nextAt: nextRun(t.cron, now), lastRun: recent[0] ?? null, recent };
+      const lastRun = recent[0] ?? null;
+      // A tick after the last logged run ended means the task ran again quietly.
+      const tick = lastTicks[t.cron];
+      const quietAt = t.cron === EVERY_MINUTE && tick && (!lastRun || tick > lastRun.finishedAt) ? tick : null;
+      return { id: t.id, cron: t.cron, nextAt: nextRun(t.cron, now), lastRun, recent, quietAt };
     }),
-    lastTicks: Object.fromEntries(crons.map((c, i) => [c, ticks[i] ? Number(ticks[i]!.value) : null])),
+    lastTicks,
   };
 }
