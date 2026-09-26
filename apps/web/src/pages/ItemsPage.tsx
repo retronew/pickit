@@ -55,8 +55,7 @@ export function ItemsPage() {
     { query: search.query, category: filters.category, tags: filters.selectedTags, sort: filters.sortKey },
     (s) => {
       search.setQuery(s.query);
-      filters.setCategory(s.category);
-      filters.setTagFilter(s.tags);
+      filters.setFilters({ category: s.category, tags: s.tags });
       filters.setSortKey(s.sort);
     },
   );

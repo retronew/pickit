@@ -37,34 +37,29 @@ export function useItemFilters(items: Item[], hits: Item[] | null) {
   // The category lives in the URL too, so other pages can link to a filtered list.
   const category = searchParams.get("category") ?? "";
 
-  function setCategory(next: string) {
+  // One URL update for both filters: two setSearchParams calls in a row would
+  // each start from the same render's params, and the second would undo the first.
+  function setFilters(next: { category?: string; tags?: string[] }) {
     setSearchParams(
       (current) => {
         const params = new URLSearchParams(current);
-        if (next) params.set("category", next);
-        else params.delete("category");
+        if (next.category !== undefined) {
+          if (next.category) params.set("category", next.category);
+          else params.delete("category");
+        }
+        if (next.tags !== undefined) {
+          params.delete("tag");
+          for (const tag of uniq(next.tags)) params.append("tag", tag);
+        }
         return params;
       },
       { replace: true },
     );
   }
 
-  function setTagFilter(next: string[]) {
-    setSearchParams(
-      (current) => {
-        const params = new URLSearchParams(current);
-        params.delete("tag");
-        for (const tag of next) params.append("tag", tag);
-        return params;
-      },
-      { replace: true },
-    );
-  }
-
-  function clearFilters() {
-    setCategory("");
-    setTagFilter([]);
-  }
+  const setCategory = (next: string) => setFilters({ category: next });
+  const setTagFilter = (next: string[]) => setFilters({ tags: next });
+  const clearFilters = () => setFilters({ category: "", tags: [] });
 
   const categories = useMemo(
     () => sortText(uniq(items.map((i) => i.category).filter(Boolean))),
@@ -90,6 +85,7 @@ export function useItemFilters(items: Item[], hits: Item[] | null) {
     setCategory,
     selectedTags,
     setTagFilter,
+    setFilters,
     clearFilters,
     sortKey,
     setSortKey,
