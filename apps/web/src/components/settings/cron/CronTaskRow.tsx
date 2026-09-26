@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ChevronDownIcon, PlayIcon } from "lucide-react";
 import type { CronTaskView } from "@pickit/shared";
 import { Button } from "#components/ui/button";
@@ -21,10 +22,12 @@ interface Props {
   task: CronTaskView;
   running: boolean;
   onRun: () => void;
+  /** More actions for this task, before "run now". */
+  actions?: ReactNode;
 }
 
 /** One scheduled task: what it does, how the last run went, the next run and its recent runs. */
-export function CronTaskRow({ task, running, onRun }: Props) {
+export function CronTaskRow({ task, running, onRun, actions }: Props) {
   const label = CRON_TASK_LABELS[task.id];
   const last = task.lastRun;
 
@@ -57,7 +60,7 @@ export function CronTaskRow({ task, running, onRun }: Props) {
           </p>
           {last?.error && <p className="break-words text-destructive-foreground text-xs">{last.error}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 flex-wrap items-center gap-1">
           {task.recent.length > 0 && (
             <CollapsibleTrigger
               render={<Button variant="ghost" size="sm" className="text-muted-foreground [&[data-panel-open]>svg]:rotate-180" />}
@@ -66,6 +69,7 @@ export function CronTaskRow({ task, running, onRun }: Props) {
               <ChevronDownIcon className="transition-transform" />
             </CollapsibleTrigger>
           )}
+          {actions}
           <Button variant="outline" size="sm" onClick={onRun} loading={running}>
             <PlayIcon />
             {m.cron_run_now()}

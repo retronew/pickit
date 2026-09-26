@@ -1,6 +1,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "#components/ui/card";
 import { ListSkeleton } from "#components/settings/skeletons";
 import { CronTaskRow } from "#components/settings/cron/CronTaskRow";
+import { RecaptureAllButton } from "#components/settings/cron/RecaptureAllButton";
 import { useCron } from "#hooks/useCron";
 import { scheduleLabel } from "#lib/cron";
 import { formatDateTime, formatRelative } from "#lib/format";
@@ -64,7 +65,13 @@ export function CronTasksCard({ description }: { description: string }) {
               </CardHeader>
               <CardContent className="-mx-2 space-y-1">
                 {tasks.map((task) => (
-                  <CronTaskRow key={task.id} task={task} running={running === task.id} onRun={() => runNow(task.id)} />
+                  <CronTaskRow
+                    key={task.id}
+                    task={task}
+                    running={running === task.id}
+                    onRun={() => runNow(task.id)}
+                    actions={task.id === "content" && <RecaptureAllButton onDone={reload} />}
+                  />
                 ))}
               </CardContent>
             </Card>

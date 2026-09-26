@@ -6,7 +6,7 @@ import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { getSettings } from "#settings";
 import { emitEvent } from "#webhooks";
 import { toItemJson, findDuplicate, embedItem } from "./helpers";
-import { deleteContent } from "#item-content";
+import { deleteContent, recaptureForNewUrl } from "#item-content";
 
 export const itemByIdRoutes = new Hono<{ Bindings: Env }>();
 
@@ -64,6 +64,9 @@ itemByIdRoutes.put("/:id", async (c) => {
     c.executionCtx.waitUntil(
       embedItem(c.env, id, merged, settings).catch(() => {}),
     );
+  }
+  if (merged.url && merged.url !== existing.url) {
+    c.executionCtx.waitUntil(recaptureForNewUrl(c.env, id, merged.url).catch(() => {}));
   }
   emitEvent(c.env, (p) => c.executionCtx.waitUntil(p), "item.updated", { id, ...merged });
   return c.json({ ok: true });

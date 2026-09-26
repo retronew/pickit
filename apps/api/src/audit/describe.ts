@@ -203,6 +203,8 @@ export function describe(
       return { action: "settings.github_token", summary: msg("github_token_set") };
     case "DELETE /settings/github-token":
       return { action: "settings.github_token", summary: msg("github_token_remove") };
+    case "POST /items/content/recapture-all":
+      return { action: "settings.content_recapture", summary: msg("content_recapture", { count: Number(res.scheduled) || 0 }) };
     case "PUT /settings/browser-render":
       return { action: "settings.browser_render", summary: msg(body.enabled ? "browser_render_on" : "browser_render_off", { plan: String(body.plan ?? "free"), minutes: Number(body.limitMinutes) || 0 }) };
     case "DELETE /settings/api-token":

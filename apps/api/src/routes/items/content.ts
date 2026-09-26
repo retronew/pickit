@@ -1,9 +1,10 @@
 // Page text snapshot of one bookmark: its status (plus the text with ?text=1,
 // so opening the detail panel doesn't download it), or capture it again now.
+// /content/recapture-all schedules every bookmark for the backfill instead.
 
 import { Hono } from "hono";
 import type { Env } from "#types";
-import { captureContent, contentEnabled, readContent } from "#item-content";
+import { captureContent, contentEnabled, readContent, scheduleRecaptureAll } from "#item-content";
 
 export const contentRoutes = new Hono<{ Bindings: Env }>();
 
@@ -24,6 +25,11 @@ async function view(env: Env, id: number, row: Row, withText: boolean) {
     text: withText && row.content_status === "ok" ? await readContent(env, id) : null,
   };
 }
+
+contentRoutes.post("/content/recapture-all", async (c) => {
+  if (!contentEnabled(c.env)) return c.json({ error: "no storage" }, 400);
+  return c.json({ scheduled: await scheduleRecaptureAll(c.env) });
+});
 
 contentRoutes.get("/:id/content", async (c) => {
   const id = Number(c.req.param("id"));

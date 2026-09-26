@@ -74,4 +74,72 @@ describe("page text snapshots", () => {
     expect(r2.objects.get(`content/${id}.txt`)?.body).toBe("later");
     expect(await backfillContent(env)).toBe(0);
   });
+
+  it("retries a failed capture after 1, 3 and 7 days, then stops", async () => {
+    pages["https://down.dev/"] = { status: 500, html: "down" };
+    const id = await create("https://down.dev/");
+    const row = () => t.db.prepare("SELECT content_status, content_attempts, content_due_at FROM items WHERE id = ?").bind(id).first<{
+      content_status: string;
+      content_attempts: number;
+      content_due_at: number | null;
+    }>();
+    expect(await row()).toMatchObject({ content_status: "failed", content_attempts: 1 });
+
+    // Not due yet: the backfill leaves it alone.
+    expect(await backfillContent(t.env)).toBe(0);
+
+    const DAY = 86_400_000;
+    for (const [attempts, days] of [[2, 3], [3, 7]] as const) {
+      await t.db.prepare("UPDATE items SET content_due_at = ? WHERE id = ?").bind(Date.now() - 1, id).run();
+      expect(await backfillContent(t.env)).toBe(1);
+      const r = (await row())!;
+      expect(r.content_attempts).toBe(attempts);
+      expect(r.content_due_at! - Date.now()).toBeGreaterThan(days * DAY - 60_000);
+    }
+    await t.db.prepare("UPDATE items SET content_due_at = ? WHERE id = ?").bind(Date.now() - 1, id).run();
+    await backfillContent(t.env);
+    expect(await row()).toMatchObject({ content_attempts: 4, content_due_at: null });
+
+    // Once the page is back, a retry captures it and resets the count.
+    pages["https://down.dev/"] = { html: "<p>back</p>" };
+    await t.db.prepare("UPDATE items SET content_due_at = ? WHERE id = ?").bind(Date.now() - 1, id).run();
+    expect(await backfillContent(t.env)).toBe(1);
+    expect(await row()).toMatchObject({ content_status: "ok", content_attempts: 0, content_due_at: null });
+  });
+
+  it("recaptures all bookmarks through the backfill", async () => {
+    pages["https://a.dev/"] = { html: "<p>v1</p>" };
+    const id = await create("https://a.dev/");
+    pages["https://a.dev/"] = { html: "<p>v2</p>" };
+    expect(await t.json("/api/items/content/recapture-all", { json: {} })).toEqual({ scheduled: 1 });
+    expect(await backfillContent(t.env)).toBe(1);
+    expect(r2.objects.get(`content/${id}.txt`)?.body).toBe("v2");
+    expect(await backfillContent(t.env)).toBe(0);
+  });
+
+  it("captures the new page when a bookmark's URL changes", async () => {
+    pages["https://a.dev/"] = { html: "<p>old page</p>" };
+    pages["https://b.dev/"] = { html: "<p>new page</p>" };
+    const id = await create("https://a.dev/");
+    await t.json(`/api/items/${id}`, { method: "PUT", json: { url: "https://b.dev/" } });
+    expect(r2.objects.get(`content/${id}.txt`)?.body).toBe("new page");
+  });
+
+  it("upgrades old plain-text snapshots to Markdown once Browser Rendering is on", async () => {
+    pages["https://a.dev/"] = { html: "<p>plain</p>" };
+    const id = await create("https://a.dev/");
+    // Browser Rendering off: nothing to upgrade.
+    expect(await backfillContent(t.env)).toBe(0);
+
+    const quickAction = vi.fn(async () =>
+      Response.json({ success: true, result: "# Plain" }, { headers: { "X-Browser-Ms-Used": "1000" } }),
+    );
+    t.env.BROWSER = { quickAction } as unknown as BrowserRun;
+    await t.json("/api/settings/browser-render", { method: "PUT", json: { enabled: true, plan: "paid", limitMinutes: 540 } });
+    expect(await backfillContent(t.env)).toBe(1);
+    expect(r2.objects.get(`content/${id}.txt`)?.body).toBe("# Plain");
+    // Upgraded once, not again.
+    expect(await backfillContent(t.env)).toBe(0);
+    expect(quickAction).toHaveBeenCalledTimes(1);
+  });
 });

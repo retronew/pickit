@@ -55,6 +55,7 @@ export const AUDIT_ACTIONS = [
   "settings.saved_searches",
   "settings.github_token",
   "settings.browser_render",
+  "settings.content_recapture",
   "settings.cron_run",
   "settings.webhook_create",
   "settings.webhook_update",

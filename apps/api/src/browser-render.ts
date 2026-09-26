@@ -99,11 +99,17 @@ export type BrowserAccess =
  * Whether a render may start now. On the free plan it also claims the
  * 10-second slot, atomically, so two captures can't both take it.
  */
-export async function acquireBrowser(env: Pick<Env, "DB" | "BROWSER">, now = Date.now()): Promise<BrowserAccess> {
+export async function acquireBrowser(
+  env: Pick<Env, "DB" | "BROWSER">,
+  now = Date.now(),
+  /** The share of the limit this use may reach (lower for less important work). */
+  budgetShare = 1,
+): Promise<BrowserAccess> {
   const db = env.DB;
   const settings = await getBrowserRenderSettings(db);
   if (!settings.enabled || !env.BROWSER) return { ok: false, reason: "off" };
-  if ((await readUsageMs(db, settings.plan, now)) >= settings.limitMinutes * 60_000) return { ok: false, reason: "budget" };
+  const limitMs = settings.limitMinutes * 60_000 * budgetShare;
+  if ((await readUsageMs(db, settings.plan, now)) >= limitMs) return { ok: false, reason: "budget" };
   if (settings.plan === "free") {
     const claimed = await db
       .prepare(
