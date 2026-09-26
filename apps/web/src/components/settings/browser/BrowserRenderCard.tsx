@@ -15,7 +15,6 @@ import { RadioGroup, Radio } from "#components/ui/radio-group";
 import { Switch } from "#components/ui/switch";
 import { TextSkeleton } from "#components/settings/skeletons";
 import { BrowserUsage } from "#components/settings/browser/BrowserUsage";
-import { BrowserTokenForm } from "#components/settings/browser/BrowserTokenForm";
 import { useBrowserRender } from "#hooks/useBrowserRender";
 import { m } from "#lib/i18n";
 
@@ -24,19 +23,16 @@ const PLAN_LABELS: Record<BrowserRenderPlan, () => string> = {
   paid: m.browser_render_plan_paid,
 };
 
-/** Cloudflare Browser Rendering for page text: plan, usage limit, account and token. */
+/** Cloudflare Browser Rendering for page text: on/off, plan and usage limit. */
 export function BrowserRenderCard() {
-  const { info, saving, savingToken, save, saveToken, removeToken } = useBrowserRender();
+  const { info, saving, save } = useBrowserRender();
   const [draft, setDraft] = useState<BrowserRenderSettings | null>(null);
 
   useEffect(() => {
-    if (info) setDraft({ enabled: info.enabled, plan: info.plan, accountId: info.accountId, limitMinutes: info.limitMinutes });
+    if (info) setDraft({ enabled: info.enabled, plan: info.plan, limitMinutes: info.limitMinutes });
   }, [info]);
 
-  const dirty =
-    !!info &&
-    !!draft &&
-    (draft.plan !== info.plan || draft.accountId !== info.accountId || draft.limitMinutes !== info.limitMinutes);
+  const dirty = !!info && !!draft && (draft.plan !== info.plan || draft.limitMinutes !== info.limitMinutes);
   const maxLimit = draft?.plan === "free" ? BROWSER_PLAN_QUOTA.free.minutes : BROWSER_MAX_LIMIT_MINUTES;
 
   return (
@@ -54,14 +50,14 @@ export function BrowserRenderCard() {
               <span>{m.browser_render_enabled()}</span>
               <Switch
                 checked={info.enabled}
-                disabled={!info.accountId || !info.tokenMasked}
-                onCheckedChange={(enabled) =>
-                  save({ enabled, plan: info.plan, accountId: info.accountId, limitMinutes: info.limitMinutes })
-                }
+                disabled={!info.available}
+                onCheckedChange={(enabled) => save({ enabled, plan: info.plan, limitMinutes: info.limitMinutes })}
               />
             </label>
-            {(!info.accountId || !info.tokenMasked) && (
-              <p className="text-muted-foreground -mt-3 text-xs">{m.browser_render_needs_setup()}</p>
+            {!info.available && (
+              <p className="text-muted-foreground -mt-3 text-xs">
+                {m.browser_render_unavailable()} <code>"browser": {'{ "binding": "BROWSER" }'}</code>
+              </p>
             )}
             {info.enabled && <BrowserUsage info={info} />}
 
@@ -93,43 +89,24 @@ export function BrowserRenderCard() {
                   {draft.plan === "free" ? m.browser_render_plan_free_hint() : m.browser_render_plan_paid_hint()}
                 </p>
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="browser-account">Account ID</FieldLabel>
-                  <Input
-                    id="browser-account"
-                    autoComplete="off"
-                    value={draft.accountId}
-                    onChange={(e) => setDraft({ ...draft, accountId: e.target.value.trim() })}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="browser-limit">
-                    {draft.plan === "free" ? m.browser_render_limit_day() : m.browser_render_limit_month()}
-                  </FieldLabel>
-                  <Input
-                    id="browser-limit"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={maxLimit}
-                    value={draft.limitMinutes}
-                    onChange={(e) => setDraft({ ...draft, limitMinutes: Number(e.target.value) })}
-                  />
-                </Field>
-              </div>
+              <Field className="sm:max-w-60">
+                <FieldLabel htmlFor="browser-limit">
+                  {draft.plan === "free" ? m.browser_render_limit_day() : m.browser_render_limit_month()}
+                </FieldLabel>
+                <Input
+                  id="browser-limit"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={maxLimit}
+                  value={draft.limitMinutes}
+                  onChange={(e) => setDraft({ ...draft, limitMinutes: Number(e.target.value) })}
+                />
+              </Field>
               <Button type="submit" size="sm" disabled={!dirty} loading={saving}>
                 {m.common_save()}
               </Button>
             </form>
-
-            <BrowserTokenForm
-              masked={info.tokenMasked}
-              canSave={!!info.accountId}
-              saving={savingToken}
-              onSave={saveToken}
-              onRemove={removeToken}
-            />
           </div>
         )}
       </CardContent>

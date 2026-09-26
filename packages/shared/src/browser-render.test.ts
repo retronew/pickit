@@ -10,11 +10,10 @@ describe("browser render settings", () => {
   });
 
   it("falls back to defaults for bad input", () => {
-    expect(sanitizeBrowserRenderSettings(null)).toEqual({ enabled: false, plan: "free", accountId: "", limitMinutes: 8 });
-    expect(sanitizeBrowserRenderSettings({ enabled: true, plan: "paid", accountId: " abc ", limitMinutes: "x" })).toEqual({
+    expect(sanitizeBrowserRenderSettings(null)).toEqual({ enabled: false, plan: "free", limitMinutes: 8 });
+    expect(sanitizeBrowserRenderSettings({ enabled: true, plan: "paid", accountId: "old", limitMinutes: "x" })).toEqual({
       enabled: true,
       plan: "paid",
-      accountId: "abc",
       limitMinutes: 540,
     });
   });

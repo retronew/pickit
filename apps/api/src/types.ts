@@ -2,6 +2,8 @@ export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   BACKUPS?: R2Bucket;
+  /** Optional: Cloudflare Browser Rendering, for page text as Markdown. */
+  BROWSER?: BrowserRun;
   /** Better Auth: secret for signing sessions (`wrangler secret put`). */
   BETTER_AUTH_SECRET: string;
   /** Public origin, e.g. https://pickit.example.com (OAuth callbacks live under it). */

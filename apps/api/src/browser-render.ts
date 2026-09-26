@@ -1,5 +1,6 @@
-// Cloudflare Browser Rendering (/markdown) for page text snapshots. Browser
-// time is metered, so PickIt keeps its own tally per UTC day (free plan) or
+// Cloudflare Browser Rendering (the markdown quick action, through the
+// BROWSER binding, so no account ID or API token) for page text snapshots.
+// Browser time is metered, so PickIt keeps its own tally per UTC day (free plan) or
 // month (paid plan) and stops calling once the configured limit is reached;
 // the free plan's one request per 10 seconds is respected too.
 
@@ -10,18 +11,14 @@ import {
   type BrowserRenderPlan,
   type BrowserRenderSettings,
 } from "@pickit/shared";
+import type { Env } from "#types";
 import { MAX_TEXT } from "#page-text";
 
 const SETTINGS_KEY = "browser_render";
-const TOKEN_KEY = "browser_render_token";
 const USAGE_PREFIX = "browser_usage:";
 const LAST_CALL_KEY = "browser_render_last";
 /** Workers Free allows one Browser Rendering REST request every 10 seconds. */
 const FREE_MIN_INTERVAL_MS = 10_000;
-/** The browser gives up after 60 s; wait a little longer for the response. */
-const REQUEST_TIMEOUT_MS = 70_000;
-
-const API = "https://api.cloudflare.com/client/v4";
 
 async function getValue(db: D1Database, key: string): Promise<string | null> {
   const row = await db.prepare("SELECT value FROM settings WHERE key = ?").bind(key).first<{ value: string }>();
@@ -46,13 +43,8 @@ export async function getBrowserRenderSettings(db: D1Database): Promise<BrowserR
 
 export async function saveBrowserRenderSettings(db: D1Database, settings: BrowserRenderSettings) {
   await setValue(db, SETTINGS_KEY, JSON.stringify(sanitizeBrowserRenderSettings(settings)));
-}
-
-export const getBrowserRenderToken = (db: D1Database) => getValue(db, TOKEN_KEY).then((v) => v || null);
-
-export async function setBrowserRenderToken(db: D1Database, token: string | null) {
-  if (token) await setValue(db, TOKEN_KEY, token);
-  else await db.prepare("DELETE FROM settings WHERE key = ?").bind(TOKEN_KEY).run();
+  // The API token of the first version (before the BROWSER binding) is no longer used.
+  await db.prepare("DELETE FROM settings WHERE key = 'browser_render_token'").run();
 }
 
 /** The usage bucket `now` falls in: a UTC day on the free plan, a UTC month on paid. */
@@ -87,12 +79,12 @@ async function addUsageMs(db: D1Database, plan: BrowserRenderPlan, ms: number, n
   ]);
 }
 
-export async function getBrowserRenderInfo(db: D1Database, now = Date.now()): Promise<BrowserRenderInfo> {
+export async function getBrowserRenderInfo(env: Pick<Env, "DB" | "BROWSER">, now = Date.now()): Promise<BrowserRenderInfo> {
+  const db = env.DB;
   const settings = await getBrowserRenderSettings(db);
-  const token = await getBrowserRenderToken(db);
   return {
     ...settings,
-    tokenMasked: token ? `${token.slice(0, 4)}****${token.slice(-4)}` : null,
+    available: !!env.BROWSER,
     usedMs: await readUsageMs(db, settings.plan, now),
     period: BROWSER_PLAN_QUOTA[settings.plan].period,
     resetsAt: usagePeriod(settings.plan, now).resetsAt,
@@ -100,17 +92,17 @@ export async function getBrowserRenderInfo(db: D1Database, now = Date.now()): Pr
 }
 
 export type BrowserAccess =
-  | { ok: true; plan: BrowserRenderPlan; accountId: string; token: string }
+  | { ok: true; plan: BrowserRenderPlan; browser: BrowserRun }
   | { ok: false; reason: "off" | "budget" | "throttled" };
 
 /**
  * Whether a render may start now. On the free plan it also claims the
  * 10-second slot, atomically, so two captures can't both take it.
  */
-export async function acquireBrowser(db: D1Database, now = Date.now()): Promise<BrowserAccess> {
+export async function acquireBrowser(env: Pick<Env, "DB" | "BROWSER">, now = Date.now()): Promise<BrowserAccess> {
+  const db = env.DB;
   const settings = await getBrowserRenderSettings(db);
-  const token = await getBrowserRenderToken(db);
-  if (!settings.enabled || !settings.accountId || !token) return { ok: false, reason: "off" };
+  if (!settings.enabled || !env.BROWSER) return { ok: false, reason: "off" };
   if ((await readUsageMs(db, settings.plan, now)) >= settings.limitMinutes * 60_000) return { ok: false, reason: "budget" };
   if (settings.plan === "free") {
     const claimed = await db
@@ -122,7 +114,7 @@ export async function acquireBrowser(db: D1Database, now = Date.now()): Promise<
       .run();
     if (!claimed.meta.changes) return { ok: false, reason: "throttled" };
   }
-  return { ok: true, plan: settings.plan, accountId: settings.accountId, token };
+  return { ok: true, plan: settings.plan, browser: env.BROWSER };
 }
 
 /** Markdown fit for storing: no front matter, links absolute, length capped. */
@@ -147,8 +139,8 @@ export type RenderResult = { ok: true; markdown: string } | { ok: false; error: 
 
 /**
  * Renders a page (by URL, or HTML we already have) to Markdown and records
- * the browser time it took. The time comes from X-Browser-Ms-Used when
- * Cloudflare sends it, else the request's wall time, which overcounts.
+ * the browser time it took: X-Browser-Ms-Used, else the call's wall time
+ * (which overcounts).
  */
 export async function renderMarkdown(
   db: D1Database,
@@ -158,16 +150,12 @@ export async function renderMarkdown(
   const started = Date.now();
   let res: Response | null = null;
   try {
-    res = await fetch(`${API}/accounts/${access.accountId}/browser-rendering/markdown`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${access.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(
-        "url" in input
-          ? { url: input.url, rejectResourceTypes: ["image", "media", "font"] }
-          : { html: input.html, rejectResourceTypes: ["image", "media", "font"] },
-      ),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    res = await access.browser.quickAction(
+      "markdown",
+      "url" in input
+        ? { url: input.url, rejectResourceTypes: ["image", "media", "font"] }
+        : { html: input.html, rejectResourceTypes: ["image", "media", "font"] },
+    );
     const data = await res.json<{ success?: boolean; result?: unknown; errors?: { message?: string }[] }>().catch(() => null);
     if (res.status === 429 && /time limit/i.test(JSON.stringify(data ?? ""))) {
       // Cloudflare says the quota is used up: stop until the period resets.
@@ -192,15 +180,4 @@ export async function renderMarkdown(
       await addUsageMs(db, access.plan, Date.now() - started).catch(() => {});
     }
   }
-}
-
-/** Checks an API token with Cloudflare (free: no browser time). Account tokens and user tokens verify differently. */
-export async function verifyBrowserToken(accountId: string, token: string): Promise<boolean> {
-  const headers = { Authorization: `Bearer ${token}` };
-  for (const url of [`${API}/accounts/${accountId}/tokens/verify`, `${API}/user/tokens/verify`]) {
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(10_000) }).catch(() => null);
-    const data = await res?.json<{ success?: boolean; result?: { status?: string } }>().catch(() => null);
-    if (data?.success && data.result?.status === "active") return true;
-  }
-  return false;
 }

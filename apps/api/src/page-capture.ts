@@ -20,7 +20,7 @@ export type Capture = FetchedText | { ok: "deferred" };
  */
 export async function capturePage(env: Env, url: string, { background = false } = {}): Promise<Capture> {
   const plain = await fetchPageText(url);
-  const access = await acquireBrowser(env.DB).catch(() => ({ ok: false, reason: "off" }) as const);
+  const access = await acquireBrowser(env).catch(() => ({ ok: false, reason: "off" }) as const);
   if (!access.ok) return access.reason === "throttled" && background ? { ok: "deferred" } : plain;
 
   const input: RenderInput =

@@ -5,11 +5,10 @@ import { m } from "#lib/i18n";
 
 const URL = "/api/settings/browser-render";
 
-/** Browser Rendering on the settings page: settings, usage this period, and the API token. */
+/** Browser Rendering on the settings page: settings and usage this period. */
 export function useBrowserRender() {
   const [info, setInfo] = useState<BrowserRenderInfo | null>(null);
   const [saving, setSaving] = useState(false);
-  const [savingToken, setSavingToken] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -38,28 +37,5 @@ export function useBrowserRender() {
     }
   }
 
-  /** Verifies the token with Cloudflare and saves it; resolves to true when saved. */
-  async function saveToken(token: string): Promise<boolean> {
-    setSavingToken(true);
-    try {
-      setInfo(await api<BrowserRenderInfo>(`${URL}/token`, { method: "PUT", json: { token } }));
-      toastSuccess(m.browser_render_token_saved(), { id: "browser-render" });
-      return true;
-    } catch (err) {
-      toastError(m.save_failed(), err, { id: "browser-render" });
-      return false;
-    } finally {
-      setSavingToken(false);
-    }
-  }
-
-  async function removeToken() {
-    try {
-      setInfo(await api<BrowserRenderInfo>(`${URL}/token`, { method: "DELETE" }));
-    } catch (err) {
-      toastError(m.save_failed(), err, { id: "browser-render" });
-    }
-  }
-
-  return { info, saving, savingToken, refresh, save, saveToken, removeToken };
+  return { info, saving, refresh, save };
 }

@@ -1,11 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, type TestApp } from "./test/app";
 import {
   acquireBrowser,
   readUsageMs,
   renderMarkdown,
   saveBrowserRenderSettings,
-  setBrowserRenderToken,
   tidyMarkdown,
   usagePeriod,
 } from "#browser-render";
@@ -17,13 +16,16 @@ beforeEach(async () => {
   t = await createTestApp();
 });
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+/** A BROWSER binding whose markdown quick action answers with `response`. */
+function bindBrowser(response: () => Response) {
+  const quickAction = vi.fn(async () => response());
+  t.env.BROWSER = { quickAction } as unknown as BrowserRun;
+  return quickAction;
+}
 
 async function enable(plan: "free" | "paid", limitMinutes: number) {
-  await saveBrowserRenderSettings(t.env.DB, { enabled: true, plan, accountId: "acc", limitMinutes });
-  await setBrowserRenderToken(t.env.DB, "cf-token-1234");
+  await saveBrowserRenderSettings(t.env.DB, { enabled: true, plan, limitMinutes });
+  if (!t.env.BROWSER) bindBrowser(() => Response.json({ success: true, result: "" }));
 }
 
 describe("usagePeriod", () => {
@@ -43,48 +45,49 @@ describe("tidyMarkdown", () => {
 });
 
 describe("acquireBrowser", () => {
-  it("is off until enabled with an account and a token", async () => {
-    expect(await acquireBrowser(t.env.DB, NOON)).toEqual({ ok: false, reason: "off" });
-    await saveBrowserRenderSettings(t.env.DB, { enabled: true, plan: "free", accountId: "acc", limitMinutes: 8 });
-    expect(await acquireBrowser(t.env.DB, NOON)).toEqual({ ok: false, reason: "off" });
+  it("is off until enabled, and without the BROWSER binding", async () => {
+    bindBrowser(() => Response.json({ success: true, result: "" }));
+    expect(await acquireBrowser(t.env, NOON)).toEqual({ ok: false, reason: "off" });
+    await saveBrowserRenderSettings(t.env.DB, { enabled: true, plan: "free", limitMinutes: 8 });
+    t.env.BROWSER = undefined;
+    expect(await acquireBrowser(t.env, NOON)).toEqual({ ok: false, reason: "off" });
   });
 
   it("allows one render per 10 seconds on the free plan", async () => {
     await enable("free", 8);
-    expect((await acquireBrowser(t.env.DB, NOON)).ok).toBe(true);
-    expect(await acquireBrowser(t.env.DB, NOON + 5_000)).toEqual({ ok: false, reason: "throttled" });
-    expect((await acquireBrowser(t.env.DB, NOON + 10_000)).ok).toBe(true);
+    expect((await acquireBrowser(t.env, NOON)).ok).toBe(true);
+    expect(await acquireBrowser(t.env, NOON + 5_000)).toEqual({ ok: false, reason: "throttled" });
+    expect((await acquireBrowser(t.env, NOON + 10_000)).ok).toBe(true);
   });
 
   it("doesn't throttle the paid plan", async () => {
     await enable("paid", 540);
-    expect((await acquireBrowser(t.env.DB, NOON)).ok).toBe(true);
-    expect((await acquireBrowser(t.env.DB, NOON)).ok).toBe(true);
+    expect((await acquireBrowser(t.env, NOON)).ok).toBe(true);
+    expect((await acquireBrowser(t.env, NOON)).ok).toBe(true);
   });
 });
 
 describe("renderMarkdown", () => {
   it("records the reported browser time and stops at the limit", async () => {
     await enable("paid", 1);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => Response.json({ success: true, result: "# Hi" }, { headers: { "X-Browser-Ms-Used": "45000" } })),
+    const quickAction = bindBrowser(() =>
+      Response.json({ success: true, result: "# Hi" }, { headers: { "X-Browser-Ms-Used": "45000" } }),
     );
-    const access = await acquireBrowser(t.env.DB);
+    const access = await acquireBrowser(t.env);
     if (!access.ok) throw new Error("expected access");
     expect(await renderMarkdown(t.env.DB, access, { url: "https://site.com" })).toEqual({ ok: true, markdown: "# Hi" });
+    expect(quickAction).toHaveBeenCalledWith("markdown", expect.objectContaining({ url: "https://site.com" }));
     expect(await readUsageMs(t.env.DB, "paid")).toBe(45_000);
     await renderMarkdown(t.env.DB, access, { url: "https://site.com" });
-    expect(await acquireBrowser(t.env.DB)).toEqual({ ok: false, reason: "budget" });
+    expect(await acquireBrowser(t.env)).toEqual({ ok: false, reason: "budget" });
   });
 
   it("treats Cloudflare's time-limit error as the limit being used up", async () => {
     await enable("free", 8);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => Response.json({ success: false, errors: [{ message: "Browser time limit exceeded for today" }] }, { status: 429 })),
+    bindBrowser(() =>
+      Response.json({ success: false, errors: [{ message: "Browser time limit exceeded for today" }] }, { status: 429 }),
     );
-    const access = await acquireBrowser(t.env.DB);
+    const access = await acquireBrowser(t.env);
     if (!access.ok) throw new Error("expected access");
     expect((await renderMarkdown(t.env.DB, access, { url: "https://site.com" })).ok).toBe(false);
     expect(await readUsageMs(t.env.DB, "free")).toBe(8 * 60_000);

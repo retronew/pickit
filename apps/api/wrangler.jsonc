@@ -1,6 +1,6 @@
 {
 	"name": "pickit",
-	"compatibility_date": "2025-03-01",
+	"compatibility_date": "2026-03-24",
 	// Better Auth imports node:crypto / node:async_hooks.
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "src/index.ts",
@@ -42,6 +42,13 @@
 			"bucket_name": "pickit-backups"
 		}
 	],
+	// Optional: Cloudflare Browser Rendering, so page text snapshots can be
+	// saved as Markdown (turned on and limited under Settings → Data). The
+	// markdown quick action needs compatibility_date 2026-03-24 or later.
+	// Remove this block to leave it off.
+	"browser": {
+		"binding": "BROWSER"
+	},
 	// Daily at 18:00 UTC (02:00 China time): full JSON backup to R2, plus a
 	// batch of dead-link checks. See src/cron.ts.
 	// Every minute: advance running batch jobs (re-embed / organize) when no

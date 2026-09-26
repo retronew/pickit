@@ -1,6 +1,7 @@
-// Cloudflare Browser Rendering for page text snapshots: renders the page in a
-// real browser (so JavaScript-built pages work) and returns Markdown. Its
-// browser time is metered, so PickIt caps its own use below the plan's quota.
+// Cloudflare Browser Rendering for page text snapshots, through the Worker's
+// BROWSER binding: renders the page in a real browser (so JavaScript-built
+// pages work) and returns Markdown. Its browser time is metered, so PickIt
+// caps its own use below the plan's quota.
 
 /** "free": Workers Free (10 min a day); "paid": Workers Paid (10 h a month included). */
 export type BrowserRenderPlan = "free" | "paid";
@@ -8,7 +9,6 @@ export type BrowserRenderPlan = "free" | "paid";
 export interface BrowserRenderSettings {
   enabled: boolean;
   plan: BrowserRenderPlan;
-  accountId: string;
   /** Browser minutes PickIt may use per day (free) or per month (paid). */
   limitMinutes: number;
 }
@@ -26,7 +26,7 @@ export const BROWSER_DEFAULT_LIMIT: Record<BrowserRenderPlan, number> = { free: 
 export const BROWSER_MAX_LIMIT_MINUTES = 6000;
 
 export function defaultBrowserRenderSettings(): BrowserRenderSettings {
-  return { enabled: false, plan: "free", accountId: "", limitMinutes: BROWSER_DEFAULT_LIMIT.free };
+  return { enabled: false, plan: "free", limitMinutes: BROWSER_DEFAULT_LIMIT.free };
 }
 
 /** A limit within what the plan allows: the free quota can't be exceeded at all. */
@@ -44,15 +44,14 @@ export function sanitizeBrowserRenderSettings(raw: unknown): BrowserRenderSettin
   return {
     enabled: r.enabled === true,
     plan,
-    accountId: typeof r.accountId === "string" ? r.accountId.trim().slice(0, 64) : "",
     limitMinutes: clampBrowserLimit(plan, typeof r.limitMinutes === "number" ? r.limitMinutes : BROWSER_DEFAULT_LIMIT[plan]),
   };
 }
 
-/** Settings plus what the settings page shows about the token and usage. */
+/** Settings plus what the settings page shows: whether the binding exists, and usage. */
 export interface BrowserRenderInfo extends BrowserRenderSettings {
-  /** Masked API token, null when none is saved. */
-  tokenMasked: string | null;
+  /** False when the Worker has no BROWSER binding (wrangler.jsonc). */
+  available: boolean;
   /** Browser time used in the current period (UTC day or month). */
   usedMs: number;
   period: "day" | "month";
