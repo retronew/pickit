@@ -326,7 +326,9 @@
 }
 
 button:not(:disabled),
-[role="button"]:not(:disabled) {
+[role="button"]:not(:disabled),
+/* Base UI renders these as spans, which the rule above misses. */
+:is([role="switch"], [role="checkbox"], [role="radio"]):not([data-disabled]) {
   cursor: pointer;
 }
 
