@@ -15,6 +15,7 @@ import { WebhooksCard } from "#components/settings/webhooks/WebhooksCard";
 import { ReembedCard } from "#components/settings/ReembedCard";
 import { BuildInfo } from "#components/settings/BuildInfo";
 import { BackupsCard } from "#components/settings/backups/BackupsCard";
+import { BrowserRenderCard } from "#components/settings/browser/BrowserRenderCard";
 import { Confirm } from "#components/Confirm";
 import { ScrollFade } from "#components/ScrollFade";
 import { Tabs, TabsList, TabsTab, TabsPanel } from "#components/ui/tabs";
@@ -80,6 +81,7 @@ const TABS: SettingsTab[] = [
       <div className="space-y-6">
         <CardColumns left={<DataImportExportCard />} right={<BookmarkletCard />} />
         <BackupsCard />
+        <BrowserRenderCard />
       </div>
     ),
   },

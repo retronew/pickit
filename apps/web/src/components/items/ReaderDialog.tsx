@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createCallable } from "react-call";
+import { Streamdown } from "streamdown";
 import {
   Dialog,
   DialogPopup,
@@ -18,7 +19,7 @@ interface Props {
   loadText: () => Promise<string | null>;
 }
 
-/** Reading view of a bookmark's saved page text. */
+/** Reading view of a bookmark's saved page text: Markdown, or plain text from older snapshots (which reads as Markdown too). */
 export const ReaderDialog = createCallable<Props, void>(({ title, captured, loadText, call }) => {
   const [entered, setEntered] = useState(false);
   const [text, setText] = useState<string | null | undefined>(undefined);
@@ -44,7 +45,9 @@ export const ReaderDialog = createCallable<Props, void>(({ title, captured, load
               ))}
             </div>
           ) : text ? (
-            <article className="space-y-4 whitespace-pre-wrap break-words text-[15px] leading-7">{text}</article>
+            <article className="break-words text-[15px] leading-7 [&_img]:rounded-md">
+              <Streamdown mode="static">{text}</Streamdown>
+            </article>
           ) : (
             <p className="text-muted-foreground text-sm">{m.content_load_failed()}</p>
           )}

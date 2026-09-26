@@ -32,13 +32,21 @@ function inner(html: string, tag: string): string | null {
   return end > start ? html.slice(start, end) : html.slice(start);
 }
 
-/** Plain text of the page's main content; "" when there's nothing readable. */
-export function extractText(rawHtml: string): string {
+/** HTML of the page's main content (article, else main, else body), page chrome dropped. */
+export function mainHtml(rawHtml: string): string {
   let html = rawHtml.slice(0, MAX_HTML).replace(/<!--[\s\S]*?-->/g, "");
   for (const tag of DROP) html = html.replace(new RegExp(`<${tag}\\b[\\s\\S]*?</${tag}\\s*>`, "gi"), " ");
   // The article when the page marks one, else main, else the whole body.
-  const content = inner(html, "article") ?? inner(html, "main") ?? inner(html, "body") ?? html;
-  const text = decodeEntities(content.replace(BLOCK, "\n").replace(/<[^>]+>/g, ""))
+  return inner(html, "article") ?? inner(html, "main") ?? inner(html, "body") ?? html;
+}
+
+/** Plain text of the page's main content; "" when there's nothing readable. */
+export function extractText(rawHtml: string): string {
+  return htmlToText(mainHtml(rawHtml));
+}
+
+function htmlToText(content: string): string {
+  const text =decodeEntities(content.replace(BLOCK, "\n").replace(/<[^>]+>/g, ""))
     .split("\n")
     .map((line) => line.replace(/[ \t\f\v ]+/g, " ").trim())
     .filter(Boolean)
@@ -46,7 +54,8 @@ export function extractText(rawHtml: string): string {
   return text.length > MAX_TEXT ? text.slice(0, MAX_TEXT) : text;
 }
 
-export type FetchedText = { ok: true; text: string } | { ok: false; error: string };
+/** `html`: the main content's HTML, for pages that are HTML. */
+export type FetchedText = { ok: true; text: string; html?: string } | { ok: false; error: string };
 
 /** Downloads a page and extracts its text. Non-HTML responses count as no text. */
 export async function fetchPageText(url: string, timeoutMs = 10_000): Promise<FetchedText> {
@@ -60,7 +69,9 @@ export async function fetchPageText(url: string, timeoutMs = 10_000): Promise<Fe
     const type = res.headers.get("content-type") ?? "";
     if (type && !/html|xml|text\/plain/i.test(type)) return { ok: true, text: "" };
     const body = await res.text();
-    return { ok: true, text: /text\/plain/i.test(type) ? body.slice(0, MAX_TEXT).trim() : extractText(body) };
+    if (/text\/plain/i.test(type)) return { ok: true, text: body.slice(0, MAX_TEXT).trim() };
+    const html = mainHtml(body);
+    return { ok: true, text: htmlToText(html), html };
   } catch (e) {
     return { ok: false, error: String(e instanceof Error ? e.message : e).slice(0, 200) };
   }

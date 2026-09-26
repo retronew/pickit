@@ -22,8 +22,11 @@ import { ownerEmails, getExtraEmails, setExtraEmails, parseEmails, isValidEmail 
 import { isLocale } from "@pickit/shared/i18n";
 import { getLocalePrefs, setLocalePrefs, isAiLanguage, type LocalePrefs } from "#locale";
 import { localizedError, tr } from "#i18n";
+import { browserRenderRoutes } from "#routes/browser-render";
 
 export const settingsRoutes = new Hono<{ Bindings: Env }>();
+
+settingsRoutes.route("/browser-render", browserRenderRoutes);
 
 function maskKey(key: string): string {
   if (!key) return "";

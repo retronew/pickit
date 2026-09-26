@@ -1,10 +1,11 @@
-// Page text snapshots of bookmarks, stored in R2 as content/<id>.txt. A
+// Page text snapshots of bookmarks, stored in R2 as content/<id>.txt: plain
+// text, or Markdown when Browser Rendering made it (see page-capture.ts). A
 // snapshot is what the page said when it was captured: it is never synced
 // with the live page, only replaced by an explicit refetch. Without an R2
 // bucket the feature is off.
 
 import type { Env } from "#types";
-import { fetchPageText } from "#page-text";
+import { capturePage } from "#page-capture";
 
 const PREFIX = "content/";
 /** Small per run: rides the per-minute cron like the preview backfill. */
@@ -16,10 +17,19 @@ const key = (id: number) => `${PREFIX}${id}.txt`;
 
 export const contentEnabled = (env: Pick<Env, "BACKUPS">) => !!env.BACKUPS;
 
-/** Fetches the page, stores its text and records the outcome on the item. */
-export async function captureContent(env: Env, id: number, url: string): Promise<ContentStatus> {
+/**
+ * Fetches the page, stores its text and records the outcome on the item.
+ * In the background it may defer (returns "" and leaves the item untouched).
+ */
+export async function captureContent(
+  env: Env,
+  id: number,
+  url: string,
+  { background = false } = {},
+): Promise<ContentStatus> {
   if (!env.BACKUPS || !url) return "";
-  const result = await fetchPageText(url);
+  const result = await capturePage(env, url, { background });
+  if (result.ok === "deferred") return "";
   let status: ContentStatus;
   let size: number | null = null;
   if (!result.ok) {
@@ -32,7 +42,7 @@ export async function captureContent(env: Env, id: number, url: string): Promise
     status = "ok";
     const bytes = new TextEncoder().encode(result.text);
     size = bytes.byteLength;
-    await env.BACKUPS.put(key(id), bytes, { httpMetadata: { contentType: "text/plain; charset=utf-8" } });
+    await env.BACKUPS.put(key(id), bytes, { httpMetadata: { contentType: "text/markdown; charset=utf-8" } });
   }
   await env.DB.prepare(
     status === "failed"
@@ -53,7 +63,11 @@ export async function deleteContent(env: Env, ids: number[]) {
   if (env.BACKUPS && ids.length) await env.BACKUPS.delete(ids.map(key));
 }
 
-/** Captures text for a few bookmarks never tried before, newest first. */
+/**
+ * Captures text for a few bookmarks never tried before, newest first. One at
+ * a time, stopping when Browser Rendering asks to wait (free plan: one render
+ * per 10 seconds); the rest are picked up on the next run.
+ */
 export async function backfillContent(env: Env): Promise<number> {
   if (!env.BACKUPS) return 0;
   const { results } = await env.DB.prepare(
@@ -62,6 +76,11 @@ export async function backfillContent(env: Env): Promise<number> {
   )
     .bind(BACKFILL_BATCH)
     .all<{ id: number; url: string }>();
-  await Promise.all(results.map((r) => captureContent(env, r.id, r.url).catch(() => {})));
-  return results.length;
+  let done = 0;
+  for (const r of results) {
+    const status = await captureContent(env, r.id, r.url, { background: true }).catch(() => "failed" as const);
+    if (!status) break;
+    done++;
+  }
+  return done;
 }

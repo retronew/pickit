@@ -203,6 +203,12 @@ export function describe(
       return { action: "settings.github_token", summary: msg("github_token_set") };
     case "DELETE /settings/github-token":
       return { action: "settings.github_token", summary: msg("github_token_remove") };
+    case "PUT /settings/browser-render":
+      return { action: "settings.browser_render", summary: msg(body.enabled ? "browser_render_on" : "browser_render_off", { plan: String(body.plan ?? "free"), minutes: Number(body.limitMinutes) || 0 }) };
+    case "PUT /settings/browser-render/token":
+      return { action: "settings.browser_render", summary: msg("browser_render_token_set") };
+    case "DELETE /settings/browser-render/token":
+      return { action: "settings.browser_render", summary: msg("browser_render_token_remove") };
     case "DELETE /settings/api-token":
       return { action: "settings.token_delete", summary: msg("token_delete") };
     case "PUT /settings/allowed-emails":

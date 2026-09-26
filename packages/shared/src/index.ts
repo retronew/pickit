@@ -59,3 +59,4 @@ export * from "./saved-searches";
 export * from "./share-stats";
 export * from "./activity";
 export * from "./cron";
+export * from "./browser-render";
