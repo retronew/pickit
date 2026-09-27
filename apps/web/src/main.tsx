@@ -14,7 +14,9 @@ import { SharesPage } from "#pages/SharesPage";
 import { AuditPage } from "#pages/AuditPage";
 import { LoginPage } from "#pages/LoginPage";
 import { PublicSharePage } from "#pages/PublicSharePage";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { ToastProvider } from "#components/ui/toast";
+import { persistOptions, queryClient } from "#lib/query-client";
 import { applyDocumentLocale } from "#lib/i18n";
 import { registerServiceWorker } from "#lib/pwa";
 
@@ -23,6 +25,7 @@ registerServiceWorker();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
     <ToastProvider position="top-center">
     <BrowserRouter>
       <Routes>
@@ -42,5 +45,6 @@ createRoot(document.getElementById("root")!).render(
       </Routes>
     </BrowserRouter>
     </ToastProvider>
+    </PersistQueryClientProvider>
   </StrictMode>,
 );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Item } from "@pickit/shared";
 import {
   CommandDialog,
@@ -14,10 +15,10 @@ import {
 } from "#components/ui/command";
 import { Favicon } from "#components/Favicon";
 import { m } from "#lib/i18n";
+import { itemsQuery } from "#lib/items-query";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<Item[] | null>(null);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -30,13 +31,8 @@ export function CommandPalette() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  useEffect(() => {
-    if (open && items === null) {
-      fetch("/api/items")
-        .then((r) => r.json())
-        .then(setItems);
-    }
-  }, [open, items]);
+  // Shares the item list (and its on-disk copy) with the items page.
+  const items = useQuery({ ...itemsQuery, enabled: open }).data ?? null;
 
   function openItem(item: Item) {
     window.open(item.url, "_blank", "noreferrer");

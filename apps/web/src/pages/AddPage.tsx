@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { sortText } from "#lib/collate";
 import { useNavigate, useSearchParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { uniq } from "es-toolkit";
-import type { Item } from "@pickit/shared";
 import { ItemFormDialog, type ItemFormPayload } from "#components/items/ItemFormDialog";
 import { saveItem } from "#lib/items";
+import { itemsQuery } from "#lib/items-query";
 import { Confirm } from "#components/Confirm";
 import { Spinner } from "#components/ui/spinner";
 import { m } from "#lib/i18n";
@@ -12,6 +13,7 @@ import { m } from "#lib/i18n";
 export function AddPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const ran = useRef(false);
   const [status, setStatus] = useState<string>(m.add_recognizing());
 
@@ -27,7 +29,8 @@ export function AddPage() {
     const url = rawUrl || (text.match(/https?:\/\/\S+/)?.[0] ?? "");
 
     (async () => {
-      const items: Item[] = await fetch("/api/items").then((r) => r.json());
+      // Only needs categories and tags, so a cached list is good enough.
+      const items = await queryClient.ensureQueryData(itemsQuery);
       const categories = sortText(uniq(items.map((i) => i.category).filter(Boolean)));
       const allTags = sortText(uniq(items.flatMap((i) => i.tags)));
 

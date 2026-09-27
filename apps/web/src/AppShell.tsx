@@ -13,6 +13,7 @@ import { ThemeToggle } from "#components/ThemeToggle";
 import { syncLocaleWithServer } from "#lib/i18n";
 import { cn } from "#lib/utils";
 import { authClient } from "#lib/auth-client";
+import { clearQueryCache } from "#lib/query-client";
 import { m } from "#lib/i18n";
 
 /** Login URL that returns here afterwards, e.g. to /add from the bookmarklet. */
@@ -48,6 +49,8 @@ export function AppShell() {
 
   async function signOut() {
     await authClient.signOut();
+    // Cached lists stay on disk otherwise; the next person here shouldn't see them.
+    await clearQueryCache();
     navigate("/login");
   }
 
