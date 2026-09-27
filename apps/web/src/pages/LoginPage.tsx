@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "#components/ui/card";
 import { Button } from "#components/ui/button";
 import { authClient } from "#lib/auth-client";
+import { useSignedInRedirect } from "#hooks/useSignedInRedirect";
 import { m } from "#lib/i18n";
 
 type Provider = "google" | "github";
@@ -52,6 +53,8 @@ export function LoginPage() {
   // Same-origin paths only, so the redirect can't send you to another site.
   const redirect = params.get("redirect") ?? "";
   const callbackURL = /^\/(?![/\\])/.test(redirect) ? redirect : "/";
+  // Already signed in: nothing to do here, go where the user was headed.
+  const checkingSession = useSignedInRedirect(callbackURL);
   const message = error || (code ? (ERRORS[code]?.() ?? m.login_error_code({ code })) : "");
 
   async function signIn(provider: Provider) {
@@ -68,6 +71,8 @@ export function LoginPage() {
       setError(error.message ?? m.login_error_generic());
     }
   }
+
+  if (checkingSession) return null;
 
   return (
     <div className="flex min-h-svh items-center justify-center px-4">
