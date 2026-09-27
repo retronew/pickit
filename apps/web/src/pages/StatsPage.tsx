@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Card,
@@ -18,16 +19,7 @@ import {
 import { PageLoading } from "#components/PageLoading";
 import { Empty, EmptyHeader, EmptyTitle } from "#components/ui/empty";
 import { m } from "#lib/i18n";
-
-interface Stats {
-  total: number;
-  byCategory: { category: string; count: number }[];
-  byMonth: { month: string; count: number }[];
-  clickTop: { id: number; name: string; clickCount: number }[];
-  embeddingCoverage: number;
-  deadLinks: number;
-  trash: number;
-}
+import { statsQuery } from "#lib/queries";
 
 const categoryChartConfig = {
   count: { label: m.stats_count(), color: "var(--chart-2)" },
@@ -56,13 +48,7 @@ function ChartEmpty() {
 }
 
 export function StatsPage() {
-  const [stats, setStats] = useState<Stats | null>(null);
-
-  useEffect(() => {
-    fetch("/api/items/stats")
-      .then((r) => r.json())
-      .then(setStats);
-  }, []);
+  const stats = useQuery(statsQuery).data ?? null;
 
   const categoryData = useMemo(
     () =>

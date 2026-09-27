@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, toastError, toastSuccess } from "#lib/api";
 import { m } from "#lib/i18n";
+import { githubTokenQuery, githubTokenStatusQuery } from "#lib/queries";
 
 export interface GithubTokenInfo {
   masked: string | null;
@@ -25,35 +27,19 @@ export type GithubTokenStatus =
 
 /** The GitHub token on the settings page: what's saved, its live status, save / check / remove. */
 export function useGithubToken() {
-  const [info, setInfo] = useState<GithubTokenInfo | null>(null);
-  const [status, setStatus] = useState<GithubTokenStatus | null>(null);
-  const [checking, setChecking] = useState(false);
+  const queryClient = useQueryClient();
+  const infoQuery = useQuery(githubTokenQuery);
+  const info: GithubTokenInfo | null =
+    infoQuery.data ?? (infoQuery.isError ? { masked: null, fromSecret: false } : null);
+  const hasToken = !!(info?.masked || info?.fromSecret);
+  const statusQuery = useQuery({ ...githubTokenStatusQuery, enabled: hasToken });
+  const status: GithubTokenStatus | null = !info ? null : hasToken ? (statusQuery.data ?? null) : { configured: false };
+  const checking = statusQuery.isFetching;
   const [saving, setSaving] = useState(false);
 
-  const check = useCallback(async () => {
-    setChecking(true);
-    try {
-      setStatus(await api<GithubTokenStatus>("/api/settings/github-token/status"));
-    } catch {
-      setStatus({ configured: true, reachable: false });
-    } finally {
-      setChecking(false);
-    }
-  }, []);
-
-  const refresh = useCallback(async () => {
-    const next = await api<GithubTokenInfo>("/api/settings/github-token").catch(() => ({
-      masked: null,
-      fromSecret: false,
-    }));
-    setInfo(next);
-    if (next.masked || next.fromSecret) await check();
-    else setStatus({ configured: false });
-  }, [check]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const check = () => statusQuery.refetch();
+  // Refetches the token info and, through the prefix, its live status.
+  const refresh = () => queryClient.invalidateQueries({ queryKey: githubTokenQuery.queryKey });
 
   /** Verifies the token with GitHub and saves it; resolves to true when saved. */
   async function save(token: string): Promise<boolean> {

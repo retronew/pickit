@@ -1,26 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { BrowserRenderInfo, BrowserRenderSettings } from "@pickit/shared";
 import { api, toastError, toastSuccess } from "#lib/api";
 import { m } from "#lib/i18n";
+import { browserRenderQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 const URL = "/api/settings/browser-render";
 
 /** Browser Rendering on the settings page: settings and usage this period. */
 export function useBrowserRender() {
-  const [info, setInfo] = useState<BrowserRenderInfo | null>(null);
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    ...browserRenderQuery,
+    meta: { errorToast: { title: m.browser_render_load_failed, id: "browser-render" } },
+  });
   const [saving, setSaving] = useState(false);
-
-  const refresh = useCallback(async () => {
-    try {
-      setInfo(await api<BrowserRenderInfo>(URL));
-    } catch (err) {
-      toastError(m.browser_render_load_failed(), err, { id: "browser-render" });
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const refresh = useRefresh(browserRenderQuery.queryKey);
+  const setInfo = (next: BrowserRenderInfo) => queryClient.setQueryData(browserRenderQuery.queryKey, next);
 
   /** Saves the settings; resolves to true when saved. */
   async function save(settings: BrowserRenderSettings): Promise<boolean> {
@@ -37,5 +34,5 @@ export function useBrowserRender() {
     }
   }
 
-  return { info, saving, refresh, save };
+  return { info: data ?? null, saving, refresh, save };
 }

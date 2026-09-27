@@ -1,5 +1,5 @@
 import { api, toastError, toastSuccess } from "#lib/api";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { RotateCcwIcon, Trash2Icon } from "lucide-react";
 import type { Item } from "@pickit/shared";
 import { Card } from "#components/ui/card";
@@ -9,21 +9,14 @@ import { Confirm } from "#components/Confirm";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { PageLoading } from "#components/PageLoading";
 import { m } from "#lib/i18n";
+import { itemsQuery, trashQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 export function TrashPage() {
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  function refresh() {
-    return fetch("/api/items/trash")
-      .then((r) => r.json())
-      .then(setItems)
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => {
-    refresh();
-  }, []);
+  const { data, isPending: loading } = useQuery(trashQuery);
+  const items = data ?? [];
+  // The "items" prefix covers the trash, the list and the stats alike.
+  const refresh = useRefresh(itemsQuery.queryKey);
 
   async function restore(item: Item) {
     try {

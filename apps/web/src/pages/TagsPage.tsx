@@ -1,6 +1,7 @@
 import { api, toastError, toastSuccess } from "#lib/api";
 import { ShareDialog } from "#components/shares/ShareDialog";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { TagCard } from "#components/tags/TagCard";
 import { WindowVirtualList } from "#components/WindowVirtualList";
@@ -12,30 +13,23 @@ import { Prompt } from "#components/Prompt";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#components/ui/empty";
 import { PageLoading } from "#components/PageLoading";
 import { m } from "#lib/i18n";
-
-interface TagRow {
-  tag: string;
-  count: number;
-}
+import { itemsQuery, tagsQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 export function TagsPage() {
-  const [tags, setTags] = useState<TagRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isPending: loading } = useQuery(tagsQuery);
+  const tags = useMemo(() => data ?? [], [data]);
+  const refreshTags = useRefresh(tagsQuery.queryKey);
+  const refreshItems = useRefresh(itemsQuery.queryKey);
   const navigate = useNavigate();
   // Virtualized rows need the column count in JS; matches the old lg:grid-cols-3.
   const columns = useMediaQuery("lg") ? 3 : 2;
   const rows = useMemo(() => chunk(tags, columns), [tags, columns]);
 
+  // Renaming or deleting a tag changes the items that carry it too.
   function refresh() {
-    return fetch("/api/tags")
-      .then((r) => r.json())
-      .then(setTags)
-      .finally(() => setLoading(false));
+    return Promise.all([refreshTags(), refreshItems()]);
   }
-
-  useEffect(() => {
-    refresh();
-  }, []);
 
   async function rename(tag: string) {
     const to = await Prompt.call({

@@ -1,21 +1,20 @@
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "#components/ui/card";
 import { Select, SelectTrigger, SelectValue, SelectPopup, SelectItem } from "#components/ui/select";
 import { Skeleton } from "#components/ui/skeleton";
 import { api, toastError, toastSuccess } from "#lib/api";
 import { m, locales, LOCALE_NAMES, type Locale } from "#lib/i18n";
+import { localePrefsQuery } from "#lib/queries";
 
 type AiLanguage = Locale | "auto";
 
 /** Which language AI writes notes, summaries, suggestions and chat replies in. */
 export function AiLanguageCard() {
-  const [value, setValue] = useState<AiLanguage | null>(null);
-
-  useEffect(() => {
-    api<{ aiLanguage: AiLanguage }>("/api/settings/locale")
-      .then((d) => setValue(d.aiLanguage))
-      .catch(() => setValue("auto"));
-  }, []);
+  const queryClient = useQueryClient();
+  const query = useQuery(localePrefsQuery);
+  const value: AiLanguage | null = query.data?.aiLanguage ?? (query.isError ? "auto" : null);
+  const setValue = (aiLanguage: AiLanguage | null) =>
+    aiLanguage && queryClient.setQueryData(localePrefsQuery.queryKey, (d) => ({ ...d, aiLanguage }));
 
   async function change(next: AiLanguage) {
     const previous = value;

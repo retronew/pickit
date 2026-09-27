@@ -1,7 +1,9 @@
 import { useEffect, useEffectEvent, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Item } from "@pickit/shared";
 import { api, copyText, toastError, toastSuccess } from "#lib/api";
 import { m } from "#lib/i18n";
+import { relatedQuery } from "#lib/queries";
 
 interface LinkStatus {
   httpStatus: number | null;
@@ -12,8 +14,6 @@ interface LinkStatus {
 
 /** Related items, AI summary, link check and sharing for the detail sheet. */
 export function useItemDetail(item: Item | null, open: boolean, onChanged: () => void) {
-  const [related, setRelated] = useState<Item[]>([]);
-  const [relatedLoading, setRelatedLoading] = useState(false);
   const [summary, setSummary] = useState("");
   const [summarizing, setSummarizing] = useState(false);
   const [linkStatus, setLinkStatus] = useState<LinkStatus | null>(null);
@@ -25,7 +25,6 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
   const showItem = useEffectEvent(() => {
     if (!item) return;
     setSummary(item.aiSummary ?? "");
-    setRelated([]);
     setLinkStatus({ httpStatus: item.httpStatus, checkedAt: item.checkedAt, archiveUrl: item.archiveUrl });
     setShared(false);
   });
@@ -37,21 +36,11 @@ export function useItemDetail(item: Item | null, open: boolean, onChanged: () =>
   useEffect(() => {
     if (itemId == null || !open) return;
     showItem();
-    let cancelled = false;
-    setRelatedLoading(true);
-    fetch(`/api/items/${itemId}/related?limit=6`)
-      .then((r) => r.json())
-      .then((data: Item[]) => {
-        if (!cancelled) setRelated(data);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setRelatedLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
   }, [itemId, open]);
+
+  const relatedResult = useQuery({ ...relatedQuery(itemId ?? 0), enabled: itemId != null && open });
+  const related: Item[] = relatedResult.data ?? [];
+  const relatedLoading = relatedResult.isLoading;
 
   async function checkLinkNow() {
     if (!item) return;

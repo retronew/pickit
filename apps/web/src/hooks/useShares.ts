@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
 import { ShareDialog } from "#components/shares/ShareDialog";
@@ -7,22 +7,14 @@ import { CollectionOrderDialog } from "#components/shares/CollectionOrderDialog"
 import { api, toastError, toastSuccess } from "#lib/api";
 import type { Share } from "#lib/shares";
 import { m } from "#lib/i18n";
+import { sharesQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 /** The shares list on the shares page and the actions on it. */
 export function useShares() {
-  const [shares, setShares] = useState<Share[] | null>(null);
-
-  const refresh = useCallback(
-    () =>
-      api<Share[]>("/api/shares")
-        .then(setShares)
-        .catch(() => setShares((prev) => prev ?? [])),
-    [],
-  );
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const { data, isError } = useQuery(sharesQuery);
+  const shares = data ?? (isError ? [] : null);
+  const refresh = useRefresh(sharesQuery.queryKey);
 
   async function create() {
     if (await ShareDialog.call({})) refresh();

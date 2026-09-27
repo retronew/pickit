@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { TextSkeleton } from "#components/settings/skeletons";
 import { api, copyText, toastError, toastSuccess } from "#lib/api";
 import { CopyIcon, CheckIcon, RefreshCwIcon } from "lucide-react";
@@ -13,23 +14,16 @@ import {
 import { Button } from "#components/ui/button";
 import { Confirm } from "#components/Confirm";
 import { m } from "#lib/i18n";
+import { apiTokenQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 export function ApiTokenCard() {
-  const [masked, setMasked] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const { data, isPending } = useQuery(apiTokenQuery);
+  const masked = data?.masked ?? null;
+  const loaded = !isPending;
+  const refresh = useRefresh(apiTokenQuery.queryKey);
   const [newToken, setNewToken] = useState("");
   const [copied, setCopied] = useState(false);
-
-  function refresh() {
-    return api<{ configured: boolean; masked: string | null }>("/api/settings/api-token")
-      .then((d) => setMasked(d.masked))
-      .catch(() => {})
-      .finally(() => setLoaded(true));
-  }
-
-  useEffect(() => {
-    refresh();
-  }, []);
 
   async function reset() {
     if (masked) {

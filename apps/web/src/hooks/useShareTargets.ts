@@ -1,20 +1,13 @@
-import { useEffect, useState } from "react";
-import { api } from "#lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { itemCategoryNamesQuery, tagsQuery } from "#lib/queries";
 
 /** Categories and tags to pick from when creating a share from scratch. */
 export function useShareTargets(enabled: boolean) {
-  const [categories, setCategories] = useState<string[] | null>(null);
-  const [tags, setTags] = useState<string[] | null>(null);
+  const categories = useQuery({ ...itemCategoryNamesQuery, enabled });
+  const tags = useQuery({ ...tagsQuery, enabled });
 
-  useEffect(() => {
-    if (!enabled) return;
-    api<string[]>("/api/items/categories")
-      .then(setCategories)
-      .catch(() => setCategories([]));
-    api<{ tag: string }[]>("/api/tags")
-      .then((rows) => setTags(rows.map((r) => r.tag)))
-      .catch(() => setTags([]));
-  }, [enabled]);
-
-  return { categories, tags };
+  return {
+    categories: categories.data ?? (categories.isError ? [] : null),
+    tags: tags.data ? tags.data.map((r) => r.tag) : tags.isError ? [] : null,
+  };
 }

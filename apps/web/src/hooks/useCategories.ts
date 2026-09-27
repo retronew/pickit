@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CategoryPickerDialog } from "#components/categories/CategoryPickerDialog";
 import { Confirm } from "#components/Confirm";
 import { Prompt } from "#components/Prompt";
@@ -8,27 +9,23 @@ import {
   isWithinCategory,
   joinCategory,
   parentCategory,
-  type CategoryCount,
   type CategoryNode,
 } from "#lib/categories";
 import { m } from "#lib/i18n";
+import { categoriesQuery, itemsQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 /** The category tree with rename, move, merge and delete actions. */
 export function useCategories() {
-  const [nodes, setNodes] = useState<CategoryNode[] | null>(null);
-
-  const refresh = useCallback(async () => {
-    try {
-      setNodes(categoryTree(await api<CategoryCount[]>("/api/categories")));
-    } catch (err) {
-      toastError(m.categories_load_failed(), err, { id: "category" });
-      setNodes((prev) => prev ?? []);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const { data, isError } = useQuery({
+    ...categoriesQuery,
+    meta: { ...categoriesQuery.meta, errorToast: { title: m.categories_load_failed, id: "category" } },
+  });
+  const nodes = useMemo(() => (data ? categoryTree(data) : isError ? [] : null), [data, isError]);
+  const refreshCategories = useRefresh(categoriesQuery.queryKey);
+  const refreshItems = useRefresh(itemsQuery.queryKey);
+  // Renaming or deleting a category changes the items in it too.
+  const refresh = () => Promise.all([refreshCategories(), refreshItems()]);
 
   const exists = (category: string) => !!nodes?.some((n) => n.category === category);
 

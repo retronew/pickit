@@ -3,8 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Item } from "@pickit/shared";
 import { api, toastError } from "#lib/api";
 import { m } from "#lib/i18n";
-import { itemsQuery } from "#lib/items-query";
-import { queryKeys } from "#lib/query-keys";
+import { itemsQuery } from "#lib/queries";
 
 export type { Item };
 
@@ -18,7 +17,7 @@ export function useItems() {
   const items = data ?? [];
 
   const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.items }),
+    () => queryClient.invalidateQueries({ queryKey: itemsQuery.queryKey }),
     [queryClient],
   );
 
@@ -26,7 +25,7 @@ export function useItems() {
   const reorder = useCallback(
     async (ids: number[]) => {
       const position = new Map(ids.map((id, i) => [id, i]));
-      queryClient.setQueryData<Item[]>(queryKeys.items, (prev) =>
+      queryClient.setQueryData(itemsQuery.queryKey, (prev) =>
         prev?.map((i) => (position.has(i.id) ? { ...i, position: position.get(i.id)! } : i)),
       );
       try {

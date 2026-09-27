@@ -1,54 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { debounce } from "es-toolkit";
-import type { Item } from "#hooks/useItems";
-import { api, errorMessage } from "#lib/api";
+import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { errorMessage } from "#lib/api";
+import { searchQuery } from "#lib/queries";
 
-interface Hit extends Item {
-  score: number;
-}
+const DEBOUNCE_MS = 300;
 
 export function useItemSearch() {
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<Hit[] | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState("");
-  const requestIdRef = useRef(0);
-
-  const search = useMemo(
-    () =>
-      debounce(async (q: string) => {
-        const requestId = ++requestIdRef.current;
-        try {
-          const data = await api<{ hits: Hit[] }>(`/api/search?q=${encodeURIComponent(q)}`);
-          if (requestId === requestIdRef.current) {
-            setHits(data.hits);
-            setError("");
-          }
-        } catch (err) {
-          if (requestId === requestIdRef.current) setError(errorMessage(err));
-        } finally {
-          if (requestId === requestIdRef.current) setSearching(false);
-        }
-      }, 300),
-    [],
-  );
-
-  useEffect(() => () => search.cancel(), [search]);
+  const [debounced, setDebounced] = useState("");
+  const q = query.trim();
 
   useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      search.cancel();
-      requestIdRef.current++;
-      setHits(null);
-      setSearching(false);
-      setError("");
-      return;
-    }
-    // Searching starts now, not after the debounce, so feedback is immediate.
-    setSearching(true);
-    search(q);
-  }, [query, search]);
+    const timer = setTimeout(() => setDebounced(q), DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [q]);
 
-  return { query, setQuery, hits, searching, error };
+  const result = useQuery({
+    ...searchQuery(debounced),
+    enabled: !!debounced,
+    // Keeps the last hits on screen (dimmed) while the next search runs.
+    placeholderData: keepPreviousData,
+  });
+
+  if (!q) return { query, setQuery, hits: null, searching: false, error: "" };
+  return {
+    query,
+    setQuery,
+    hits: result.data?.hits ?? null,
+    // Searching starts now, not after the debounce, so feedback is immediate.
+    searching: q !== debounced || result.isFetching,
+    error: result.isError && q === debounced ? errorMessage(result.error) : "",
+  };
 }

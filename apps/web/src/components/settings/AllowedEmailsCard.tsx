@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ListSkeleton } from "#components/settings/skeletons";
 import { api, errorMessage, toastSuccess } from "#lib/api";
 import { LockIcon, PlusIcon, Trash2Icon } from "lucide-react";
@@ -14,6 +15,7 @@ import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Confirm } from "#components/Confirm";
 import { m } from "#lib/i18n";
+import { allowedEmailsQuery } from "#lib/queries";
 
 interface AllowedEmails {
   owners: string[];
@@ -21,16 +23,14 @@ interface AllowedEmails {
 }
 
 export function AllowedEmailsCard() {
-  const [data, setData] = useState<AllowedEmails | null>(null);
+  const queryClient = useQueryClient();
+  const query = useQuery(allowedEmailsQuery);
+  const data = query.data ?? null;
+  const setData = (next: AllowedEmails) => queryClient.setQueryData(allowedEmailsQuery.queryKey, next);
   const [draft, setDraft] = useState("");
-  const [error, setError] = useState("");
+  const [saveError, setError] = useState("");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    api<AllowedEmails>("/api/settings/allowed-emails")
-      .then(setData)
-      .catch((err) => setError(m.load_failed({ error: errorMessage(err) })));
-  }, []);
+  const error = saveError || (query.error ? m.load_failed({ error: errorMessage(query.error) }) : "");
 
   async function save(emails: string[]) {
     setSaving(true);

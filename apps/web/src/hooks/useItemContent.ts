@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, toastError } from "#lib/api";
 import { m } from "#lib/i18n";
+import { itemContentQuery } from "#lib/queries";
 
 export interface ItemContent {
   /** False when the server has no R2 bucket: the feature is off. */
@@ -13,20 +15,14 @@ export interface ItemContent {
 
 /** The page text snapshot of one bookmark: its status, the text on demand, and refetching. */
 export function useItemContent(itemId: number, open: boolean) {
-  const [content, setContent] = useState<ItemContent | null>(null);
+  const queryClient = useQueryClient();
+  const query = itemContentQuery(itemId);
+  const content = useQuery({ ...query, enabled: open }).data ?? null;
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    setContent(null);
-    api<ItemContent>(`/api/items/${itemId}/content`)
-      .then((c) => !cancelled && setContent(c))
-      .catch(() => !cancelled && setContent(null));
-    return () => {
-      cancelled = true;
-    };
-  }, [itemId, open]);
+  const setContent = useCallback(
+    (c: ItemContent) => queryClient.setQueryData(query.queryKey, c),
+    [queryClient, itemId],
+  );
 
   /** Loads the text (not fetched until the reader opens). */
   const loadText = useCallback(async (): Promise<string | null> => {
@@ -38,7 +34,7 @@ export function useItemContent(itemId: number, open: boolean) {
       toastError(m.content_load_failed(), err, { id: "content" });
       return null;
     }
-  }, [itemId]);
+  }, [itemId, setContent]);
 
   /** Captures the page again now; an old snapshot is kept if the page can't be read. */
   const refetch = useCallback(async () => {
@@ -54,7 +50,7 @@ export function useItemContent(itemId: number, open: boolean) {
     } finally {
       setBusy(false);
     }
-  }, [itemId]);
+  }, [itemId, setContent]);
 
   return { content, busy, loadText, refetch };
 }

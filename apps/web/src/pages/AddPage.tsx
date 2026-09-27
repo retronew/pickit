@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { uniq } from "es-toolkit";
 import { ItemFormDialog, type ItemFormPayload } from "#components/items/ItemFormDialog";
 import { saveItem } from "#lib/items";
-import { itemsQuery } from "#lib/items-query";
+import { itemsQuery } from "#lib/queries";
 import { Confirm } from "#components/Confirm";
 import { Spinner } from "#components/ui/spinner";
 import { m } from "#lib/i18n";

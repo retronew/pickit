@@ -15,7 +15,7 @@ import {
 } from "#components/ui/command";
 import { Favicon } from "#components/Favicon";
 import { m } from "#lib/i18n";
-import { itemsQuery } from "#lib/items-query";
+import { itemsQuery } from "#lib/queries";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);

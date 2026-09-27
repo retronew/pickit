@@ -1,10 +1,18 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { del, get, set } from "idb-keyval";
+import { toastError } from "#lib/api";
 
 const STORAGE_KEY = "pickit-query-cache";
 
 export const queryClient = new QueryClient({
+  // A query with `meta.errorToast` reports a failed load once, after retries.
+  queryCache: new QueryCache({
+    onError: (err, query) => {
+      const toast = query.meta?.errorToast as { title: () => string; id: string } | undefined;
+      if (toast) toastError(toast.title(), err, { id: toast.id });
+    },
+  }),
   defaultOptions: {
     queries: {
       // Kept long enough to survive being written to and restored from disk.

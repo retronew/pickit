@@ -1,55 +1,46 @@
-import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SavedSearch } from "@pickit/shared";
 import { api, toastError } from "#lib/api";
 import { useLatestSave } from "#hooks/useLatestSave";
 import { m } from "#lib/i18n";
+import { savedSearchesQuery } from "#lib/queries";
+
+const KEY = savedSearchesQuery.queryKey;
 
 /**
  * Saved searches, stored server-side so they follow you across devices.
  * Changes apply optimistically; only the last of quick successive changes is
- * saved, and if that fails the list rolls back to what the server last confirmed.
+ * saved, and if that fails the list is reloaded from the server.
  */
 export function useSavedSearches() {
-  const [list, setListState] = useState<SavedSearch[]>([]);
+  const queryClient = useQueryClient();
+  const list = useQuery(savedSearchesQuery).data ?? [];
   // The latest list, so quick successive edits build on each other instead of
   // on the list from the last render.
-  const listRef = useRef(list);
-  // What the server last confirmed, to roll back to.
-  const confirmedRef = useRef(list);
-  const setList = (next: SavedSearch[]) => {
-    listRef.current = next;
-    setListState(next);
-  };
-  const confirm = (next: SavedSearch[]) => {
-    confirmedRef.current = next;
-    setList(next);
-  };
-
-  useEffect(() => {
-    api<SavedSearch[]>("/api/settings/saved-searches")
-      .then(confirm)
-      .catch(() => {});
-  }, []);
+  const current = () => queryClient.getQueryData(KEY) ?? [];
+  const setList = (next: SavedSearch[]) => queryClient.setQueryData(KEY, next);
 
   const persist = useLatestSave(
     (next: SavedSearch[]) => api<SavedSearch[]>("/api/settings/saved-searches", { method: "PUT", json: next }),
     {
-      onSuccess: confirm,
+      onSuccess: setList,
       onError: (err) => {
-        setList(confirmedRef.current);
+        queryClient.invalidateQueries({ queryKey: KEY });
         toastError(m.saved_search_failed(), err, { id: "saved-search" });
       },
     },
   );
 
   function save(next: SavedSearch[]) {
+    // A refetch landing now would undo the optimistic change.
+    queryClient.cancelQueries({ queryKey: KEY });
     setList(next);
     persist(next);
   }
 
   return {
     list,
-    add: (entry: Omit<SavedSearch, "id">) => save([...listRef.current, { ...entry, id: crypto.randomUUID() }]),
-    remove: (id: string) => save(listRef.current.filter((s) => s.id !== id)),
+    add: (entry: Omit<SavedSearch, "id">) => save([...current(), { ...entry, id: crypto.randomUUID() }]),
+    remove: (id: string) => save(current().filter((s) => s.id !== id)),
   };
 }

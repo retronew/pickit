@@ -1,27 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Confirm } from "#components/Confirm";
 import { WebhookDialog } from "#components/settings/webhooks/WebhookDialog";
 import { api, toastError, toastSuccess } from "#lib/api";
 import type { Webhook } from "#lib/webhooks";
 import { m } from "#lib/i18n";
+import { webhooksQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 /** The webhooks on the settings page and the actions on them. */
 export function useWebhooks() {
-  const [webhooks, setWebhooks] = useState<Webhook[] | null>(null);
+  const { data, isError } = useQuery(webhooksQuery);
+  const webhooks = data ?? (isError ? [] : null);
+  const refresh = useRefresh(webhooksQuery.queryKey);
   /** The secret of a webhook just created: shown once, until dismissed. */
   const [newSecret, setNewSecret] = useState<{ id: number; secret: string } | null>(null);
-
-  const refresh = useCallback(
-    () =>
-      api<Webhook[]>("/api/webhooks")
-        .then(setWebhooks)
-        .catch(() => setWebhooks((prev) => prev ?? [])),
-    [],
-  );
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   async function add() {
     const input = await WebhookDialog.call({});

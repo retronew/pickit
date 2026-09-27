@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api, errorMessage, toastError, toastSuccess } from "#lib/api";
 import { m } from "#lib/i18n";
+import { backupsQuery } from "#lib/queries";
+import { useRefresh } from "#hooks/useRefresh";
 
 export type BackupKind = "daily" | "manual" | "pre-restore";
 export type RestoreMode = "merge" | "replace";
@@ -30,26 +33,12 @@ export function restoreBackup(name: string, mode: RestoreMode, dryRun: boolean) 
 
 /** R2 backups: list, back up now, delete. */
 export function useBackups() {
-  const [backups, setBackups] = useState<BackupInfo[] | null>(null);
-  const [configured, setConfigured] = useState(true);
-  const [error, setError] = useState("");
+  const { data, error: loadError } = useQuery(backupsQuery);
+  const backups = data?.backups ?? (loadError ? [] : null);
+  const configured = data?.configured ?? true;
+  const error = loadError ? errorMessage(loadError) : "";
   const [creating, setCreating] = useState(false);
-
-  const reload = useCallback(async () => {
-    try {
-      const data = await api<{ configured: boolean; backups: BackupInfo[] }>("/api/backups");
-      setConfigured(data.configured);
-      setBackups(data.backups);
-      setError("");
-    } catch (err) {
-      setError(errorMessage(err));
-      setBackups((prev) => prev ?? []);
-    }
-  }, []);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
+  const reload = useRefresh(backupsQuery.queryKey);
 
   async function create() {
     setCreating(true);
