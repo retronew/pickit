@@ -13,7 +13,9 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "#components/ui/card";
 import { Button } from "#components/ui/button";
 import { useAiSettings } from "./useAiSettings";
-import { PanelHeading, RequestPreview, TestResult, AiSettingsSkeleton } from "./parts";
+import { PanelHeading, RequestPreview, AiSettingsSkeleton } from "./parts";
+import { TestResult } from "./TestResult";
+import { ReasoningField } from "./ReasoningField";
 import { EndpointFields } from "./EndpointFields";
 import { ModelField } from "./ModelField";
 import { emptyModels } from "./shared";
@@ -94,6 +96,7 @@ export function AiSettingsCard() {
                 onFetch={() => fetchModels("chat")}
                 onChange={(model) => patchChat({ model })}
               />
+              <ReasoningField value={form.chat.reasoning} onChange={(reasoning) => patchChat({ reasoning })} />
               <RequestPreview
                 urls={[
                   ...chatRequestUrls(form.chat.protocol, form.chat.baseUrl, form.chat.model),

@@ -7,6 +7,7 @@ import {
   normalizeBaseUrl,
   resolveEmbeddingEndpoint,
   type AiSettings,
+  type ChatTestReport,
 } from "@pickit/shared";
 import { hasUsableKey, emptyModels, postJson } from "./shared";
 import type { Target, ModelInfo, AiSettingsResponse, ModelState, TestState } from "./shared";
@@ -95,12 +96,9 @@ export function useAiSettings() {
 
   const runTest = async (target: Target) => {
     setTests((t) => ({ ...t, [target]: { running: true } }));
-    const { data } = await postJson<{
-      ok: boolean;
-      error?: string;
-      reply?: string;
-      dimensions?: number;
-    }>("/api/settings/ai/test", { target, settings: form });
+    const { data } = await postJson<
+      Partial<ChatTestReport> & { ok: boolean; error?: string; dimensions?: number; durationMs?: number }
+    >("/api/settings/ai/test", { target, settings: form });
     setTests((t) => ({
       ...t,
       [target]: {
@@ -111,6 +109,8 @@ export function useAiSettings() {
             ? m.ai_test_chat_ok({ reply: data.reply || m.ai_empty_reply() })
             : m.ai_test_embedding_ok({ dimensions: String(data.dimensions) })
           : m.ai_test_failed({ error: String(data.error) }),
+        durationMs: data.durationMs,
+        report: data.ok && target === "chat" ? (data as ChatTestReport) : undefined,
       },
     }));
   };

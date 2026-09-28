@@ -2,8 +2,8 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import type { LanguageModel, EmbeddingModel } from "ai";
-import { embed, embedMany, APICallError, RetryError } from "ai";
+import type { LanguageModel, LanguageModelMiddleware, EmbeddingModel } from "ai";
+import { embed, embedMany, wrapLanguageModel, APICallError, RetryError } from "ai";
 import {
   normalizeBaseUrl,
   resolveEmbeddingEndpoint,
@@ -23,7 +23,25 @@ export interface Provider {
   embeddingModelId?: string;
 }
 
+/** Applies the configured reasoning level to every call that doesn't set its own. */
+function reasoningMiddleware(reasoning: ChatEndpoint["reasoning"]): LanguageModelMiddleware {
+  return {
+    specificationVersion: "v4",
+    transformParams: async ({ params }) => ({ ...params, reasoning: params.reasoning ?? reasoning }),
+  };
+}
+
+/** The model with a default reasoning level; unchanged for "provider-default". */
+export function withReasoning(model: LanguageModel, reasoning: ChatEndpoint["reasoning"] | undefined): LanguageModel {
+  if (!reasoning || reasoning === "provider-default" || typeof model === "string") return model;
+  return wrapLanguageModel({ model, middleware: reasoningMiddleware(reasoning) });
+}
+
 export function createChatModel(e: ChatEndpoint): LanguageModel {
+  return withReasoning(createBaseChatModel(e), e.reasoning);
+}
+
+function createBaseChatModel(e: ChatEndpoint) {
   const baseURL = normalizeBaseUrl(e.baseUrl);
   // Keyless endpoints (e.g. Ollama) still need a non-empty string for the SDKs.
   const apiKey = e.apiKey || "none";

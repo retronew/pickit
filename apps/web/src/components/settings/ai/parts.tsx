@@ -4,7 +4,6 @@ import { type RequestUrl } from "@pickit/shared";
 import { CardContent, CardFooter } from "#components/ui/card";
 import { Skeleton } from "#components/ui/skeleton";
 import { FieldSkeleton, ButtonsSkeleton } from "#components/settings/skeletons";
-import type { TestState } from "./shared";
 import { m } from "#lib/i18n";
 
 export function PanelHeading({ title, configured }: { title: string; configured?: boolean }) {
@@ -37,21 +36,6 @@ export function RequestPreview({ urls }: { urls: RequestUrl[] }) {
         </p>
       ))}
     </div>
-  );
-}
-
-export function TestResult({ state }: { state: TestState }) {
-  if (!state.text) return null;
-  return (
-    <p
-      className={
-        state.ok
-          ? "text-sm text-emerald-700 dark:text-emerald-400"
-          : "text-destructive min-w-0 break-all text-sm"
-      }
-    >
-      {state.text}
-    </p>
   );
 }
 

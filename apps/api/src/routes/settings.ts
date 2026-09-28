@@ -17,6 +17,7 @@ import type { Env } from "#types";
 import { getRawSettings, saveSettings, getApiToken, setApiToken, deleteApiToken, getGithubToken, setGithubToken } from "#settings";
 import { githubToken, githubTokenStatus } from "#activity";
 import { createChatModel, createEmbeddingModel, describeError } from "#ai";
+import { testChat } from "#ai-test";
 import { listModels, ModelListError, type ModelFamily } from "#ai-models";
 import { ownerEmails, getExtraEmails, setExtraEmails, parseEmails, isValidEmail } from "#auth";
 import { isLocale } from "@pickit/shared/i18n";
@@ -123,17 +124,11 @@ settingsRoutes.post("/ai/test", async (c) => {
     if (!isChatConfigured(next)) {
       return c.json({ ok: false, urls, error: await tr(c, "api_chat_incomplete") });
     }
+    const startedAt = Date.now();
     try {
-      const { generateText } = await import("ai");
-      const { text } = await generateText({
-        model: createChatModel(e),
-        prompt: "Reply with: ok",
-        maxOutputTokens: 16, // the Responses API requires >= 16
-        maxRetries: 0,
-      });
-      return c.json({ ok: true, urls, reply: text.slice(0, 100) });
+      return c.json({ ok: true, urls, ...(await testChat(createChatModel(e), e)) });
     } catch (err) {
-      return c.json({ ok: false, urls, error: describeError(err) });
+      return c.json({ ok: false, urls, durationMs: Date.now() - startedAt, error: describeError(err) });
     }
   }
 
@@ -142,6 +137,7 @@ settingsRoutes.post("/ai/test", async (c) => {
   if (!e || !isEmbeddingConfigured(next)) {
     return c.json({ ok: false, urls, error: await tr(c, "api_embedding_incomplete") });
   }
+  const startedAt = Date.now();
   try {
     const { embed } = await import("ai");
     const { embedding } = await embed({
@@ -149,9 +145,9 @@ settingsRoutes.post("/ai/test", async (c) => {
       value: "test",
       maxRetries: 0,
     });
-    return c.json({ ok: true, urls, dimensions: embedding.length });
+    return c.json({ ok: true, urls, dimensions: embedding.length, durationMs: Date.now() - startedAt });
   } catch (err) {
-    return c.json({ ok: false, urls, error: describeError(err) });
+    return c.json({ ok: false, urls, durationMs: Date.now() - startedAt, error: describeError(err) });
   }
 });
 

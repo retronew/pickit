@@ -7,6 +7,7 @@ import {
   normalizeBaseUrl,
   type AiEndpoint,
   type AiSettings,
+  type ChatTestReport,
 } from "@pickit/shared";
 import { m } from "#lib/i18n";
 
@@ -41,6 +42,9 @@ export interface TestState {
   running: boolean;
   ok?: boolean;
   text?: string;
+  durationMs?: number;
+  /** Details of a successful chat test. */
+  report?: ChatTestReport;
 }
 
 export const PROVIDER_LABELS: Record<string, string> = {

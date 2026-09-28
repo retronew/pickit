@@ -1,8 +1,14 @@
 // Stored AI settings: defaults, legacy upgrade and readiness checks.
 
-import type { ChatEndpoint, EmbeddingEndpoint, AiSettings } from "./types";
+import type { ChatEndpoint, EmbeddingEndpoint, AiSettings, ReasoningLevel } from "./types";
 import { CUSTOM_PROVIDER, findProvider } from "./providers";
 import { embeddingProtocolFor } from "./urls";
+
+export const REASONING_LEVELS: ReasoningLevel[] = ["provider-default", "none", "low", "medium", "high"];
+
+export function isReasoningLevel(value: unknown): value is ReasoningLevel {
+  return REASONING_LEVELS.includes(value as ReasoningLevel);
+}
 
 /** The embedding endpoint, or null when no embedding model is set. */
 export function resolveEmbeddingEndpoint(settings: AiSettings): EmbeddingEndpoint | null {
@@ -12,7 +18,14 @@ export function resolveEmbeddingEndpoint(settings: AiSettings): EmbeddingEndpoin
 export function emptyAiSettings(): AiSettings {
   return {
     version: 2,
-    chat: { provider: "", baseUrl: "", apiKey: "", protocol: "openai-chat", model: "" },
+    chat: {
+      provider: "",
+      baseUrl: "",
+      apiKey: "",
+      protocol: "openai-chat",
+      model: "",
+      reasoning: "provider-default",
+    },
     embedding: {
       provider: "",
       baseUrl: "",
@@ -37,6 +50,7 @@ export function upgradeAiSettings(raw: unknown): AiSettings {
     const s = raw as AiSettings & { embedding?: { inheritChat?: boolean } };
     const empty = emptyAiSettings();
     const chat = { ...empty.chat, ...s.chat };
+    if (!isReasoningLevel(chat.reasoning)) chat.reasoning = "provider-default";
     const { inheritChat, ...embedding } = { ...empty.embedding, ...s.embedding };
     // Earlier v2 configs could reuse the chat provider for embeddings; copy it
     // over so the two endpoints are independent from now on.
@@ -55,6 +69,7 @@ export function upgradeAiSettings(raw: unknown): AiSettings {
       apiKey: legacy.apiKey ?? "",
       protocol: legacy.apiMode === "responses" ? "openai-responses" : "openai-chat",
       model: legacy.chatModel ?? "",
+      reasoning: "provider-default",
     };
     if (legacy.embeddingModel) {
       settings.embedding = {

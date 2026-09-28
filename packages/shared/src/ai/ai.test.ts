@@ -5,6 +5,7 @@ import {
   chatRequestUrls,
   embeddingRequestUrls,
   upgradeAiSettings,
+  emptyAiSettings,
   resolveEmbeddingEndpoint,
   isChatConfigured,
   isEmbeddingConfigured,
@@ -120,5 +121,15 @@ describe("upgrading configs that inherited the chat provider", () => {
     });
     expect(s.embedding.provider).toBe("");
     expect(isEmbeddingConfigured(s)).toBe(false);
+  });
+});
+
+describe("chat reasoning level", () => {
+  it("defaults to the provider's, and drops unknown values", () => {
+    expect(upgradeAiSettings(null).chat.reasoning).toBe("provider-default");
+    const stored = { version: 2, chat: { ...emptyAiSettings().chat, reasoning: "max" } };
+    expect(upgradeAiSettings(stored).chat.reasoning).toBe("provider-default");
+    stored.chat.reasoning = "low";
+    expect(upgradeAiSettings(stored).chat.reasoning).toBe("low");
   });
 });

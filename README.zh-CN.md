@@ -128,7 +128,7 @@ cd ../.. && pnpm deploy
 - **Browser Rendering（可选）**：`wrangler.jsonc` 里的 `browser` 段会把它绑定到 Worker，部署后在「设置 → 数据」开启并选择 Workers 套餐。需要 `compatibility_date` 不早于 2026-03-24；本地 `wrangler dev` 不支持，抓取会自动改用纯文本。不需要的话删掉这一段即可。
 - **R2 备份（可选）**：运行 `npx wrangler r2 bucket create pickit-backups`。不需要 R2 的话，删掉 `wrangler.jsonc` 里的 `r2_buckets` 段，定时任务会自动跳过备份。
 - **自定义域名（可选）**：在 `wrangler.jsonc` 里加上 `"routes": [{ "pattern": "pickit.example.com", "custom_domain": true }]`，域名需要已接入你的 Cloudflare 账号。
-- **AI（可选）**：登录后到 **设置** 页选择服务商（OpenAI、Anthropic、Gemini、DeepSeek、通义千问、OpenRouter 等，或「自定义」），填写 API Key，再从拉取到的模型列表里选模型。对话模型和向量模型分开配置，可以用不同的服务商。自定义地址时，「检测并获取模型」会自动判断要不要加 `/v1`，页面上也会实时显示实际请求的地址。不配置 AI 的话，其他功能都能正常使用。
+- **AI（可选）**：登录后到 **设置** 页选择服务商（OpenAI、Anthropic、Gemini、DeepSeek、通义千问、OpenRouter 等，或「自定义」），填写 API Key，再从拉取到的模型列表里选模型。对话模型和向量模型分开配置，可以用不同的服务商。自定义地址时，「检测并获取模型」会自动判断要不要加 `/v1`，页面上也会实时显示实际请求的地址。对话模型可以设置**思考强度**（模型默认 / 关闭 / 低 / 中 / 高），所有 AI 功能都会按它调用；「测试对话模型」会显示总耗时、首字延迟、token 用量（含思考 token）、模型是否进行了思考，以及实际响应的模型。不配置 AI 的话，其他功能都能正常使用。
 
 ### 自动部署
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, formatRelative } from "./format";
+import { formatBytes, formatDuration, formatRelative } from "./format";
 
 describe("formatBytes", () => {
   it("picks a unit and keeps one decimal below 10", () => {
@@ -20,5 +20,13 @@ describe("formatRelative", () => {
     expect(at(5 * 60_000)).toMatch(/5/);
     expect(at(3 * 3600_000)).toMatch(/3/);
     expect(at(2 * 86400_000)).not.toBe(at(2 * 3600_000));
+  });
+});
+
+describe("formatDuration", () => {
+  it("uses ms under a second, then seconds", () => {
+    expect(formatDuration(850)).toBe("850 ms");
+    expect(formatDuration(2345)).toBe("2.3 s");
+    expect(formatDuration(12_600)).toBe("13 s");
   });
 });
