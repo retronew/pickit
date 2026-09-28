@@ -14,7 +14,7 @@ const BATCH_SIZE = 5;
 export async function backfillPreviews(db: D1Database): Promise<number> {
   const { results } = await db
     .prepare(
-      `SELECT id, url FROM items
+      `SELECT id, url FROM items INDEXED BY idx_items_preview_backfill
        WHERE deleted_at IS NULL AND url != '' AND image = '' AND preview_checked_at IS NULL
        ORDER BY id DESC LIMIT ?`,
     )

@@ -147,7 +147,7 @@ export async function githubTokenStatus(token: string): Promise<GithubTokenStatu
 /** Checks a few project bookmarks never checked, or not in the last week. */
 export async function backfillActivity(env: Env): Promise<number> {
   const { results } = await env.DB.prepare(
-    `SELECT id, url FROM items
+    `SELECT id, url FROM items INDEXED BY idx_items_activity_backfill
      WHERE deleted_at IS NULL
        AND (url LIKE '%github.com/%' OR url LIKE '%npmjs.com/package/%')
        AND (activity_at IS NULL OR activity_at < ?)

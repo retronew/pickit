@@ -39,7 +39,7 @@ export interface StepResult {
 const LOCK_MS = 60_000;
 const MAX_FAILURES_KEPT = 200;
 
-function jobKey(kind: JobKind) {
+export function jobKey(kind: JobKind) {
   return `job:${kind}`;
 }
 

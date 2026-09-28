@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestApp, type TestApp } from "../test/app";
-import { DAILY, EVERY_MINUTE, isTransientD1Error, runSchedule, runTask } from "#cron-tasks";
+import { DAILY, EVERY_FIVE_MINUTES, EVERY_MINUTE, isTransientD1Error, runSchedule, runTask } from "#cron-tasks";
 
 let t: TestApp;
 
@@ -22,7 +22,7 @@ describe("scheduled tasks", () => {
     // Next 18:00 UTC, within a day.
     expect(new Date(backup.nextAt).getUTCHours()).toBe(18);
     expect(backup.nextAt - Date.now()).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
-    expect(lastTicks).toEqual({ [EVERY_MINUTE]: null, [DAILY]: null });
+    expect(lastTicks).toEqual({ [EVERY_MINUTE]: null, [EVERY_FIVE_MINUTES]: null, [DAILY]: null });
   });
 
   it("logs daily runs always, and per-minute runs only when they did something", async () => {
@@ -37,6 +37,15 @@ describe("scheduled tasks", () => {
     // Both triggers noted when they fired.
     expect(lastTicks[EVERY_MINUTE]).toEqual(expect.any(Number));
     expect(lastTicks[DAILY]).toEqual(expect.any(Number));
+  });
+
+  it("runs the five-minute backfills off the per-minute trigger, on multiples of five", async () => {
+    await runSchedule(t.env, EVERY_MINUTE, Date.parse("2026-09-24T10:16:00Z"));
+    expect((await overview()).lastTicks[EVERY_FIVE_MINUTES]).toBeNull();
+    await runSchedule(t.env, EVERY_MINUTE, Date.parse("2026-09-24T10:15:00Z"));
+    const { lastTicks } = await overview();
+    expect(lastTicks[EVERY_MINUTE]).toEqual(expect.any(Number));
+    expect(lastTicks[EVERY_FIVE_MINUTES]).toEqual(expect.any(Number));
   });
 
   it("records failures with their error", async () => {

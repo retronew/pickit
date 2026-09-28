@@ -109,16 +109,28 @@ export async function deleteContent(env: Env, ids: number[]) {
  * captured, then ones due again (a retry after a failure, or "recapture
  * all"), then plain-text snapshots Browser Rendering hasn't tried yet, to turn
  * them into Markdown (only while it's on, and within part of its limit).
+ *
+ * All three are read in one statement (a UNION ALL, queue order kept by `q`),
+ * and each branch goes through its own partial index (migration 0019) so an
+ * empty queue costs next to no row reads; left alone, SQLite picks
+ * idx_items_deleted and scans every live item.
  */
-const BACKFILL_QUEUES: { where: string; order: string; upgrade?: boolean }[] = [
-  { where: "content_status = ''", order: "id DESC" },
-  { where: "content_due_at <= ?", order: "content_due_at, id DESC" },
+const BACKFILL_QUEUES: { where: string; order: string; index: string; upgrade?: boolean }[] = [
+  { where: "content_status = ''", order: "id DESC", index: "idx_items_content_backfill" },
+  { where: "content_due_at <= ?1", order: "content_due_at, id DESC", index: "idx_items_content_due_live" },
   {
+    index: "idx_items_content_upgrade",
     where: "content_status IN ('ok', 'empty') AND content_format != 'markdown' AND content_rendered_at IS NULL",
     order: "id DESC",
     upgrade: true,
   },
 ];
+
+const BACKFILL_SQL = BACKFILL_QUEUES.map(
+  (queue, i) =>
+    `SELECT * FROM (SELECT id, url, ${i} AS q FROM items INDEXED BY ${queue.index}
+       WHERE deleted_at IS NULL AND url != '' AND ${queue.where} ORDER BY ${queue.order} LIMIT ?2)`,
+).join(" UNION ALL ");
 
 /**
  * Captures a few bookmarks from the queues above, one at a time, stopping
@@ -127,25 +139,23 @@ const BACKFILL_QUEUES: { where: string; order: string; upgrade?: boolean }[] = [
  */
 export async function backfillContent(env: Env): Promise<number> {
   if (!env.BACKUPS) return 0;
-  const now = Date.now();
+  const { results } = await env.DB.prepare(BACKFILL_SQL)
+    .bind(Date.now(), BACKFILL_BATCH)
+    .all<{ id: number; url: string; q: number }>();
   let done = 0;
-  for (const queue of BACKFILL_QUEUES) {
+  const seen = new Set<number>();
+  // UNION ALL keeps each branch's rows together, in queue order.
+  for (const r of results) {
     if (done >= BACKFILL_BATCH) break;
-    const stmt = env.DB.prepare(
-      `SELECT id, url FROM items WHERE deleted_at IS NULL AND url != '' AND ${queue.where}
-       ORDER BY ${queue.order} LIMIT ?`,
-    );
-    const { results } = await (queue.where.includes("?") ? stmt.bind(now, BACKFILL_BATCH - done) : stmt.bind(BACKFILL_BATCH - done)).all<{
-      id: number;
-      url: string;
-    }>();
-    for (const r of results) {
-      const status = await captureContent(env, r.id, r.url, { background: true, upgrade: queue.upgrade }).catch(
-        () => "failed" as const,
-      );
-      if (status === "deferred") return done;
-      done++;
-    }
+    // An item can sit in two queues (due again and not yet Markdown); capture it once.
+    if (seen.has(r.id)) continue;
+    seen.add(r.id);
+    const status = await captureContent(env, r.id, r.url, {
+      background: true,
+      upgrade: BACKFILL_QUEUES[r.q].upgrade,
+    }).catch(() => "failed" as const);
+    if (status === "deferred") return done;
+    done++;
   }
   return done;
 }

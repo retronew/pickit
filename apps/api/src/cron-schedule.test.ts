@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextRun } from "./cron-schedule";
+import { matchesAt, nextRun } from "./cron-schedule";
 
 const at = (iso: string) => Date.parse(iso);
 const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
@@ -27,5 +27,13 @@ describe("nextRun", () => {
   it("rejects malformed expressions", () => {
     expect(() => nextRun("* * *", 0)).toThrow();
     expect(() => nextRun("x * * * *", 0)).toThrow();
+  });
+});
+
+describe("matchesAt", () => {
+  it("matches the minute a cron fires in", () => {
+    expect(matchesAt("*/5 * * * *", at("2026-09-24T10:15:30Z"))).toBe(true);
+    expect(matchesAt("*/5 * * * *", at("2026-09-24T10:16:00Z"))).toBe(false);
+    expect(matchesAt("0 18 * * *", at("2026-09-24T18:00:59Z"))).toBe(true);
   });
 });

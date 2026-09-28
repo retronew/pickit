@@ -62,3 +62,9 @@ export function nextRun(expr: string, from: number): number | null {
   }
   return null;
 }
+
+/** Whether `expr` fires in the minute that contains `at` (ms). */
+export function matchesAt(expr: string, at: number): boolean {
+  const minute = at - (at % 60_000);
+  return nextRun(expr, minute - 60_000) === minute;
+}

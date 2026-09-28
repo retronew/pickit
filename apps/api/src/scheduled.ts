@@ -6,5 +6,5 @@ import { runSchedule } from "#cron-tasks";
  * in cron-tasks.ts; the triggers themselves in wrangler.jsonc.
  */
 export async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-  ctx.waitUntil(runSchedule(env, controller.cron));
+  ctx.waitUntil(runSchedule(env, controller.cron, controller.scheduledTime));
 }

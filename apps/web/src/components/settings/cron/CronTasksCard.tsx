@@ -60,7 +60,7 @@ export function CronTasksCard({ description }: { description: string }) {
                   ) : (
                     m.cron_tick_never()
                   )}
-                  {cron === "* * * * *" && ` · ${m.cron_quiet_hint()}`}
+                  {cron.startsWith("*") && ` · ${m.cron_quiet_hint()}`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="-mx-2 space-y-1">

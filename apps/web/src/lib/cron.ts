@@ -12,9 +12,10 @@ export const CRON_TASK_LABELS: Record<CronTaskId, { name: () => string; hint: ()
   audit_prune: { name: m.cron_task_audit_prune, hint: m.cron_task_audit_prune_hint },
 };
 
-/** "Every minute" / "Daily at 02:00" in the viewer's time zone (from the next run). */
+/** "Every minute" / "Every 5 minutes" / "Daily at 02:00" in the viewer's time zone (from the next run). */
 export function scheduleLabel(cron: string, nextAt: number | null): string {
   if (cron === "* * * * *") return m.cron_group_minute();
+  if (cron === "*/5 * * * *") return m.cron_group_five_minutes();
   const time = nextAt
     ? new Intl.DateTimeFormat(intlLocale(), { hour: "2-digit", minute: "2-digit" }).format(nextAt)
     : cron;

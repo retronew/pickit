@@ -3,7 +3,7 @@ import { vectorColumns } from "#vectors";
 import { getSettings } from "#settings";
 import { createProvider, embedText, embedTexts, describeError, embeddingInput } from "#ai";
 import { isChatConfigured, isEmbeddingConfigured, type AiSettings } from "@pickit/shared";
-import { stepJob, type JobKind, type JobState, type StepResult } from "#jobs";
+import { jobKey, stepJob, type JobKind, type JobState, type StepResult } from "#jobs";
 import type { LanguageModel } from "ai";
 import { activeCategories, suggestOrganize } from "#organize";
 import { summarizeItem } from "#summarize";
@@ -235,7 +235,17 @@ export async function runJobStep(env: Env, kind: JobKind): Promise<JobState> {
 export async function advanceRunningJobs(env: Env, budgetMs = 25_000): Promise<number> {
   const deadline = Date.now() + budgetMs;
   let steps = 0;
-  for (const kind of Object.keys(RUNNERS) as JobKind[]) {
+  // One read for all kinds instead of one per kind: this runs every minute
+  // and almost always finds nothing running.
+  const kinds = Object.keys(RUNNERS) as JobKind[];
+  const { results } = await env.DB.prepare(
+    `SELECT key FROM settings WHERE key IN (${kinds.map(() => "?").join(",")})
+       AND json_extract(value, '$.status') = 'running'`,
+  )
+    .bind(...kinds.map(jobKey))
+    .all<{ key: string }>();
+  const running = new Set(results.map((r) => r.key));
+  for (const kind of kinds.filter((k) => running.has(jobKey(k)))) {
     while (Date.now() < deadline) {
       const job = await runJobStep(env, kind);
       // Stop when finished/paused, or when another driver holds the lock.

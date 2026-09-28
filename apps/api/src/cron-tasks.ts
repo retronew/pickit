@@ -1,6 +1,8 @@
-// The scheduled tasks: what each does, on which cron trigger, and a log of
-// their runs for the settings page. The expressions must match
-// wrangler.jsonc `triggers.crons`; Cloudflare runs them in UTC.
+// The scheduled tasks: what each does, on which schedule, and a log of their
+// runs for the settings page. EVERY_MINUTE and DAILY must match wrangler.jsonc
+// `triggers.crons`; EVERY_FIVE_MINUTES has no trigger of its own (cron
+// triggers are limited per account) and runs off the per-minute one.
+// Cloudflare runs them in UTC.
 
 import type { CronOverview, CronRun, CronRunStatus, CronTaskId } from "@pickit/shared";
 import type { Env } from "#types";
@@ -12,10 +14,18 @@ import { writeBackup, pruneBackups } from "#backups";
 import { pruneAudit, safeAudit } from "#audit/index";
 import { backfillContent } from "#item-content";
 import { backfillActivity } from "#activity";
-import { nextRun } from "#cron-schedule";
+import { matchesAt, nextRun } from "#cron-schedule";
 
 export const EVERY_MINUTE = "* * * * *";
 export const DAILY = "0 18 * * *";
+/** The backfills: each one's query runs even when there's nothing to do, so not every minute. */
+export const EVERY_FIVE_MINUTES = "*/5 * * * *";
+
+/** Schedules run by each wrangler trigger (when they match the trigger's time). */
+const SCHEDULES: Record<string, string[]> = {
+  [EVERY_MINUTE]: [EVERY_MINUTE, EVERY_FIVE_MINUTES],
+  [DAILY]: [DAILY],
+};
 
 const KEEP_MS = 30 * 24 * 60 * 60 * 1000;
 const RECENT = 10;
@@ -85,17 +95,17 @@ export const TASKS: CronTask[] = [
   // Keeps re-embedding / organizing / summary / activity jobs moving when no page drives them.
   { id: "jobs", cron: EVERY_MINUTE, run: async (env) => count(await advanceRunningJobs(env)) },
   // Fills compact vectors for embeddings stored before they existed.
-  { id: "vectors", cron: EVERY_MINUTE, run: compactVectors },
+  { id: "vectors", cron: EVERY_FIVE_MINUTES, run: compactVectors },
   // Preview images for older items, a few at a time.
-  { id: "previews", cron: EVERY_MINUTE, run: async (env) => count(await backfillPreviews(env.DB)) },
+  { id: "previews", cron: EVERY_FIVE_MINUTES, run: async (env) => count(await backfillPreviews(env.DB)) },
   // Page text for older items (needs R2).
   {
     id: "content",
-    cron: EVERY_MINUTE,
+    cron: EVERY_FIVE_MINUTES,
     run: async (env) => (env.BACKUPS ? count(await backfillContent(env)) : { processed: 0, skipped: true }),
   },
   // GitHub / npm activity: new projects first, then weekly.
-  { id: "activity", cron: EVERY_MINUTE, run: async (env) => count(await backfillActivity(env)) },
+  { id: "activity", cron: EVERY_FIVE_MINUTES, run: async (env) => count(await backfillActivity(env)) },
   { id: "backup", cron: DAILY, run: dailyBackup },
   { id: "link_check", cron: DAILY, run: linkCheck },
   { id: "audit_prune", cron: DAILY, run: async (env) => count(await pruneAudit(env.DB)) },
@@ -123,7 +133,7 @@ async function runWithRetry(env: Env, task: CronTask): Promise<TaskResult> {
 }
 
 /**
- * Runs one task and logs it. Per-minute tasks that did nothing aren't
+ * Runs one task and logs it. Frequent tasks that did nothing aren't
  * logged (they'd flood the table); daily and manual runs always are.
  * A transient D1 error is retried once before the run counts as failed.
  */
@@ -139,7 +149,7 @@ export async function runTask(env: Env, task: CronTask, trigger: "cron" | "manua
     status = "error";
     error = String(e instanceof Error ? e.message : e).slice(0, 500);
   }
-  const quiet = task.cron === EVERY_MINUTE && trigger === "cron" && status !== "error" && result.processed === 0;
+  const quiet = task.cron !== DAILY && trigger === "cron" && status !== "error" && result.processed === 0;
   if (quiet) return null;
   const finishedAt = Date.now();
   const detail = result.detail ? JSON.stringify(result.detail) : null;
@@ -162,16 +172,24 @@ export async function runTask(env: Env, task: CronTask, trigger: "cron" | "manua
   };
 }
 
-/** Everything a cron trigger does: note the tick, run its tasks, prune old logs. */
-export async function runSchedule(env: Env, cron: string) {
-  await env.DB.prepare(
-    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-  )
-    .bind(`cron_tick:${cron}`, String(Date.now()))
-    .run();
-  const tasks = TASKS.filter((t) => t.cron === cron);
+/**
+ * Everything a cron trigger does: for each schedule due at `at`, note the
+ * tick and run its tasks; prune old logs daily. A schedule passed directly
+ * (not a trigger) just runs.
+ */
+export async function runSchedule(env: Env, trigger: string, at = Date.now()) {
+  const due = (SCHEDULES[trigger] ?? [trigger]).filter((c) => c === trigger || matchesAt(c, at));
+  const now = String(Date.now());
+  await env.DB.batch(
+    due.map((c) =>
+      env.DB.prepare(
+        "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      ).bind(`cron_tick:${c}`, now),
+    ),
+  );
+  const tasks = TASKS.filter((t) => due.includes(t.cron));
   await Promise.all(tasks.map((t) => runTask(env, t, "cron")));
-  if (cron === DAILY) {
+  if (trigger === DAILY) {
     await env.DB.prepare("DELETE FROM cron_runs WHERE started_at < ?").bind(Date.now() - KEEP_MS).run();
   }
 }
@@ -226,7 +244,7 @@ export async function cronOverview(db: D1Database, now = Date.now()): Promise<Cr
       const lastRun = recent[0] ?? null;
       // A tick after the last logged run ended means the task ran again quietly.
       const tick = lastTicks[t.cron];
-      const quietAt = t.cron === EVERY_MINUTE && tick && (!lastRun || tick > lastRun.finishedAt) ? tick : null;
+      const quietAt = t.cron !== DAILY && tick && (!lastRun || tick > lastRun.finishedAt) ? tick : null;
       return { id: t.id, cron: t.cron, nextAt: nextRun(t.cron, now), lastRun, recent, quietAt };
     }),
     lastTicks,
