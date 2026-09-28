@@ -1,6 +1,5 @@
 // Model picker: fetched list with free text entry.
 
-import { useState } from "react";
 import { Field, FieldLabel, FieldDescription } from "#components/ui/field";
 import { Button } from "#components/ui/button";
 import {
@@ -11,6 +10,7 @@ import {
   AutocompleteItem,
   AutocompleteEmpty,
 } from "#components/ui/autocomplete";
+import { useSuggestionFilter } from "#hooks/useSuggestionFilter";
 import type { Target, ModelState } from "./shared";
 import { m } from "#lib/i18n";
 
@@ -35,12 +35,7 @@ export function ModelField({
 }) {
   const preferred = state.models.filter((model) => model.kind === target).map((model) => model.id);
   const items = preferred.length ? preferred : state.models.map((model) => model.id);
-  // Show the full list when the popup opens; filter only once the user edits
-  // the input. Otherwise a selected model filters the list down to itself.
-  const [openedWith, setOpenedWith] = useState<string | null>(null);
-  const query = value.trim().toLowerCase();
-  const filteredItems =
-    openedWith === value || !query ? items : items.filter((id) => id.toLowerCase().includes(query));
+  const { filteredItems, onOpenChange } = useSuggestionFilter(items, value);
   return (
     <Field>
       <FieldLabel htmlFor={`${target}-model`}>{m.ai_model()}</FieldLabel>
@@ -50,7 +45,7 @@ export function ModelField({
           filteredItems={filteredItems}
           value={value}
           onValueChange={(v) => onChange(v)}
-          onOpenChange={(open) => setOpenedWith(open ? value : null)}
+          onOpenChange={onOpenChange}
           openOnInputClick
         >
           <AutocompleteInput

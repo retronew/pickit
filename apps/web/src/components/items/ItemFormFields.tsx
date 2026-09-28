@@ -4,15 +4,16 @@ import { Input } from "#components/ui/input";
 import { Textarea } from "#components/ui/textarea";
 import { Button } from "#components/ui/button";
 import {
-  Combobox,
-  ComboboxInput,
-  ComboboxPopup,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxEmpty,
-} from "#components/ui/combobox";
+  Autocomplete,
+  AutocompleteInput,
+  AutocompletePopup,
+  AutocompleteList,
+  AutocompleteItem,
+  AutocompleteEmpty,
+} from "#components/ui/autocomplete";
 import { TagsField } from "#components/items/TagsField";
 import { PossibleDuplicates } from "#components/items/PossibleDuplicates";
+import { useSuggestionFilter } from "#hooks/useSuggestionFilter";
 import { useUrlAnalyzer, type PossibleDuplicate } from "#hooks/useUrlAnalyzer";
 import { m } from "#lib/i18n";
 
@@ -60,6 +61,7 @@ export function ItemFormFields({
       image: data.image || f.image,
     })),
   );
+  const categoryFilter = useSuggestionFilter(categories, value.category);
   const set = (patch: Partial<ItemFormPayload>) => onChange((f) => ({ ...f, ...patch }));
   const id = (field: string) => `${idPrefix}-${field}`;
   const canAnalyze = /^https?:\/\/.+/.test(value.url.trim());
@@ -114,28 +116,33 @@ export function ItemFormFields({
       </Field>
       <Field>
         <FieldLabel htmlFor={id("category")}>{m.field_category()}</FieldLabel>
-        <Combobox
+        {/* Free text with suggestions (a new category is fine): Autocomplete,
+            not Combobox, which only allows picking from the list. */}
+        <Autocomplete
           items={categories}
-          onValueChange={(v) => set({ category: (v as string) ?? "" })}
-          onInputValueChange={(v) => set({ category: v })}
+          filteredItems={categoryFilter.filteredItems}
+          value={value.category}
+          onValueChange={(v) => set({ category: v })}
+          onOpenChange={categoryFilter.onOpenChange}
+          openOnInputClick
         >
-          <ComboboxInput
+          <AutocompleteInput
             id={id("category")}
             size="lg"
-            value={value.category}
             placeholder={m.form_category_placeholder()}
+            showTrigger={categories.length > 0}
           />
-          <ComboboxPopup>
-            <ComboboxEmpty>{m.form_category_new()}</ComboboxEmpty>
-            <ComboboxList>
-              {categories.map((c) => (
-                <ComboboxItem key={c} value={c}>
+          <AutocompletePopup>
+            <AutocompleteEmpty>{m.form_category_new()}</AutocompleteEmpty>
+            <AutocompleteList>
+              {(c: string) => (
+                <AutocompleteItem key={c} value={c}>
                   {c}
-                </ComboboxItem>
-              ))}
-            </ComboboxList>
-          </ComboboxPopup>
-        </Combobox>
+                </AutocompleteItem>
+              )}
+            </AutocompleteList>
+          </AutocompletePopup>
+        </Autocomplete>
       </Field>
       <Field>
         <FieldLabel htmlFor={id("tags")}>{m.field_tags()}</FieldLabel>
