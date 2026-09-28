@@ -9,6 +9,7 @@ import { itemsQuery } from "#lib/queries";
 import { Confirm } from "#components/Confirm";
 import { Spinner } from "#components/ui/spinner";
 import { m } from "#lib/i18n";
+import type { AnalyzeResult, PossibleDuplicate } from "#hooks/useUrlAnalyzer";
 
 export function AddPage() {
   const [params] = useSearchParams();
@@ -35,6 +36,7 @@ export function AddPage() {
       const allTags = sortText(uniq(items.flatMap((i) => i.tags)));
 
       let initial: Partial<ItemFormPayload> = { url, name: title };
+      let duplicates: PossibleDuplicate[] = [];
       if (/^https?:\/\//.test(url)) {
         try {
           const res = await fetch("/api/items/analyze", {
@@ -43,7 +45,7 @@ export function AddPage() {
             body: JSON.stringify({ url }),
           });
           if (res.ok) {
-            const data = await res.json();
+            const data: AnalyzeResult = await res.json();
             initial = {
               name: data.name || title,
               url,
@@ -53,6 +55,7 @@ export function AddPage() {
               category: data.category || "",
               tags: data.tags ?? [],
             };
+            duplicates = data.possibleDuplicates ?? [];
           }
         } catch {
           // AI unavailable, fall back to bare url/title
@@ -65,6 +68,7 @@ export function AddPage() {
         categories,
         allTags,
         initial,
+        duplicates,
         onSubmit: (p) => saveItem(p, null),
       });
       navigate("/");

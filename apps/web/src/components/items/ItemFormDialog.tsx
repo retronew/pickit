@@ -12,6 +12,7 @@ import {
 import { Button } from "#components/ui/button";
 import { Spinner } from "#components/ui/spinner";
 import { ItemFormFields, type ItemFormPayload } from "#components/items/ItemFormFields";
+import type { PossibleDuplicate } from "#hooks/useUrlAnalyzer";
 import { errorMessage, toastError } from "#lib/api";
 import { m } from "#lib/i18n";
 
@@ -22,6 +23,8 @@ interface Props {
   categories: string[];
   allTags: string[];
   initial?: Partial<ItemFormPayload>;
+  /** Possible duplicates found before opening, e.g. by the bookmarklet's analysis. */
+  duplicates?: PossibleDuplicate[];
   /**
    * Saves the form. Resolves true to close the dialog, false to keep it open;
    * a thrown error is shown in the dialog, which also stays open.
@@ -30,7 +33,7 @@ interface Props {
 }
 
 export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
-  ({ item, categories, allTags, initial, onSubmit, call }) => {
+  ({ item, categories, allTags, initial, duplicates, onSubmit, call }) => {
     const isEditing = !!item;
     // Starts closed so Base UI has a real false→true transition to animate —
     // flips true one frame after mount (mirrors @retronew/call-vue's demo).
@@ -94,7 +97,13 @@ export const ItemFormDialog = createCallable<Props, ItemFormPayload | null>(
                 submit();
               }}
             >
-              <ItemFormFields value={form} onChange={setForm} categories={categories} allTags={allTags} />
+              <ItemFormFields
+                value={form}
+                onChange={setForm}
+                categories={categories}
+                allTags={allTags}
+                duplicates={duplicates}
+              />
             </form>
           </DialogPanel>
           <DialogFooter className="sm:items-center">
