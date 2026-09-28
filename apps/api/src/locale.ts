@@ -1,4 +1,5 @@
 import { baseLocale, isLocale, type Locale } from "@pickit/shared/i18n";
+import { readSetting, writeSetting } from "#settings-store";
 
 // The owner's language: the interface language (null until chosen, then the
 // web app follows the browser) and the language AI writes in ("auto" = the
@@ -11,20 +12,9 @@ export interface LocalePrefs {
   aiLanguage: AiLanguage;
 }
 
-async function read(db: D1Database, key: string): Promise<string | null> {
-  const row = await db.prepare("SELECT value FROM settings WHERE key = ?").bind(key).first<{ value: string }>();
-  return row?.value ?? null;
-}
-
-async function write(db: D1Database, key: string, value: string) {
-  await db
-    .prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
-    .bind(key, value)
-    .run();
-}
 
 export async function getLocalePrefs(db: D1Database): Promise<LocalePrefs> {
-  const [locale, ai] = await Promise.all([read(db, "locale"), read(db, "ai_language")]);
+  const [locale, ai] = await Promise.all([readSetting(db, "locale"), readSetting(db, "ai_language")]);
   return {
     locale: isLocale(locale) ? locale : null,
     aiLanguage: isLocale(ai) ? ai : "auto",
@@ -36,8 +26,8 @@ export function isAiLanguage(value: unknown): value is AiLanguage {
 }
 
 export async function setLocalePrefs(db: D1Database, prefs: Partial<LocalePrefs>) {
-  if (prefs.locale) await write(db, "locale", prefs.locale);
-  if (prefs.aiLanguage) await write(db, "ai_language", prefs.aiLanguage);
+  if (prefs.locale) await writeSetting(db, "locale", prefs.locale);
+  if (prefs.aiLanguage) await writeSetting(db, "ai_language", prefs.aiLanguage);
 }
 
 /** The interface language, falling back to the base locale. */

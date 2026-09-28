@@ -13,6 +13,7 @@ import {
 } from "@pickit/shared";
 import type { Env } from "#types";
 import { MAX_TEXT } from "#page-text";
+import { readSetting, writeSetting } from "#settings-store";
 
 const SETTINGS_KEY = "browser_render";
 const USAGE_PREFIX = "browser_usage:";
@@ -25,15 +26,8 @@ async function getValue(db: D1Database, key: string): Promise<string | null> {
   return row?.value ?? null;
 }
 
-async function setValue(db: D1Database, key: string, value: string) {
-  await db
-    .prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
-    .bind(key, value)
-    .run();
-}
-
 export async function getBrowserRenderSettings(db: D1Database): Promise<BrowserRenderSettings> {
-  const raw = await getValue(db, SETTINGS_KEY);
+  const raw = await readSetting(db, SETTINGS_KEY);
   try {
     return sanitizeBrowserRenderSettings(raw ? JSON.parse(raw) : null);
   } catch {
@@ -42,7 +36,7 @@ export async function getBrowserRenderSettings(db: D1Database): Promise<BrowserR
 }
 
 export async function saveBrowserRenderSettings(db: D1Database, settings: BrowserRenderSettings) {
-  await setValue(db, SETTINGS_KEY, JSON.stringify(sanitizeBrowserRenderSettings(settings)));
+  await writeSetting(db, SETTINGS_KEY, JSON.stringify(sanitizeBrowserRenderSettings(settings)));
   // The API token of the first version (before the BROWSER binding) is no longer used.
   await db.prepare("DELETE FROM settings WHERE key = 'browser_render_token'").run();
 }

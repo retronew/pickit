@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import type { Env } from "#types";
 import { safeAudit, requestMeta } from "#audit/index";
 import type { MessageRef } from "@pickit/shared/i18n";
+import { readSetting, writeSetting } from "#settings-store";
 
 const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitHub" };
 const providerName = (id?: string): MessageRef | string =>
@@ -43,12 +44,9 @@ const SETTINGS_KEY = "allowed_emails";
 
 /** Extra emails managed on the settings page. */
 export async function getExtraEmails(db: D1Database): Promise<string[]> {
-  const row = await db
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .bind(SETTINGS_KEY)
-    .first<{ value: string }>();
+  const raw = await readSetting(db, SETTINGS_KEY);
   try {
-    const list: unknown = row ? JSON.parse(row.value) : [];
+    const list: unknown = raw ? JSON.parse(raw) : [];
     return Array.isArray(list) ? list.filter((e): e is string => typeof e === "string") : [];
   } catch {
     return [];
@@ -56,12 +54,7 @@ export async function getExtraEmails(db: D1Database): Promise<string[]> {
 }
 
 export async function setExtraEmails(db: D1Database, emails: string[]) {
-  await db
-    .prepare(
-      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    )
-    .bind(SETTINGS_KEY, JSON.stringify(emails))
-    .run();
+  await writeSetting(db, SETTINGS_KEY, JSON.stringify(emails));
 }
 
 /** Owners plus the extra emails from the settings page. */

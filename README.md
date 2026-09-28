@@ -149,6 +149,8 @@ The web app uses the Better Auth session cookie. Scripts can use an API token ge
 curl -H "Authorization: Bearer <token>" https://your-domain/api/items
 ```
 
+Settings that nearly every request reads (API token, allowed emails, AI config, language) are cached in the Worker for up to 30 seconds to save D1 reads, so revoking a token or removing an email can take up to 30 seconds to apply everywhere.
+
 API errors use the language from the web app's `pickit_locale` cookie, an `X-PickIt-Locale: zh | en | ja` header, or the saved interface language.
 
 ### MCP (AI assistants)

@@ -149,6 +149,8 @@ Web アプリは Better Auth のセッション Cookie で認証します。ス�
 curl -H "Authorization: Bearer <token>" https://your-domain/api/items
 ```
 
+ほぼすべてのリクエストが読む設定（API トークン、ログインを許可するメール、AI 設定、言語）は D1 の読み取りを減らすため Worker 内で最大 30 秒キャッシュされます。そのためトークンの失効やメールの削除がすべてに反映されるまで最大 30 秒かかることがあります。
+
 API のエラーメッセージの言語は、Web アプリの `pickit_locale` Cookie、ヘッダー `X-PickIt-Locale: zh | en | ja`、保存された表示言語の順で決まります。
 
 ### MCP（AI アシスタント）

@@ -1,17 +1,16 @@
 // How long audit entries are kept (settings key `audit_retention_days`,
 // 0 = forever) and how much space they take.
 
+import { readSetting, writeSetting } from "#settings-store";
+
 export const DEFAULT_RETENTION_DAYS = 180;
 export const MAX_RETENTION_DAYS = 3650;
 const KEY = "audit_retention_days";
 const DAY_MS = 86_400_000;
 
 export async function getRetentionDays(db: D1Database): Promise<number> {
-  const row = await db
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .bind(KEY)
-    .first<{ value: string }>();
-  const days = row ? Number(row.value) : DEFAULT_RETENTION_DAYS;
+  const raw = await readSetting(db, KEY);
+  const days = raw !== null ? Number(raw) : DEFAULT_RETENTION_DAYS;
   return Number.isInteger(days) && days >= 0 ? days : DEFAULT_RETENTION_DAYS;
 }
 
@@ -20,12 +19,7 @@ export function isValidRetention(days: unknown): days is number {
 }
 
 export async function setRetentionDays(db: D1Database, days: number) {
-  await db
-    .prepare(
-      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    )
-    .bind(KEY, String(days))
-    .run();
+  await writeSetting(db, KEY, String(days));
 }
 
 /** Deletes entries older than the retention window; returns how many. */

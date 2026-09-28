@@ -5,15 +5,14 @@ import {
   isEmbeddingConfigured,
   type AiSettings,
 } from "@pickit/shared";
+import { readSetting, writeSetting, deleteSetting } from "#settings-store";
 
 /** The stored AI config (upgraded from the legacy single-endpoint format), even if incomplete. */
 export async function getRawSettings(db: D1Database): Promise<AiSettings> {
-  const row = await db
-    .prepare("SELECT value FROM settings WHERE key = 'ai_config'")
-    .first<{ value: string }>();
-  if (!row) return emptyAiSettings();
+  const raw = await readSetting(db, "ai_config");
+  if (!raw) return emptyAiSettings();
   try {
-    return upgradeAiSettings(JSON.parse(row.value));
+    return upgradeAiSettings(JSON.parse(raw));
   } catch {
     return emptyAiSettings();
   }
@@ -26,45 +25,30 @@ export async function getSettings(db: D1Database): Promise<AiSettings | null> {
 }
 
 export async function saveSettings(db: D1Database, config: AiSettings) {
-  await db
-    .prepare(
-      "INSERT INTO settings (key, value) VALUES ('ai_config', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    )
-    .bind(JSON.stringify(config))
-    .run();
+  await writeSetting(db, "ai_config", JSON.stringify(config));
 }
 
 export async function getApiToken(db: D1Database): Promise<string | null> {
-  const row = await db
-    .prepare("SELECT value FROM settings WHERE key = 'api_token'")
-    .first<{ value: string }>();
-  return row?.value ?? null;
+  return readSetting(db, "api_token");
 }
 
 /** GitHub token for project activity checks, set on the settings page. */
 export async function getGithubToken(db: D1Database): Promise<string | null> {
-  const row = await db.prepare("SELECT value FROM settings WHERE key = 'github_token'").first<{ value: string }>();
-  return row?.value || null;
+  return (await readSetting(db, "github_token")) || null;
 }
 
 export async function setGithubToken(db: D1Database, token: string | null) {
   if (!token) {
-    await db.prepare("DELETE FROM settings WHERE key = 'github_token'").run();
+    await deleteSetting(db, "github_token");
     return;
   }
-  await db
-    .prepare(
-      "INSERT INTO settings (key, value) VALUES ('github_token', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    )
-    .bind(token)
-    .run();
+  await writeSetting(db, "github_token", token);
 }
 
 export async function setApiToken(db: D1Database, token: string) {
-  await db
-    .prepare(
-      "INSERT INTO settings (key, value) VALUES ('api_token', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    )
-    .bind(token)
-    .run();
+  await writeSetting(db, "api_token", token);
+}
+
+export async function deleteApiToken(db: D1Database) {
+  await deleteSetting(db, "api_token");
 }

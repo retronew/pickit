@@ -149,6 +149,8 @@ cd ../.. && pnpm deploy
 curl -H "Authorization: Bearer <token>" https://your-domain/api/items
 ```
 
+几乎每个请求都要读的设置（API Token、允许登录的邮箱、AI 配置、语言）会在 Worker 内缓存最多 30 秒以减少 D1 读取，因此吊销 Token 或移除邮箱最多需要 30 秒才会全部生效。
+
 API 错误信息的语言依次取自网页端的 `pickit_locale` Cookie、请求头 `X-PickIt-Locale: zh | en | ja`，以及保存的界面语言。
 
 ### MCP（AI 助手）

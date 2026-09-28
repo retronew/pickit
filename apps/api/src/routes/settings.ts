@@ -14,7 +14,7 @@ import {
   sanitizeSavedSearches,
 } from "@pickit/shared";
 import type { Env } from "#types";
-import { getRawSettings, saveSettings, getApiToken, setApiToken, getGithubToken, setGithubToken } from "#settings";
+import { getRawSettings, saveSettings, getApiToken, setApiToken, deleteApiToken, getGithubToken, setGithubToken } from "#settings";
 import { githubToken, githubTokenStatus } from "#activity";
 import { createChatModel, createEmbeddingModel, describeError } from "#ai";
 import { listModels, ModelListError, type ModelFamily } from "#ai-models";
@@ -167,7 +167,7 @@ settingsRoutes.post("/api-token/reset", async (c) => {
 });
 
 settingsRoutes.delete("/api-token", async (c) => {
-  await c.env.DB.prepare("DELETE FROM settings WHERE key = 'api_token'").run();
+  await deleteApiToken(c.env.DB);
   return c.json({ ok: true });
 });
 
