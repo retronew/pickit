@@ -26,6 +26,7 @@ export function ChatPanel({ chats, configured }: { chats: ChatEndpointsState; co
       <PanelHeading title={m.ai_chat_model()} configured={configured} />
       <ChatEndpointList
         endpoints={chats.list}
+        isReady={chats.isReady}
         selectedId={e.id}
         onSelect={chats.select}
         onReorder={chats.reorder}

@@ -6,6 +6,7 @@ import {
   chatEndpoints,
   emptyAiSettings,
   emptyChatEndpoint,
+  findProvider,
   normalizeBaseUrl,
   resolveEmbeddingEndpoint,
   withChatEndpoints,
@@ -54,6 +55,14 @@ export function useAiSettings() {
   const savedChatFor = (e: ChatEndpoint): SavedEndpoint | undefined =>
     savedChats.find((s) => s.id === e.id) ??
     savedChats.find((s) => s.provider === e.provider && originOf(s.baseUrl) === originOf(e.baseUrl));
+
+  /** Complete, counting a saved key the API will reuse (the form never holds saved keys). */
+  const isChatReady = (e: ChatEndpoint) => {
+    if (!e.baseUrl || !e.model) return false;
+    if (e.apiKey || findProvider(e.provider)?.keyOptional) return true;
+    const s = savedChatFor(e);
+    return !!s?.apiKeyMasked && s.provider === e.provider && originOf(s.baseUrl) === originOf(e.baseUrl);
+  };
 
   const setChats = (list: ChatEndpoint[]) => setForm((f) => withChatEndpoints(f, list));
   const patchChat = (id: string, patch: Partial<ChatEndpoint>) =>
@@ -175,6 +184,7 @@ export function useAiSettings() {
       selected: selectedChat,
       selectedIndex,
       select: setSelectedChatId,
+      isReady: isChatReady,
       reorder: setChats,
       add: addChat,
       remove: removeChat,

@@ -1,7 +1,7 @@
 // Chat endpoints in fallback order: drag to reorder, click one to edit it.
 
 import { PlusIcon, XIcon } from "lucide-react";
-import { isChatEndpointReady, type ChatEndpoint } from "@pickit/shared";
+import type { ChatEndpoint } from "@pickit/shared";
 import { SortableList } from "#components/SortableList";
 import { Button } from "#components/ui/button";
 import { cn } from "#lib/utils";
@@ -10,6 +10,7 @@ import { m } from "#lib/i18n";
 
 export function ChatEndpointList({
   endpoints,
+  isReady,
   selectedId,
   onSelect,
   onReorder,
@@ -17,6 +18,8 @@ export function ChatEndpointList({
   onRemove,
 }: {
   endpoints: ChatEndpoint[];
+  /** Complete, counting a saved key the form doesn't hold. */
+  isReady: (e: ChatEndpoint) => boolean;
   selectedId: string;
   onSelect: (id: string) => void;
   onReorder: (list: ChatEndpoint[]) => void;
@@ -32,7 +35,7 @@ export function ChatEndpointList({
         onChange={onReorder}
         renderItem={(e) => {
           const index = endpoints.indexOf(e);
-          const ready = isChatEndpointReady(e);
+          const ready = isReady(e);
           return (
             <div className="flex items-center gap-2">
               <button
