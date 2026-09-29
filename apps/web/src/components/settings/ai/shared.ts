@@ -19,6 +19,8 @@ export interface ModelInfo {
 }
 
 export interface SavedEndpoint {
+  /** Chat endpoints only. */
+  id?: string;
   provider: string;
   baseUrl: string;
   apiKeyMasked: string;
@@ -26,6 +28,7 @@ export interface SavedEndpoint {
 
 export interface AiSettingsResponse {
   chat: AiSettings["chat"] & { apiKeyMasked: string };
+  chatFallbacks: (AiSettings["chat"] & { apiKeyMasked: string })[];
   embedding: AiSettings["embedding"] & { apiKeyMasked: string };
   chatConfigured: boolean;
   embeddingConfigured: boolean;

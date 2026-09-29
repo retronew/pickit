@@ -15,17 +15,42 @@ export function resolveEmbeddingEndpoint(settings: AiSettings): EmbeddingEndpoin
   return settings.embedding.model ? settings.embedding : null;
 }
 
+export function emptyChatEndpoint(): ChatEndpoint {
+  return {
+    id: crypto.randomUUID(),
+    provider: "",
+    baseUrl: "",
+    apiKey: "",
+    protocol: "openai-chat",
+    model: "",
+    reasoning: "provider-default",
+  };
+}
+
+/** Fills missing fields and drops an unknown reasoning level. */
+function upgradeChatEndpoint(raw: unknown): ChatEndpoint {
+  const chat = { ...emptyChatEndpoint(), ...(raw && typeof raw === "object" ? raw : {}) } as ChatEndpoint;
+  if (!isReasoningLevel(chat.reasoning)) chat.reasoning = "provider-default";
+  if (typeof chat.id !== "string" || !chat.id) chat.id = crypto.randomUUID();
+  return chat;
+}
+
+/** The chat endpoint followed by its fallbacks, in the order they are tried. */
+export function chatEndpoints(s: AiSettings): ChatEndpoint[] {
+  return [s.chat, ...s.chatFallbacks];
+}
+
+/** Settings with the chat list replaced; the first entry becomes the main endpoint. */
+export function withChatEndpoints(s: AiSettings, list: ChatEndpoint[]): AiSettings {
+  const [chat = emptyChatEndpoint(), ...chatFallbacks] = list;
+  return { ...s, chat, chatFallbacks };
+}
+
 export function emptyAiSettings(): AiSettings {
   return {
     version: 2,
-    chat: {
-      provider: "",
-      baseUrl: "",
-      apiKey: "",
-      protocol: "openai-chat",
-      model: "",
-      reasoning: "provider-default",
-    },
+    chat: emptyChatEndpoint(),
+    chatFallbacks: [],
     embedding: {
       provider: "",
       baseUrl: "",
@@ -49,8 +74,8 @@ export function upgradeAiSettings(raw: unknown): AiSettings {
   if (raw && typeof raw === "object" && (raw as { version?: number }).version === 2) {
     const s = raw as AiSettings & { embedding?: { inheritChat?: boolean } };
     const empty = emptyAiSettings();
-    const chat = { ...empty.chat, ...s.chat };
-    if (!isReasoningLevel(chat.reasoning)) chat.reasoning = "provider-default";
+    const chat = upgradeChatEndpoint(s.chat);
+    const chatFallbacks = Array.isArray(s.chatFallbacks) ? s.chatFallbacks.map(upgradeChatEndpoint) : [];
     const { inheritChat, ...embedding } = { ...empty.embedding, ...s.embedding };
     // Earlier v2 configs could reuse the chat provider for embeddings; copy it
     // over so the two endpoints are independent from now on.
@@ -58,18 +83,18 @@ export function upgradeAiSettings(raw: unknown): AiSettings {
     if (inheritChat && embeddingProtocolFor(chat.protocol)) {
       Object.assign(embedding, embeddingFromChat(chat));
     }
-    return { version: 2, chat, embedding };
+    return { version: 2, chat, chatFallbacks, embedding };
   }
   const legacy = (raw ?? {}) as LegacyAiSettings;
   const settings = emptyAiSettings();
   if (legacy.baseUrl || legacy.chatModel) {
     settings.chat = {
+      ...settings.chat,
       provider: CUSTOM_PROVIDER,
       baseUrl: legacy.baseUrl ?? "",
       apiKey: legacy.apiKey ?? "",
       protocol: legacy.apiMode === "responses" ? "openai-responses" : "openai-chat",
       model: legacy.chatModel ?? "",
-      reasoning: "provider-default",
     };
     if (legacy.embeddingModel) {
       settings.embedding = {
@@ -90,9 +115,18 @@ function embeddingFromChat(chat: ChatEndpoint): Omit<EmbeddingEndpoint, "model">
   };
 }
 
+export function isChatEndpointReady(e: ChatEndpoint): boolean {
+  const preset = findProvider(e.provider);
+  return !!(e.baseUrl && e.model && (e.apiKey || preset?.keyOptional));
+}
+
+/** The complete chat endpoints, in fallback order. */
+export function readyChatEndpoints(s: AiSettings): ChatEndpoint[] {
+  return chatEndpoints(s).filter(isChatEndpointReady);
+}
+
 export function isChatConfigured(s: AiSettings): boolean {
-  const preset = findProvider(s.chat.provider);
-  return !!(s.chat.baseUrl && s.chat.model && (s.chat.apiKey || preset?.keyOptional));
+  return readyChatEndpoints(s).length > 0;
 }
 
 export function isEmbeddingConfigured(s: AiSettings): boolean {

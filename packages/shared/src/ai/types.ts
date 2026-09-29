@@ -20,13 +20,22 @@ export interface AiEndpoint<P extends string> {
  */
 export type ReasoningLevel = "provider-default" | "none" | "low" | "medium" | "high";
 
-export type ChatEndpoint = AiEndpoint<ChatProtocol> & { reasoning: ReasoningLevel };
+export type ChatEndpoint = AiEndpoint<ChatProtocol> & {
+  /** Stable across reordering, so a saved key follows its endpoint. */
+  id: string;
+  reasoning: ReasoningLevel;
+};
 /** Configured independently of the chat endpoint, so the two can use different providers. */
 export type EmbeddingEndpoint = AiEndpoint<EmbeddingProtocol>;
 
 export interface AiSettings {
   version: 2;
   chat: ChatEndpoint;
+  /**
+   * Tried in order when the chat endpoint (or the previous fallback) fails.
+   * Embeddings have no fallback: vectors from different models don't mix.
+   */
+  chatFallbacks: ChatEndpoint[];
   embedding: EmbeddingEndpoint;
 }
 

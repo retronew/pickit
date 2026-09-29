@@ -6,7 +6,11 @@ import {
   findProvider,
   CUSTOM_PROVIDER,
   isChatConfigured,
+  isChatEndpointReady,
   isEmbeddingConfigured,
+  chatEndpoints,
+  withChatEndpoints,
+  type ChatEndpoint,
   chatRequestUrls,
   embeddingRequestUrls,
   type AiSettings,
@@ -49,27 +53,50 @@ function origin(url: string): string | null {
  * key is never sent to a different host. Path changes such as adding /v1 are
  * fine.
  */
-function keepKey<P extends string>(incoming: AiEndpoint<P>, saved: AiEndpoint<P>): string {
-  if (incoming.apiKey) return incoming.apiKey;
+function keepKey<P extends string>(incoming: AiEndpoint<P>, saved: AiEndpoint<P> | undefined): string {
+  if (incoming.apiKey || !saved) return incoming.apiKey;
   const target = origin(incoming.baseUrl);
   const sameTarget =
     incoming.provider === saved.provider && target !== null && target === origin(saved.baseUrl);
   return sameTarget ? saved.apiKey : "";
 }
 
+/**
+ * The saved chat endpoint an incoming one keeps its key from: the same entry
+ * (by id, so reordering is fine), else the first one on the same provider and server.
+ */
+function savedChatFor(incoming: ChatEndpoint, saved: ChatEndpoint[]): ChatEndpoint | undefined {
+  const target = origin(incoming.baseUrl);
+  return (
+    saved.find((s) => s.id === incoming.id) ??
+    saved.find((s) => s.provider === incoming.provider && target !== null && origin(s.baseUrl) === target)
+  );
+}
+
 function mergeWithSaved(body: unknown, saved: AiSettings): AiSettings {
   const next = upgradeAiSettings({ ...(body as object), version: 2 });
-  next.chat.baseUrl = normalizeBaseUrl(next.chat.baseUrl);
+  const savedChats = chatEndpoints(saved);
+  const chats = chatEndpoints(next).map((e) => {
+    const chat = { ...e, baseUrl: normalizeBaseUrl(e.baseUrl) };
+    return { ...chat, apiKey: keepKey(chat, savedChatFor(chat, savedChats)) };
+  });
   next.embedding.baseUrl = normalizeBaseUrl(next.embedding.baseUrl);
-  next.chat.apiKey = keepKey(next.chat, saved.chat);
   next.embedding.apiKey = keepKey(next.embedding, saved.embedding);
-  return next;
+  return withChatEndpoints(next, chats);
 }
+
+/** The chat endpoint a models/test request is about (`index` in fallback order). */
+function chatAt(settings: AiSettings, index: unknown): ChatEndpoint | undefined {
+  return chatEndpoints(settings)[typeof index === "number" ? index : 0];
+}
+
+const maskChat = (e: ChatEndpoint) => ({ ...e, apiKey: "", apiKeyMasked: maskKey(e.apiKey) });
 
 settingsRoutes.get("/ai", async (c) => {
   const s = await getRawSettings(c.env.DB);
   return c.json({
-    chat: { ...s.chat, apiKey: "", apiKeyMasked: maskKey(s.chat.apiKey) },
+    chat: maskChat(s.chat),
+    chatFallbacks: s.chatFallbacks.map(maskChat),
     embedding: { ...s.embedding, apiKey: "", apiKeyMasked: maskKey(s.embedding.apiKey) },
     chatConfigured: isChatConfigured(s),
     embeddingConfigured: isEmbeddingConfigured(s),
@@ -88,10 +115,10 @@ settingsRoutes.post("/ai", async (c) => {
 });
 
 settingsRoutes.post("/ai/models", async (c) => {
-  const body = await c.req.json<{ target: "chat" | "embedding"; settings: unknown }>();
+  const body = await c.req.json<{ target: "chat" | "embedding"; index?: number; settings: unknown }>();
   const next = mergeWithSaved(body.settings, await getRawSettings(c.env.DB));
-  const endpoint = body.target === "chat" ? next.chat : next.embedding;
-  if (!endpoint.baseUrl) return c.json({ error: await tr(c, "api_need_base_url") }, 400);
+  const endpoint = body.target === "chat" ? chatAt(next, body.index) : next.embedding;
+  if (!endpoint?.baseUrl) return c.json({ error: await tr(c, "api_need_base_url") }, 400);
   if (
     !endpoint.apiKey &&
     endpoint.provider !== CUSTOM_PROVIDER &&
@@ -115,13 +142,13 @@ settingsRoutes.post("/ai/models", async (c) => {
 });
 
 settingsRoutes.post("/ai/test", async (c) => {
-  const body = await c.req.json<{ target: "chat" | "embedding"; settings: unknown }>();
+  const body = await c.req.json<{ target: "chat" | "embedding"; index?: number; settings: unknown }>();
   const next = mergeWithSaved(body.settings, await getRawSettings(c.env.DB));
 
   if (body.target === "chat") {
-    const e = next.chat;
-    const urls = chatRequestUrls(e.protocol, e.baseUrl, e.model);
-    if (!isChatConfigured(next)) {
+    const e = chatAt(next, body.index);
+    const urls = e ? chatRequestUrls(e.protocol, e.baseUrl, e.model) : [];
+    if (!e || !isChatEndpointReady(e)) {
       return c.json({ ok: false, urls, error: await tr(c, "api_chat_incomplete") });
     }
     const startedAt = Date.now();

@@ -9,6 +9,9 @@ import {
   resolveEmbeddingEndpoint,
   isChatConfigured,
   isEmbeddingConfigured,
+  chatEndpoints,
+  readyChatEndpoints,
+  withChatEndpoints,
 } from "./index";
 
 describe("normalizeBaseUrl", () => {
@@ -131,5 +134,24 @@ describe("chat reasoning level", () => {
     expect(upgradeAiSettings(stored).chat.reasoning).toBe("provider-default");
     stored.chat.reasoning = "low";
     expect(upgradeAiSettings(stored).chat.reasoning).toBe("low");
+  });
+});
+
+describe("chat fallbacks", () => {
+  const ready = { provider: "custom", baseUrl: "https://a.com/v1", apiKey: "k", protocol: "openai-chat", model: "m" };
+
+  it("is empty for older configs and gives every endpoint an id", () => {
+    const s = upgradeAiSettings({ version: 2, chat: ready });
+    expect(s.chatFallbacks).toEqual([]);
+    expect(s.chat.id).toBeTruthy();
+  });
+
+  it("counts chat as configured when any endpoint is complete, in order", () => {
+    const s = upgradeAiSettings({ version: 2, chat: { model: "" }, chatFallbacks: [{ ...ready, id: "b" }] });
+    expect(isChatConfigured(s)).toBe(true);
+    expect(readyChatEndpoints(s).map((e) => e.id)).toEqual(["b"]);
+    const swapped = withChatEndpoints(s, [...chatEndpoints(s)].reverse());
+    expect(swapped.chat.id).toBe("b");
+    expect(swapped.chatFallbacks).toHaveLength(1);
   });
 });

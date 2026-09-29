@@ -3,27 +3,30 @@
 import { useEffect, useState } from "react";
 import { toastError, toastSuccess, api, errorMessage } from "#lib/api";
 import {
+  chatEndpoints,
   emptyAiSettings,
+  emptyChatEndpoint,
   normalizeBaseUrl,
   resolveEmbeddingEndpoint,
+  withChatEndpoints,
   type AiSettings,
+  type ChatEndpoint,
   type ChatTestReport,
 } from "@pickit/shared";
-import { hasUsableKey, emptyModels, postJson } from "./shared";
-import type { Target, ModelInfo, AiSettingsResponse, ModelState, TestState } from "./shared";
+import { hasUsableKey, emptyModels, originOf, postJson } from "./shared";
+import type { Target, ModelInfo, AiSettingsResponse, ModelState, TestState, SavedEndpoint } from "./shared";
 import { m } from "#lib/i18n";
+
+/** Models and tests are tracked per chat endpoint id, plus one "embedding" slot. */
+const EMBEDDING = "embedding";
+const idleTest: TestState = { running: false };
 
 export function useAiSettings() {
   const [form, setForm] = useState<AiSettings>(emptyAiSettings);
   const [saved, setSaved] = useState<AiSettingsResponse | null>(null);
-  const [models, setModels] = useState<Record<Target, ModelState>>({
-    chat: emptyModels,
-    embedding: emptyModels,
-  });
-  const [tests, setTests] = useState<Record<Target, TestState>>({
-    chat: { running: false },
-    embedding: { running: false },
-  });
+  const [models, setModels] = useState<Record<string, ModelState>>({});
+  const [tests, setTests] = useState<Record<string, TestState>>({});
+  const [selectedChatId, setSelectedChatId] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [loadError, setLoadError] = useState("");
 
@@ -32,9 +35,10 @@ export function useAiSettings() {
       .then((d) => {
         setSaved(d);
         setLoadError("");
-        const { apiKeyMasked: _c, ...chat } = d.chat;
-        const { apiKeyMasked: _e, ...embedding } = d.embedding;
-        setForm({ version: 2, chat, embedding });
+        const strip = <T extends { apiKeyMasked: string }>({ apiKeyMasked: _, ...rest }: T) => rest;
+        const next = { version: 2 as const, chat: strip(d.chat), chatFallbacks: d.chatFallbacks.map(strip), embedding: strip(d.embedding) };
+        setForm(next);
+        setSelectedChatId((id) => (chatEndpoints(next).some((e) => e.id === id) ? id : next.chat.id));
       })
       .catch((err) => setLoadError(errorMessage(err)));
 
@@ -42,43 +46,65 @@ export function useAiSettings() {
     load();
   }, []);
 
+  const chats = chatEndpoints(form);
+  const selectedIndex = Math.max(0, chats.findIndex((e) => e.id === selectedChatId));
+  const selectedChat = chats[selectedIndex];
+  const savedChats = saved ? [saved.chat, ...saved.chatFallbacks] : [];
+  /** The saved endpoint whose key an edited one can reuse (same id, as the API matches). */
+  const savedChatFor = (e: ChatEndpoint): SavedEndpoint | undefined =>
+    savedChats.find((s) => s.id === e.id) ??
+    savedChats.find((s) => s.provider === e.provider && originOf(s.baseUrl) === originOf(e.baseUrl));
 
-  const patchChat = (patch: Partial<AiSettings["chat"]>) =>
-    setForm((f) => ({ ...f, chat: { ...f.chat, ...patch } }));
+  const setChats = (list: ChatEndpoint[]) => setForm((f) => withChatEndpoints(f, list));
+  const patchChat = (id: string, patch: Partial<ChatEndpoint>) =>
+    setForm((f) => withChatEndpoints(f, chatEndpoints(f).map((e) => (e.id === id ? { ...e, ...patch } : e))));
+  const addChat = () => {
+    const e = emptyChatEndpoint();
+    setChats([...chats, e]);
+    setSelectedChatId(e.id);
+  };
+  const removeChat = (id: string) => {
+    const rest = chats.filter((e) => e.id !== id);
+    if (!rest.length) return;
+    setChats(rest);
+    if (id === selectedChat.id) setSelectedChatId(rest[0].id);
+  };
   const patchEmbedding = (patch: Partial<AiSettings["embedding"]>) =>
     setForm((f) => ({ ...f, embedding: { ...f.embedding, ...patch } }));
+  const resetModels = (key: string) => setModels((prev) => ({ ...prev, [key]: emptyModels }));
 
-  const fetchModels = async (target: Target) => {
-    if (!hasUsableKey(form[target], saved?.[target])) {
-      setModels((prev) => ({
-        ...prev,
-        [target]: { models: [], loading: false, message: m.ai_need_key(), error: true },
-      }));
+  /** `key` is a chat endpoint id or "embedding". */
+  const fetchModels = async (key: string) => {
+    const target: Target = key === EMBEDDING ? "embedding" : "chat";
+    const index = chats.findIndex((e) => e.id === key);
+    const endpoint = target === "chat" ? chats[index] : form.embedding;
+    const savedEndpoint = target === "chat" ? savedChatFor(chats[index]) : saved?.embedding;
+    if (!hasUsableKey(endpoint, savedEndpoint)) {
+      setModels((prev) => ({ ...prev, [key]: { models: [], loading: false, message: m.ai_need_key(), error: true } }));
       return;
     }
-    setModels((prev) => ({ ...prev, [target]: { ...prev[target], loading: true, message: "" } }));
+    setModels((prev) => ({ ...prev, [key]: { ...(prev[key] ?? emptyModels), loading: true, message: "" } }));
     const { ok, data } = await postJson<{ baseUrl?: string; models?: ModelInfo[]; error?: string }>(
       "/api/settings/ai/models",
-      { target, settings: form },
+      { target, index, settings: form },
     );
     if (!ok || !data.models || !data.baseUrl) {
       setModels((prev) => ({
         ...prev,
-        [target]: { models: [], loading: false, message: data.error ?? m.ai_fetch_failed(), error: true },
+        [key]: { models: [], loading: false, message: data.error ?? m.ai_fetch_failed(), error: true },
       }));
       return;
     }
     // Model discovery may find the working route under /v1; adopt it.
-    const current = normalizeBaseUrl(form[target].baseUrl);
-    const adjusted = data.baseUrl !== current;
+    const adjusted = data.baseUrl !== normalizeBaseUrl(endpoint.baseUrl);
     if (adjusted) {
-      if (target === "chat") patchChat({ baseUrl: data.baseUrl });
+      if (target === "chat") patchChat(key, { baseUrl: data.baseUrl });
       else patchEmbedding({ baseUrl: data.baseUrl });
     }
     const wanted = data.models.filter((prev) => prev.kind === target).length;
     setModels((prev) => ({
       ...prev,
-      [target]: {
+      [key]: {
         models: data.models!,
         loading: false,
         error: false,
@@ -94,14 +120,16 @@ export function useAiSettings() {
     }));
   };
 
-  const runTest = async (target: Target) => {
-    setTests((t) => ({ ...t, [target]: { running: true } }));
+  const runTest = async (key: string) => {
+    const target: Target = key === EMBEDDING ? "embedding" : "chat";
+    const index = chats.findIndex((e) => e.id === key);
+    setTests((t) => ({ ...t, [key]: { running: true } }));
     const { data } = await postJson<
       Partial<ChatTestReport> & { ok: boolean; error?: string; dimensions?: number; durationMs?: number }
-    >("/api/settings/ai/test", { target, settings: form });
+    >("/api/settings/ai/test", { target, index, settings: form });
     setTests((t) => ({
       ...t,
-      [target]: {
+      [key]: {
         running: false,
         ok: data.ok,
         text: data.ok
@@ -135,22 +163,41 @@ export function useAiSettings() {
     await load();
   };
 
-  const embeddingEndpoint = resolveEmbeddingEndpoint(form);
-
   return {
     form,
     saved,
-    models,
-    tests,
     saveMessage,
     loadError,
     load,
-    setModels,
-    patchChat,
-    patchEmbedding,
-    fetchModels,
-    runTest,
     save,
-    embeddingEndpoint,
+    chats: {
+      list: chats,
+      selected: selectedChat,
+      selectedIndex,
+      select: setSelectedChatId,
+      reorder: setChats,
+      add: addChat,
+      remove: removeChat,
+      patch: (patch: Partial<ChatEndpoint>) => patchChat(selectedChat.id, patch),
+      savedFor: savedChatFor,
+      models: models[selectedChat.id] ?? emptyModels,
+      test: tests[selectedChat.id] ?? idleTest,
+      resetModels: () => resetModels(selectedChat.id),
+      fetchModels: () => fetchModels(selectedChat.id),
+      runTest: () => runTest(selectedChat.id),
+    },
+    embedding: {
+      endpoint: form.embedding,
+      resolved: resolveEmbeddingEndpoint(form),
+      patch: patchEmbedding,
+      models: models[EMBEDDING] ?? emptyModels,
+      test: tests[EMBEDDING] ?? idleTest,
+      resetModels: () => resetModels(EMBEDDING),
+      fetchModels: () => fetchModels(EMBEDDING),
+      runTest: () => runTest(EMBEDDING),
+    },
   };
 }
+
+export type ChatEndpointsState = ReturnType<typeof useAiSettings>["chats"];
+export type EmbeddingState = ReturnType<typeof useAiSettings>["embedding"];

@@ -306,6 +306,27 @@ describe("AI settings", () => {
     saved = await t.json("/api/settings/ai");
     expect(saved.chat.apiKeyMasked).toBe("");
   });
+
+  it("keeps each fallback's key when the order changes", async () => {
+    const endpoint = (id: string, host: string, apiKey: string) => ({
+      id,
+      provider: "custom",
+      baseUrl: `https://${host}/v1`,
+      apiKey,
+      protocol: "openai-chat",
+      model: "m",
+    });
+    await t.json("/api/settings/ai", {
+      json: { chat: endpoint("a", "a.example.com", "sk-aaaa-111111"), chatFallbacks: [endpoint("b", "b.example.com", "sk-bbbb-222222")], embedding: {} },
+    });
+    await t.json("/api/settings/ai", {
+      json: { chat: endpoint("b", "b.example.com", ""), chatFallbacks: [endpoint("a", "a.example.com", "")], embedding: {} },
+    });
+    const saved = await t.json("/api/settings/ai");
+    expect(saved.chat.id).toBe("b");
+    expect(saved.chat.apiKeyMasked).toMatch(/2222$/);
+    expect(saved.chatFallbacks[0].apiKeyMasked).toMatch(/1111$/);
+  });
 });
 
 describe("saved searches", () => {

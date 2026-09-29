@@ -61,7 +61,7 @@ export function AiSettingsSkeleton() {
         <PanelSkeleton />
       </CardContent>
       <CardFooter>
-        <ButtonsSkeleton widths={["w-16", "w-28", "w-28"]} />
+        <ButtonsSkeleton widths={["w-16"]} />
       </CardFooter>
     </>
   );

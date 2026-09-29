@@ -7,13 +7,14 @@ import { embed, embedMany, wrapLanguageModel, APICallError, RetryError } from "a
 import {
   normalizeBaseUrl,
   resolveEmbeddingEndpoint,
-  isChatConfigured,
   isEmbeddingConfigured,
+  readyChatEndpoints,
   type AiSettings,
   type ChatEndpoint,
   type AiEndpoint,
   type EmbeddingProtocol,
 } from "@pickit/shared";
+import { fallbackModel } from "#ai-fallback";
 
 export type { AiSettings };
 
@@ -39,6 +40,12 @@ export function withReasoning(model: LanguageModel, reasoning: ChatEndpoint["rea
 
 export function createChatModel(e: ChatEndpoint): LanguageModel {
   return withReasoning(createBaseChatModel(e), e.reasoning);
+}
+
+/** One model over every complete chat endpoint, falling back in order; null when none is. */
+export function createChatModelWithFallbacks(settings: AiSettings): LanguageModel | null {
+  const models = readyChatEndpoints(settings).map(createChatModel) as Parameters<typeof fallbackModel>[0];
+  return models.length ? fallbackModel(models) : null;
 }
 
 function createBaseChatModel(e: ChatEndpoint) {
@@ -79,7 +86,8 @@ export function createEmbeddingModel(e: AiEndpoint<EmbeddingProtocol>): Embeddin
  */
 export function createProvider(settings: AiSettings): Provider | null {
   const provider: Provider = {};
-  if (isChatConfigured(settings)) provider.chat = createChatModel(settings.chat);
+  const chat = createChatModelWithFallbacks(settings);
+  if (chat) provider.chat = chat;
   const embedding = isEmbeddingConfigured(settings) ? resolveEmbeddingEndpoint(settings) : null;
   if (embedding) {
     provider.embedding = createEmbeddingModel(embedding);
