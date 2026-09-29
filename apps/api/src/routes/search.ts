@@ -7,5 +7,6 @@ export { ftsQuery } from "#search";
 export const searchRoutes = new Hono<{ Bindings: Env }>();
 
 searchRoutes.get("/", async (c) => {
-  return c.json({ hits: await searchItems(c.env, c.req.query("q") ?? "") });
+  const semantic = c.req.query("semantic") !== "0";
+  return c.json({ hits: await searchItems(c.env, c.req.query("q") ?? "", 30, { semantic }) });
 });

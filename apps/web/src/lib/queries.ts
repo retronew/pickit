@@ -66,10 +66,13 @@ export const relatedQuery = (id: number) =>
     queryFn: () => api<Item[]>(`/api/items/${id}/related?limit=6`),
   });
 
-export const searchQuery = (q: string) =>
+export const searchQuery = (q: string, semantic = true) =>
   queryOptions({
-    queryKey: ["search", q],
-    queryFn: () => api<{ hits: (Item & { score: number })[] }>(`/api/search?q=${encodeURIComponent(q)}`),
+    queryKey: ["search", q, semantic],
+    queryFn: () =>
+      api<{ hits: (Item & { score: number })[] }>(
+        `/api/search?q=${encodeURIComponent(q)}${semantic ? "" : "&semantic=0"}`,
+      ),
     staleTime: 60_000,
   });
 

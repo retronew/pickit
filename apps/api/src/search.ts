@@ -30,8 +30,13 @@ export function ftsQuery(q: string): string {
     .join(" OR ");
 }
 
-/** Best matches first; at most `limit` (≤ 30) hits. */
-export async function searchItems(env: Env, query: string, limit = 30): Promise<Hit[]> {
+/** Best matches first; at most `limit` (≤ 30) hits. `semantic: false` skips the embedding call for fast keyword-only search. */
+export async function searchItems(
+  env: Env,
+  query: string,
+  limit = 30,
+  { semantic = true }: { semantic?: boolean } = {},
+): Promise<Hit[]> {
   const q = query.trim();
   if (!q) return [];
   const hits = new Map<number, Hit>();
@@ -58,7 +63,7 @@ export async function searchItems(env: Env, query: string, limit = 30): Promise<
   }
 
   // 2. semantic search (cosine over all rows with embeddings)
-  const settings = await getSettings(env.DB);
+  const settings = semantic ? await getSettings(env.DB) : null;
   const provider = settings ? createProvider(settings) : null;
   if (provider?.embedding) {
     try {

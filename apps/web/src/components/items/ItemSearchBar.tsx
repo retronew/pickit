@@ -1,9 +1,11 @@
-import { SearchIcon, PlusIcon, ChevronDownIcon, ListPlusIcon, XIcon } from "lucide-react";
+import { SearchIcon, SparklesIcon, PlusIcon, ChevronDownIcon, ListPlusIcon, XIcon } from "lucide-react";
 import { Spinner } from "#components/ui/spinner";
 import { Input } from "#components/ui/input";
 import { Button, buttonVariants } from "#components/ui/button";
 import { MarqueeText } from "#components/MarqueeText";
 import { Kbd } from "#components/ui/kbd";
+import { Toggle } from "#components/ui/toggle";
+import { Hint } from "#components/Hint";
 import { Menu, MenuTrigger, MenuPopup, MenuItem } from "#components/ui/menu";
 import { cn } from "#lib/utils";
 import { m } from "#lib/i18n";
@@ -11,6 +13,8 @@ import { m } from "#lib/i18n";
 export function ItemSearchBar({
   query,
   onQueryChange,
+  semantic,
+  onSemanticChange,
   searching,
   onAdd,
   onBatchAdd,
@@ -18,6 +22,9 @@ export function ItemSearchBar({
 }: {
   query: string;
   onQueryChange: (query: string) => void;
+  /** Whether the search also matches by meaning (slower, needs an embedding model). */
+  semantic: boolean;
+  onSemanticChange: (semantic: boolean) => void;
   searching: boolean;
   onAdd: () => void;
   onBatchAdd: () => void;
@@ -63,6 +70,17 @@ export function ItemSearchBar({
           </Kbd>
         )}
       </div>
+      <Hint content={semantic ? m.search_semantic_on() : m.search_semantic_off()}>
+        <Toggle
+          variant="outline"
+          size="lg"
+          pressed={semantic}
+          onPressedChange={onSemanticChange}
+          aria-label={m.search_semantic_toggle()}
+        >
+          <SparklesIcon />
+        </Toggle>
+      </Hint>
       <div className="flex">
         <Button size="lg" onClick={onAdd} className="rounded-e-none">
           <PlusIcon />

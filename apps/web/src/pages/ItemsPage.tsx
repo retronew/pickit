@@ -94,6 +94,8 @@ export function ItemsPage() {
         inputRef={searchRef}
         query={search.query}
         onQueryChange={search.setQuery}
+        semantic={search.semantic}
+        onSemanticChange={search.setSemantic}
         searching={search.searching}
         onAdd={actions.addItem}
         onBatchAdd={() => setBatchOpen(true)}
