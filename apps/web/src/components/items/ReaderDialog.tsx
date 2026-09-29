@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createCallable } from "react-call";
-import { Streamdown } from "streamdown";
+import { Markdown } from "#components/markdown/Markdown";
 import {
   Dialog,
   DialogPopup,
@@ -46,7 +46,7 @@ export const ReaderDialog = createCallable<Props, void>(({ title, captured, load
             </div>
           ) : text ? (
             <article className="break-words text-[15px] leading-7 [&_img]:rounded-md">
-              <Streamdown mode="static">{text}</Streamdown>
+              <Markdown mode="static">{text}</Markdown>
             </article>
           ) : (
             <p className="text-muted-foreground text-sm">{m.content_load_failed()}</p>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Streamdown } from "streamdown";
+import { Markdown } from "#components/markdown/Markdown";
 import { SparkleIcon, ArrowUpIcon, XIcon } from "lucide-react";
 import { Card } from "#components/ui/card";
 import { Button } from "#components/ui/button";
@@ -111,7 +111,7 @@ export function AskAi() {
                     className="max-w-[85%] space-y-2 rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm [&_a]:underline [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-muted [&_pre]:p-2"
                   >
                     {msg.content ? (
-                      <Streamdown>{renderableText(msg.content, itemCache)}</Streamdown>
+                      <Markdown>{renderableText(msg.content, itemCache)}</Markdown>
                     ) : streaming ? (
                       "…"
                     ) : (

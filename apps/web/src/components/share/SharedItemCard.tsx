@@ -1,4 +1,4 @@
-import { Streamdown } from "streamdown";
+import { Markdown } from "#components/markdown/Markdown";
 import { ExternalLinkIcon } from "lucide-react";
 import { Card } from "#components/ui/card";
 import { Badge } from "#components/ui/badge";
@@ -38,7 +38,7 @@ export function SharedItemCard({
       </a>
       {item.note && (
         <div className={cn("mt-2 text-muted-foreground text-sm leading-relaxed", compact && "line-clamp-3")}>
-          <Streamdown>{item.note}</Streamdown>
+          <Markdown>{item.note}</Markdown>
         </div>
       )}
       {(item.category || item.tags.length > 0) && (

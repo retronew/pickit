@@ -10,7 +10,8 @@ import {
 } from "#components/ui/card";
 import { StatTile } from "#components/StatTile";
 import { RankBarChart } from "#components/stats/RankBarChart";
-import { MonthBarChart } from "#components/stats/MonthBarChart";
+import { MonthTrendChart } from "#components/stats/MonthTrendChart";
+import { CategoryDonutChart } from "#components/stats/CategoryDonutChart";
 import { PageLoading } from "#components/PageLoading";
 import { Empty, EmptyHeader, EmptyTitle } from "#components/ui/empty";
 import { m } from "#lib/i18n";
@@ -32,16 +33,6 @@ function ChartEmpty() {
 
 export function StatsPage() {
   const stats = useQuery(statsQuery).data ?? null;
-
-  const categoryData = useMemo(
-    () =>
-      (stats?.byCategory ?? []).slice(0, 15).map((c) => ({
-        ...c,
-        label: truncateLabel(c.category || m.uncategorized()),
-        value: c.count,
-      })),
-    [stats],
-  );
 
   const clickData = useMemo(
     () =>
@@ -82,13 +73,13 @@ export function StatsPage() {
             <CardDescription>{m.stats_by_category_hint()}</CardDescription>
           </CardHeader>
           <CardContent>
-            {categoryData.length === 0 ? (
+            {stats.byCategory.length === 0 ? (
               <ChartEmpty />
             ) : (
-              <RankBarChart data={categoryData} label={m.stats_count()} />
+              <CategoryDonutChart data={stats.byCategory} />
             )}
           </CardContent>
-          {categoryData.length > 0 && (
+          {stats.byCategory.length > 0 && (
             <CardFooter className="text-muted-foreground text-sm">
               {m.stats_category_total({ count: stats.byCategory.length })}
             </CardFooter>
@@ -105,7 +96,7 @@ export function StatsPage() {
               {stats.byMonth.length === 0 ? (
                 <ChartEmpty />
               ) : (
-                <MonthBarChart data={stats.byMonth} />
+                <MonthTrendChart data={stats.byMonth} />
               )}
             </CardContent>
           </Card>

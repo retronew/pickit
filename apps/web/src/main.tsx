@@ -1,24 +1,28 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router";
 import "./index.css";
 import { AppShell } from "#AppShell";
 import { ItemsPage } from "#pages/ItemsPage";
-import { AddPage } from "#pages/AddPage";
-import { TrashPage } from "#pages/TrashPage";
-import { TagsPage } from "#pages/TagsPage";
-import { CategoriesPage } from "#pages/CategoriesPage";
-import { StatsPage } from "#pages/StatsPage";
-import { SettingsPage } from "#pages/SettingsPage";
-import { SharesPage } from "#pages/SharesPage";
-import { AuditPage } from "#pages/AuditPage";
-import { LoginPage } from "#pages/LoginPage";
-import { PublicSharePage } from "#pages/PublicSharePage";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { ToastProvider } from "#components/ui/toast";
 import { persistOptions, queryClient } from "#lib/query-client";
 import { applyDocumentLocale } from "#lib/i18n";
 import { registerServiceWorker } from "#lib/pwa";
+import { lazyPage } from "#lib/lazyPage";
+import { PageLoading } from "#components/PageLoading";
+
+// The home page ships in the main bundle; every other page loads on demand.
+const AddPage = lazyPage(() => import("#pages/AddPage"), "AddPage");
+const TrashPage = lazyPage(() => import("#pages/TrashPage"), "TrashPage");
+const TagsPage = lazyPage(() => import("#pages/TagsPage"), "TagsPage");
+const CategoriesPage = lazyPage(() => import("#pages/CategoriesPage"), "CategoriesPage");
+const StatsPage = lazyPage(() => import("#pages/StatsPage"), "StatsPage");
+const SettingsPage = lazyPage(() => import("#pages/SettingsPage"), "SettingsPage");
+const SharesPage = lazyPage(() => import("#pages/SharesPage"), "SharesPage");
+const AuditPage = lazyPage(() => import("#pages/AuditPage"), "AuditPage");
+const LoginPage = lazyPage(() => import("#pages/LoginPage"), "LoginPage");
+const PublicSharePage = lazyPage(() => import("#pages/PublicSharePage"), "PublicSharePage");
 
 applyDocumentLocale();
 registerServiceWorker();
@@ -28,6 +32,7 @@ createRoot(document.getElementById("root")!).render(
     <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
     <ToastProvider position="top-center">
     <BrowserRouter>
+      <Suspense fallback={<PageLoading />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/s/:slug" element={<PublicSharePage />} />
@@ -43,6 +48,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
+      </Suspense>
     </BrowserRouter>
     </ToastProvider>
     </PersistQueryClientProvider>

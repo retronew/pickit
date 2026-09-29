@@ -1,7 +1,6 @@
 import { useItemDetail } from "#hooks/useItemDetail";
 import { useMediaQuery } from "#hooks/use-media-query";
-import { Streamdown, defaultRemarkPlugins } from "streamdown";
-import remarkBreaks from "remark-breaks";
+import { Markdown } from "#components/markdown/Markdown";
 import {
   ArchiveIcon,
   PencilIcon,
@@ -33,7 +32,6 @@ import { intlLocale, m } from "#lib/i18n";
 import { ProjectActivityPanel } from "#components/items/ProjectActivityPanel";
 
 // Single newlines in a note render as line breaks, like they were typed.
-const NOTE_REMARK_PLUGINS = [...Object.values(defaultRemarkPlugins), remarkBreaks];
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleString(intlLocale(), {
@@ -146,7 +144,7 @@ export function ItemDetailSheet({
               <PreviewImage src={item.image} className="aspect-video w-full" />
               {item.note && (
                 <div className="text-sm leading-relaxed [&_a]:underline [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-2">
-                  <Streamdown remarkPlugins={NOTE_REMARK_PLUGINS}>{item.note}</Streamdown>
+                  <Markdown breaks>{item.note}</Markdown>
                 </div>
               )}
 

@@ -19,7 +19,7 @@ export function RankBarChart({ data, label }: { data: { label: string; value: nu
         <EvilBarChart.XAxis dataKey="value" hide />
         <EvilBarChart.YAxis dataKey="label" width={108} tickMargin={10} />
         <EvilBarChart.Tooltip />
-        <EvilBarChart.Bar dataKey="value" variant="gradient" />
+        <EvilBarChart.Bar dataKey="value" />
       </EvilBarChart>
     </div>
   );
