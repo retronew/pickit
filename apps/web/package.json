@@ -33,6 +33,7 @@
     "es-toolkit": "^1.52.0",
     "idb-keyval": "^6.3.0",
     "lucide-react": "^1.47.0",
+    "motion": "^13.4.4",
     "react": "^19.3.0",
     "react-call": "^2.0.2",
     "react-dom": "^19.3.0",

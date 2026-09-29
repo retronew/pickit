@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardHeader,
@@ -10,28 +9,12 @@ import {
   CardFooter,
 } from "#components/ui/card";
 import { StatTile } from "#components/StatTile";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "#components/ui/chart";
+import { RankBarChart } from "#components/stats/RankBarChart";
+import { MonthBarChart } from "#components/stats/MonthBarChart";
 import { PageLoading } from "#components/PageLoading";
 import { Empty, EmptyHeader, EmptyTitle } from "#components/ui/empty";
 import { m } from "#lib/i18n";
 import { statsQuery } from "#lib/queries";
-
-const categoryChartConfig = {
-  count: { label: m.stats_count(), color: "var(--chart-2)" },
-} satisfies ChartConfig;
-
-const monthChartConfig = {
-  count: { label: m.stats_added(), color: "var(--chart-2)" },
-} satisfies ChartConfig;
-
-const clickChartConfig = {
-  clickCount: { label: m.detail_clicks(), color: "var(--chart-2)" },
-} satisfies ChartConfig;
 
 function truncateLabel(label: string, max = 8) {
   return label.length > max ? `${label.slice(0, max)}…` : label;
@@ -55,6 +38,7 @@ export function StatsPage() {
       (stats?.byCategory ?? []).slice(0, 15).map((c) => ({
         ...c,
         label: truncateLabel(c.category || m.uncategorized()),
+        value: c.count,
       })),
     [stats],
   );
@@ -64,6 +48,7 @@ export function StatsPage() {
       (stats?.clickTop ?? []).slice(0, 10).map((c) => ({
         ...c,
         label: truncateLabel(c.name),
+        value: c.clickCount,
       })),
     [stats],
   );
@@ -100,37 +85,7 @@ export function StatsPage() {
             {categoryData.length === 0 ? (
               <ChartEmpty />
             ) : (
-              <ChartContainer
-                config={categoryChartConfig}
-                className="w-full"
-                style={{
-                  aspectRatio: "auto",
-                  height: categoryData.length * 26 + 8,
-                }}
-              >
-                <BarChart
-                  accessibilityLayer
-                  data={categoryData}
-                  layout="vertical"
-                  barSize={12}
-                  margin={{ left: -8 }}
-                >
-                  <XAxis type="number" dataKey="count" hide />
-                  <YAxis
-                    dataKey="label"
-                    type="category"
-                    tickLine={false}
-                    tickMargin={10}
-                    axisLine={false}
-                    width={108}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent hideLabel />}
-                  />
-                  <Bar dataKey="count" fill="var(--color-count)" radius={5} />
-                </BarChart>
-              </ChartContainer>
+              <RankBarChart data={categoryData} label={m.stats_count()} />
             )}
           </CardContent>
           {categoryData.length > 0 && (
@@ -150,30 +105,7 @@ export function StatsPage() {
               {stats.byMonth.length === 0 ? (
                 <ChartEmpty />
               ) : (
-                <ChartContainer
-                  config={monthChartConfig}
-                  className="aspect-auto h-[200px] w-full"
-                >
-                  <BarChart
-                    accessibilityLayer
-                    data={stats.byMonth}
-                    maxBarSize={40}
-                    margin={{ top: 8 }}
-                  >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                    />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Bar dataKey="count" fill="var(--color-count)" radius={8} />
-                  </BarChart>
-                </ChartContainer>
+                <MonthBarChart data={stats.byMonth} />
               )}
             </CardContent>
           </Card>
@@ -185,41 +117,7 @@ export function StatsPage() {
                 <CardDescription>{m.stats_top_clicked_hint()}</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer
-                  config={clickChartConfig}
-                  className="w-full"
-                  style={{
-                    aspectRatio: "auto",
-                    height: clickData.length * 26 + 8,
-                  }}
-                >
-                  <BarChart
-                    accessibilityLayer
-                    data={clickData}
-                    layout="vertical"
-                    barSize={12}
-                    margin={{ left: -8 }}
-                  >
-                    <XAxis type="number" dataKey="clickCount" hide />
-                    <YAxis
-                      dataKey="label"
-                      type="category"
-                      tickLine={false}
-                      tickMargin={10}
-                      axisLine={false}
-                      width={108}
-                    />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Bar
-                      dataKey="clickCount"
-                      fill="var(--color-clickCount)"
-                      radius={5}
-                    />
-                  </BarChart>
-                </ChartContainer>
+                <RankBarChart data={clickData} label={m.detail_clicks()} />
               </CardContent>
             </Card>
           )}
