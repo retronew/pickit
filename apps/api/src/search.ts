@@ -64,7 +64,7 @@ export async function searchItems(
 
   // 2. semantic search (cosine over all rows with embeddings)
   const settings = semantic ? await getSettings(env.DB) : null;
-  const provider = settings ? createProvider(settings) : null;
+  const provider = settings ? createProvider(settings, { db: env.DB, feature: "search" }) : null;
   if (provider?.embedding) {
     try {
       const { embedText } = await import("#ai");

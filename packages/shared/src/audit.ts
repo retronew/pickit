@@ -51,6 +51,7 @@ export const AUDIT_ACTIONS = [
   "settings.token_delete",
   "settings.allowed_emails",
   "settings.audit_retention",
+  "settings.ai_usage_retention",
   "settings.locale",
   "settings.saved_searches",
   "settings.github_token",

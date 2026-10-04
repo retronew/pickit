@@ -91,7 +91,7 @@ export async function embedItem(
   item: { name: string; url?: string; note?: string; category?: string },
   settings: AiSettings,
 ) {
-  const provider = createProvider(settings);
+  const provider = createProvider(settings, { db: env.DB, feature: "embed" });
   if (!provider?.embedding) return;
   const vec = await embedText(provider, embeddingInput(item));
   if (!vec) return;

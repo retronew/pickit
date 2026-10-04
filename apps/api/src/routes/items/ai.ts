@@ -22,7 +22,7 @@ aiRoutes.post("/analyze", async (c) => {
     return c.json({ error: "valid url required" }, 400);
   }
   const settings = await getSettings(c.env.DB);
-  const provider = settings ? createProvider(settings) : null;
+  const provider = settings ? createProvider(settings, { db: c.env.DB, feature: "analyze" }) : null;
   if (!provider?.chat) {
     return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
@@ -111,7 +111,7 @@ aiRoutes.post("/:id/summarize", async (c) => {
     .first<ItemRow>();
   if (!row) return c.json({ error: "not found" }, 404);
   const settings = await getSettings(c.env.DB);
-  const provider = settings ? createProvider(settings) : null;
+  const provider = settings ? createProvider(settings, { db: c.env.DB, feature: "summarize" }) : null;
   if (!provider?.chat) {
     return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
@@ -190,7 +190,7 @@ aiRoutes.post("/:id/translate", async (c) => {
   if (Object.keys(texts).length === 0) return c.json({ error: await tr(c, "api_translate_empty") }, 400);
 
   const settings = await getSettings(c.env.DB);
-  const provider = settings ? createProvider(settings) : null;
+  const provider = settings ? createProvider(settings, { db: c.env.DB, feature: "translate" }) : null;
   if (!provider?.chat) return c.json({ error: await tr(c, "api_need_chat") }, 400);
 
   const locale = isLocale(body.target) ? body.target : await aiLocale(c.env.DB);

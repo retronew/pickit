@@ -10,6 +10,7 @@ export const CRON_TASK_LABELS: Record<CronTaskId, { name: () => string; hint: ()
   backup: { name: m.cron_task_backup, hint: m.cron_task_backup_hint },
   link_check: { name: m.cron_task_link_check, hint: m.cron_task_link_check_hint },
   audit_prune: { name: m.cron_task_audit_prune, hint: m.cron_task_audit_prune_hint },
+  ai_usage_prune: { name: m.cron_task_ai_usage_prune, hint: m.cron_task_ai_usage_prune_hint },
 };
 
 /** "Every minute" / "Every 5 minutes" / "Daily at 02:00" in the viewer's time zone (from the next run). */

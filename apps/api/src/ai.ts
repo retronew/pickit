@@ -3,7 +3,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { LanguageModel, LanguageModelMiddleware, EmbeddingModel } from "ai";
-import { embed, embedMany, wrapLanguageModel, APICallError, RetryError } from "ai";
+import { embed, embedMany, wrapLanguageModel, wrapEmbeddingModel, APICallError, RetryError } from "ai";
 import {
   normalizeBaseUrl,
   resolveEmbeddingEndpoint,
@@ -14,7 +14,11 @@ import {
   type AiEndpoint,
   type EmbeddingProtocol,
 } from "@pickit/shared";
+import type { EmbeddingModelV4 } from "@ai-sdk/provider";
 import { fallbackModel } from "#ai-fallback";
+import { chatUsageMiddleware, embeddingUsageMiddleware, type UsageContext } from "#ai-usage/recorder";
+
+export type { UsageContext };
 
 export type { AiSettings };
 
@@ -38,13 +42,18 @@ export function withReasoning(model: LanguageModel, reasoning: ChatEndpoint["rea
   return wrapLanguageModel({ model, middleware: reasoningMiddleware(reasoning) });
 }
 
-export function createChatModel(e: ChatEndpoint): LanguageModel {
-  return withReasoning(createBaseChatModel(e), e.reasoning);
+/** With `usage`, every call made through the model is recorded in ai_usage. */
+export function createChatModel(e: ChatEndpoint, usage?: UsageContext): LanguageModel {
+  const model = withReasoning(createBaseChatModel(e), e.reasoning);
+  if (!usage || typeof model === "string") return model;
+  return wrapLanguageModel({ model, middleware: chatUsageMiddleware(usage, e) });
 }
 
 /** One model over every complete chat endpoint, falling back in order; null when none is. */
-export function createChatModelWithFallbacks(settings: AiSettings): LanguageModel | null {
-  const models = readyChatEndpoints(settings).map(createChatModel) as Parameters<typeof fallbackModel>[0];
+export function createChatModelWithFallbacks(settings: AiSettings, usage?: UsageContext): LanguageModel | null {
+  const models = readyChatEndpoints(settings).map((e) => createChatModel(e, usage)) as Parameters<
+    typeof fallbackModel
+  >[0];
   return models.length ? fallbackModel(models) : null;
 }
 
@@ -67,30 +76,37 @@ function createBaseChatModel(e: ChatEndpoint) {
   }
 }
 
-export function createEmbeddingModel(e: AiEndpoint<EmbeddingProtocol>): EmbeddingModel {
+export function createEmbeddingModel(e: AiEndpoint<EmbeddingProtocol>, usage?: UsageContext): EmbeddingModel {
+  const model = createBaseEmbeddingModel(e);
+  if (!usage) return model;
+  return wrapEmbeddingModel({ model, middleware: embeddingUsageMiddleware(usage, e) });
+}
+
+function createBaseEmbeddingModel(e: AiEndpoint<EmbeddingProtocol>): EmbeddingModelV4 {
   const baseURL = normalizeBaseUrl(e.baseUrl);
   const apiKey = e.apiKey || "none";
   if (e.protocol === "google") {
-    return createGoogleGenerativeAI({ baseURL, apiKey }).embeddingModel(e.model) as EmbeddingModel;
+    return createGoogleGenerativeAI({ baseURL, apiKey }).embeddingModel(e.model) as EmbeddingModelV4;
   }
   return createOpenAICompatible({
     name: e.provider || "custom",
     baseURL,
     apiKey,
-  }).embeddingModel(e.model) as EmbeddingModel;
+  }).embeddingModel(e.model) as EmbeddingModelV4;
 }
 
 /**
  * Builds whatever parts of the AI config are usable. Chat and embedding are
- * configured independently, so either may be missing.
+ * configured independently, so either may be missing. Pass `usage` whenever
+ * the provider makes calls, so their tokens are counted.
  */
-export function createProvider(settings: AiSettings): Provider | null {
+export function createProvider(settings: AiSettings, usage?: UsageContext): Provider | null {
   const provider: Provider = {};
-  const chat = createChatModelWithFallbacks(settings);
+  const chat = createChatModelWithFallbacks(settings, usage);
   if (chat) provider.chat = chat;
   const embedding = isEmbeddingConfigured(settings) ? resolveEmbeddingEndpoint(settings) : null;
   if (embedding) {
-    provider.embedding = createEmbeddingModel(embedding);
+    provider.embedding = createEmbeddingModel(embedding, usage);
     provider.embeddingModelId = embedding.model;
   }
   return provider.chat || provider.embedding ? provider : null;

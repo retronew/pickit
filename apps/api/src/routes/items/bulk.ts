@@ -176,7 +176,7 @@ bulkRoutes.post("/suggest", async (c) => {
   const ids = cleanIds(body.ids, MAX_SUGGEST);
   if (ids.length === 0) return c.json({ error: "ids required" }, 400);
   const settings = await getSettings(c.env.DB);
-  const chat = settings ? createProvider(settings)?.chat : undefined;
+  const chat = settings ? createProvider(settings, { db: c.env.DB, feature: "organize" })?.chat : undefined;
   if (!chat) return c.json({ error: await tr(c, "api_need_chat") }, 400);
 
   const { results: rows } = await c.env.DB.prepare(

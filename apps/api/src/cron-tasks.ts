@@ -12,6 +12,7 @@ import { runDeadLinkCheck } from "#cron";
 import { backfillPreviews } from "#previews";
 import { writeBackup, pruneBackups } from "#backups";
 import { pruneAudit, safeAudit } from "#audit/index";
+import { pruneAiUsage } from "#ai-usage/index";
 import { backfillContent } from "#item-content";
 import { backfillActivity } from "#activity";
 import { matchesAt, nextRun } from "#cron-schedule";
@@ -109,6 +110,7 @@ export const TASKS: CronTask[] = [
   { id: "backup", cron: DAILY, run: dailyBackup },
   { id: "link_check", cron: DAILY, run: linkCheck },
   { id: "audit_prune", cron: DAILY, run: async (env) => count(await pruneAudit(env.DB)) },
+  { id: "ai_usage_prune", cron: DAILY, run: async (env) => count(await pruneAiUsage(env.DB)) },
 ];
 
 export const findTask = (id: string) => TASKS.find((t) => t.id === id);

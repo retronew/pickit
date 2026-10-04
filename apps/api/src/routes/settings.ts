@@ -153,7 +153,7 @@ settingsRoutes.post("/ai/test", async (c) => {
     }
     const startedAt = Date.now();
     try {
-      return c.json({ ok: true, urls, ...(await testChat(createChatModel(e), e)) });
+      return c.json({ ok: true, urls, ...(await testChat(createChatModel(e, { db: c.env.DB, feature: "test" }), e)) });
     } catch (err) {
       return c.json({ ok: false, urls, durationMs: Date.now() - startedAt, error: describeError(err) });
     }
@@ -168,7 +168,7 @@ settingsRoutes.post("/ai/test", async (c) => {
   try {
     const { embed } = await import("ai");
     const { embedding } = await embed({
-      model: createEmbeddingModel(e),
+      model: createEmbeddingModel(e, { db: c.env.DB, feature: "test" }),
       value: "test",
       maxRetries: 0,
     });

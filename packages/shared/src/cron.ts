@@ -11,6 +11,7 @@ export const CRON_TASKS = [
   "backup",
   "link_check",
   "audit_prune",
+  "ai_usage_prune",
 ] as const;
 export type CronTaskId = (typeof CRON_TASKS)[number];
 

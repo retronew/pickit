@@ -231,6 +231,16 @@ export function describe(
             : msg("retention_days", { days: Number(body.retentionDays), pruned }),
       };
     }
+    case "PUT /ai-usage/settings": {
+      const pruned = res.deleted ? msg("retention_pruned", { count: res.deleted }) : "";
+      return {
+        action: "settings.ai_usage_retention",
+        summary:
+          body.retentionDays === 0
+            ? msg("ai_usage_retention_forever", { pruned })
+            : msg("ai_usage_retention_days", { days: Number(body.retentionDays), pruned }),
+      };
+    }
     case "POST /backups":
       return {
         action: "backup.create",

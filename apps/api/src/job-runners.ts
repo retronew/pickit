@@ -2,7 +2,7 @@ import { type Env, type ItemRow, ITEM_COLUMNS } from "#types";
 import { vectorColumns } from "#vectors";
 import { getSettings } from "#settings";
 import { createProvider, embedText, embedTexts, describeError, embeddingInput } from "#ai";
-import { isChatConfigured, isEmbeddingConfigured, type AiSettings } from "@pickit/shared";
+import { isChatConfigured, isEmbeddingConfigured, type AiFeature, type AiSettings } from "@pickit/shared";
 import { jobKey, stepJob, type JobKind, type JobState, type StepResult } from "#jobs";
 import type { LanguageModel } from "ai";
 import { activeCategories, suggestOrganize } from "#organize";
@@ -103,7 +103,7 @@ function missingIds(ids: number[], rows: ItemRow[]): number[] {
 }
 
 async function reembedBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
-  const provider = createProvider(settings);
+  const provider = createProvider(settings, { db: env.DB, feature: "embed" });
   if (!provider?.embedding) throw new Error(await errorText(env, "api_embedding_unavailable"));
   const rows = await loadRows(env, ids);
   const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
@@ -146,9 +146,10 @@ async function chatBatch(
   env: Env,
   settings: AiSettings,
   ids: number[],
+  feature: AiFeature,
   work: (chat: LanguageModel, row: ItemRow) => Promise<unknown>,
 ): Promise<StepResult> {
-  const chat = createProvider(settings)?.chat;
+  const chat = createProvider(settings, { db: env.DB, feature })?.chat;
   if (!chat) throw new Error(await errorText(env, "api_chat_unavailable"));
   const rows = await loadRows(env, ids);
   const result: StepResult = { doneIds: missingIds(ids, rows), failures: [] };
@@ -169,7 +170,7 @@ async function chatBatch(
 
 async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
   const [categories, locale] = await Promise.all([activeCategories(env.DB), aiLocale(env.DB)]);
-  return chatBatch(env, settings, ids, async (chat, row) => {
+  return chatBatch(env, settings, ids, "organize", async (chat, row) => {
     const { category, tags } = await suggestOrganize(chat, row, categories, locale);
     await env.DB.prepare("UPDATE items SET category=?, tags=?, updated_at=? WHERE id=?")
       .bind(category, JSON.stringify(tags), Date.now(), row.id)
@@ -179,7 +180,7 @@ async function organizeBatch(env: Env, settings: AiSettings, ids: number[]): Pro
 
 async function summarizeBatch(env: Env, settings: AiSettings, ids: number[]): Promise<StepResult> {
   const locale = await aiLocale(env.DB);
-  return chatBatch(env, settings, ids, (chat, row) => summarizeItem(env.DB, chat, row, locale));
+  return chatBatch(env, settings, ids, "summarize", (chat, row) => summarizeItem(env.DB, chat, row, locale));
 }
 
 /**

@@ -15,6 +15,7 @@ import { cronRoutes } from "#routes/cron";
 import { shareRoutes } from "#routes/shares";
 import { jobRoutes } from "#routes/jobs";
 import { auditRoutes } from "#routes/audit";
+import { aiUsageRoutes } from "#routes/ai-usage";
 import { publicRoutes } from "#routes/public";
 import { backupRoutes } from "#routes/backups";
 import { mcpRoutes } from "#routes/mcp";
@@ -58,6 +59,7 @@ app.route("/api/cron", cronRoutes);
 app.route("/api/shares", shareRoutes);
 app.route("/api/jobs", jobRoutes);
 app.route("/api/audit", auditRoutes);
+app.route("/api/ai-usage", aiUsageRoutes);
 app.route("/api/backups", backupRoutes);
 app.route("/api/mcp", mcpRoutes);
 

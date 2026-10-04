@@ -4,7 +4,15 @@
 // revisit shows it right away; only lists, never secrets or settings.
 
 import { queryOptions } from "@tanstack/react-query";
-import type { BrowserRenderInfo, CronOverview, Item, SavedSearch, ShareStats } from "@pickit/shared";
+import type {
+  AiUsageReport,
+  AiUsageRetention,
+  BrowserRenderInfo,
+  CronOverview,
+  Item,
+  SavedSearch,
+  ShareStats,
+} from "@pickit/shared";
 import { api } from "#lib/api";
 import type { Locale } from "#lib/i18n";
 import type { CategoryCount } from "#lib/categories";
@@ -109,6 +117,18 @@ export const savedSearchesQuery = queryOptions({
 export const webhooksQuery = queryOptions({
   queryKey: ["webhooks"],
   queryFn: () => api<Webhook[]>("/api/webhooks"),
+});
+
+/** `timeZone`: IANA zone the days are counted in, normally the browser's. */
+export const aiUsageQuery = (days: number, timeZone: string) =>
+  queryOptions({
+    queryKey: ["ai-usage", days, timeZone],
+    queryFn: () => api<AiUsageReport>(`/api/ai-usage?days=${days}&tz=${encodeURIComponent(timeZone)}`),
+  });
+
+export const aiUsageSettingsQuery = queryOptions({
+  queryKey: ["ai-usage", "settings"],
+  queryFn: () => api<AiUsageRetention>("/api/ai-usage/settings"),
 });
 
 export const cronQuery = queryOptions({

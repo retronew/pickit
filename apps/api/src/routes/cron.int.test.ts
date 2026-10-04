@@ -15,7 +15,7 @@ describe("scheduled tasks", () => {
   it("lists every task with its schedule and next run", async () => {
     const { tasks, lastTicks } = await overview();
     expect(tasks.map((x: { id: string }) => x.id)).toEqual([
-      "jobs", "vectors", "previews", "content", "activity", "backup", "link_check", "audit_prune",
+      "jobs", "vectors", "previews", "content", "activity", "backup", "link_check", "audit_prune", "ai_usage_prune",
     ]);
     const backup = tasks.find((x: { id: string }) => x.id === "backup");
     expect(backup).toMatchObject({ cron: DAILY, lastRun: null, recent: [] });

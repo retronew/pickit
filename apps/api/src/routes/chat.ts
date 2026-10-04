@@ -39,7 +39,7 @@ chatRoutes.post("/", async (c) => {
   }
 
   const settings = await getSettings(c.env.DB);
-  const provider = settings ? createProvider(settings) : null;
+  const provider = settings ? createProvider(settings, { db: c.env.DB, feature: "chat" }) : null;
   if (!provider?.chat) {
     return c.json({ error: await tr(c, "api_need_chat") }, 400);
   }
