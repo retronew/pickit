@@ -24,7 +24,7 @@
     "ai": "^7.0.127",
     "better-auth": "^1.7.7",
     "bowser": "^2.14.1",
-    "hono": "^4.13.12"
+    "hono": "^4.13.16"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261003.1",
